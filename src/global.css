@@ -1,0 +1,35 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  width:  100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* 禁用所有可交互元素的手型指针 */
+button,
+a,
+select,
+label,
+[role="button"],
+[role="tab"],
+[role="link"],
+[role="menuitem"],
+[onclick],
+[tabindex]:not([tabindex="-1"]) {
+  cursor: default ! important;
+}
+
+/* 保留输入框的文本光标 */
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="search"],
+input[type="number"],
+textarea {
+  cursor: text ! important;
+}

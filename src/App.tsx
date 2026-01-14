@@ -1,50 +1,31 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
+import { FluentProvider } from "@fluentui/react-components";
+import { kochLightTheme } from "./themes/kochLightTheme";
+import { kochDarkTheme } from "./themes/kochDarkTheme";
+import { Routes, Route, Navigate } from "react-router-dom";
+import { MainLayout } from "./layouts/MainLayout";
+import { TrainingPage } from "./pages/TrainingPage";
+import { ActivityPage } from "./pages/ActivityPage";
+import { StatisticsPage } from "./pages/StatisticsPage";
+import { GeneratorPage } from "./pages/GeneratorPage";
+import { AboutPage } from "./pages/AboutPage";
+import { SettingsPage } from "./pages/SettingsPage";
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
-
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
-  }
-
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
-
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
+    <FluentProvider theme={kochDarkTheme}>
+      <Routes>
+        <Route path="/" element={<MainLayout />}>
+          <Route index element={<Navigate to="/training" replace />} />
+          <Route path="training" element={<TrainingPage />} />
+          <Route path="activity" element={<ActivityPage />} />
+          <Route path="statistics" element={<StatisticsPage />} />
+          <Route path="generator" element={<GeneratorPage />} />
+          <Route path="about" element={<AboutPage />} />
+          <Route path="settings" element={<SettingsPage />} />
+          <Route path="*" element={<Navigate to="/training" replace />} />
+        </Route>
+      </Routes>
+    </FluentProvider>
   );
 }
 
