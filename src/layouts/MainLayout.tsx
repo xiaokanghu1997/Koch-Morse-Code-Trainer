@@ -7,7 +7,7 @@ import {
   NavDrawerFooter,
   NavItem,
 } from "@fluentui/react-components";
-import { makeStyles, Tooltip, tokens } from "@fluentui/react-components";
+import { makeStyles, tokens } from "@fluentui/react-components";
 import {
   HeadphonesSoundWave20Filled,
   HeadphonesSoundWave20Regular,
@@ -30,6 +30,8 @@ const useStyles = makeStyles({
     display: "flex",
     flexDirection: "column",
     height: "100vh",
+    borderRadius: "10px",
+    border: `1.5px solid ${tokens.colorNeutralStroke1}`
   },
   mainContent: {
     display: "flex",
@@ -42,7 +44,7 @@ const useStyles = makeStyles({
   },
   content: {
     flex: "1",
-    padding: "20px",
+    padding: "10px",
     overflow: "auto",
   },
   emptyHeader: {

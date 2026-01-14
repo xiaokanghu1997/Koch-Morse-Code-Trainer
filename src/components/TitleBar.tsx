@@ -10,7 +10,7 @@ const useStyles = makeStyles({
   titleBar: {
     height: "32px",
     backgroundColor: tokens.colorNeutralBackground2,
-    borderBottom: `0px solid ${tokens.colorNeutralStroke2}`,
+    borderBottom: "none",
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
@@ -70,6 +70,9 @@ const useStyles = makeStyles({
 export const TitleBar = () => {
   const styles = useStyles();
 
+  const appTitle = "Koch - Morse Code Trainer";
+  const version = "v0.0.0";
+
   // 异步调用窗口方法
   const handleMinimize = async () => {
     try {
@@ -95,8 +98,8 @@ export const TitleBar = () => {
         <div className={styles.appIcon}>
           <img src={appIcon} alt="app icon" style={{ width: "20px", height: "20px" }} />
         </div>
-        <div className={styles.title}>Koch - Morse Code Trainer</div>
-        <div className={styles.subtitle}>v0.0.0</div>
+        <div className={styles.title}>{appTitle}</div>
+        <div className={styles.subtitle}>{version}</div>
       </div>
       <div className={styles.controls}>
         <button className={styles.controlButton} onClick={handleMinimize}>
