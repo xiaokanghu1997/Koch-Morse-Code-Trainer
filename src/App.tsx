@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { FluentProvider } from "@fluentui/react-components";
 import { makeStyles, tokens } from "@fluentui/react-components";
-import { ThemeProvider, useTheme } from "./contexts/ThemeContext";
+import { AppearanceProvider, useAppearance } from "./contexts/AppearanceContext";
 import { kochLightTheme } from "./themes/kochLightTheme";
 import { kochDarkTheme } from "./themes/kochDarkTheme";
 import { Routes, Route, Navigate } from "react-router-dom";
@@ -24,7 +24,7 @@ const useStyles = makeStyles({
 
 function AppContent() {
   const styles = useStyles();
-  const { theme } = useTheme();
+  const { theme } = useAppearance();
 
   // 禁用右键菜单
   useEffect(() => {
@@ -61,9 +61,9 @@ function AppContent() {
 
 function App() {
   return (
-    <ThemeProvider>
+    <AppearanceProvider>
       <AppContent />
-    </ThemeProvider>
+    </AppearanceProvider>
   );
 }
 

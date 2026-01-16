@@ -14,7 +14,8 @@ import {
   Speaker224Regular,
   PulseSquare24Regular
 } from "@fluentui/react-icons";
-import { useTheme } from "../contexts/ThemeContext";
+import { useAppearance } from "../contexts/AppearanceContext";
+import { invoke } from "@tauri-apps/api/core";
 
 const useStyles = makeStyles({
   container: {
@@ -138,7 +139,7 @@ const useStyles = makeStyles({
 
 export const SettingsPage = () => {
   const styles = useStyles();
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, opacity, setOpacity } = useAppearance();
 
   return (
     <div className={styles.container}>
@@ -194,8 +195,16 @@ export const SettingsPage = () => {
             className={styles.slider}
             min={10}
             max={100}
+            value={opacity}
+            onChange={(_, data) => {
+              const newOpacity = data.value;
+              setOpacity(newOpacity);
+              invoke('set_window_opacity', {
+                opacity: newOpacity / 100
+              }).catch(console.error);
+            }}
           />
-          <Text className={styles.sliderValueText}>{Math.round(100)}%</Text>
+          <Text className={styles.sliderValueText}>{Math.round(opacity)}%</Text>
         </div>
       </Card>
 

@@ -6,6 +6,7 @@ import {
   NavDrawerBody,
   NavDrawerFooter,
   NavItem,
+  Tooltip,
 } from "@fluentui/react-components";
 import { makeStyles, tokens } from "@fluentui/react-components";
 import {
@@ -69,6 +70,10 @@ const useStyles = makeStyles({
       backgroundColor: tokens.colorNeutralBackground1Pressed,
     },
   },
+  tooltip: {
+    backgroundColor: tokens.colorNeutralBackground1Hover,
+    boxShadow: tokens.shadow2,
+  },
 });
 
 const Training = bundleIcon(Voicemail20Filled, Voicemail20Regular);
@@ -103,15 +108,69 @@ export const MainLayout = () => {
             <NavDrawerHeader className={styles.emptyHeader} />
 
             <NavDrawerBody className={styles.navBody}>
-              <NavItem className={styles.navItem} icon={<Training />} value="/training" />
-              <NavItem className={styles.navItem} icon={<Activity />} value="/activity" />
-              <NavItem className={styles.navItem} icon={<Statistics />} value="/statistics" />
-              <NavItem className={styles.navItem} icon={<Generator />} value="/generator" />
+              <Tooltip
+                content={{
+                  children: "Training",
+                  className: styles.tooltip,
+                }}
+                relationship="label"
+                positioning="after"
+              >
+                <NavItem className={styles.navItem} icon={<Training />} value="/training" />
+              </Tooltip>
+              <Tooltip
+                content={{
+                  children: "Activity",
+                  className: styles.tooltip,
+                }}
+                relationship="label"
+                positioning="after"
+              >
+                <NavItem className={styles.navItem} icon={<Activity />} value="/activity" />
+              </Tooltip>
+              <Tooltip
+                content={{
+                  children: "Statistics",
+                  className: styles.tooltip,
+                }}
+                relationship="label"
+                positioning="after"
+              >
+                <NavItem className={styles.navItem} icon={<Statistics />} value="/statistics" />
+              </Tooltip>
+              <Tooltip
+                content={{
+                  children: "Generator",
+                  className: styles.tooltip,
+                }}
+                relationship="label"
+                positioning="after"
+              >
+                <NavItem className={styles.navItem} icon={<Generator />} value="/generator" />
+              </Tooltip>
             </NavDrawerBody>
 
             <NavDrawerFooter className={styles.navBody}>
-              <NavItem className={styles.navItem} icon={<About />} value="/about" />
-              <NavItem className={styles.navItem} icon={<Settings />} value="/settings" />
+              <Tooltip
+                content={{
+                  children: "About",
+                  className: styles.tooltip,
+                }}
+                relationship="label"
+                positioning="after"
+              >
+                <NavItem className={styles.navItem} icon={<About />} value="/about" />
+              </Tooltip>
+              <Tooltip
+                content={{
+                  children: "Settings",
+                  className: styles.tooltip,
+                }}
+                relationship="label"
+                positioning="after"
+              >
+                <NavItem className={styles.navItem} icon={<Settings />} value="/settings" />
+              </Tooltip>
             </NavDrawerFooter>
           </NavDrawer>
 
