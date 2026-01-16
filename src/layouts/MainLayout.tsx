@@ -9,8 +9,8 @@ import {
 } from "@fluentui/react-components";
 import { makeStyles, tokens } from "@fluentui/react-components";
 import {
-  HeadphonesSoundWave20Filled,
-  HeadphonesSoundWave20Regular,
+  Voicemail20Filled,
+  Voicemail20Regular,
   CalendarLtr20Filled,
   CalendarLtr20Regular,
   DataHistogram20Filled,
@@ -40,12 +40,13 @@ const useStyles = makeStyles({
   },
   nav: {
     width: "36px",
-    backgroundColor: tokens.colorNeutralBackground2,
+    backgroundColor: tokens.colorNeutralBackground1,
   },
   content: {
     flex: "1",
     padding: "10px",
     overflow: "auto",
+    backgroundColor: tokens.colorNeutralBackground2,
   },
   emptyHeader: {
     height: "0",
@@ -59,14 +60,18 @@ const useStyles = makeStyles({
     "& svg": {
         pointerEvents: "none",
     },
-    backgroundColor: tokens.colorNeutralBackground2,
+    backgroundColor: tokens.colorNeutralBackground1,
+    transitionProperty: "none",
     ":hover": {
-      backgroundColor: tokens.colorNeutralBackground2Hover,
+      backgroundColor: tokens.colorNeutralBackground1Hover,
+    },
+    ":active": {
+      backgroundColor: tokens.colorNeutralBackground1Pressed,
     },
   },
 });
 
-const Training = bundleIcon(HeadphonesSoundWave20Filled, HeadphonesSoundWave20Regular);
+const Training = bundleIcon(Voicemail20Filled, Voicemail20Regular);
 const Activity = bundleIcon(CalendarLtr20Filled, CalendarLtr20Regular);
 const Statistics = bundleIcon(DataHistogram20Filled, DataHistogram20Regular);
 const Generator = bundleIcon(ContentSettings20Filled, ContentSettings20Regular);

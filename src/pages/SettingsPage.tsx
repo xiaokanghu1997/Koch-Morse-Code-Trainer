@@ -1,10 +1,241 @@
-import { Text } from "@fluentui/react-components";
+import { 
+  Text, 
+  Card,
+  Dropdown,
+  Option,
+  Slider,
+  Switch,
+  makeStyles,
+  tokens
+} from "@fluentui/react-components";
+import {
+  Color24Regular,
+  TransparencySquare24Regular,
+  Speaker224Regular,
+  PulseSquare24Regular
+} from "@fluentui/react-icons";
+import { useTheme } from "../contexts/ThemeContext";
+
+const useStyles = makeStyles({
+  container: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+  },
+  card: {
+    padding: "14px 16px",
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: "16px",
+    backgroundColor: tokens.colorNeutralBackground3,
+  },
+  icon: {
+    color: tokens.colorBrandForeground1,
+  },
+  content: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    gap: "2px",
+  },
+  header: {
+    fontSize: tokens.fontSizeBase300,
+    fontWeight: tokens.fontWeightSemibold,
+    color: tokens.colorNeutralForeground1,
+  },
+  description: {
+    fontSize: tokens.fontSizeBase200,
+    color: tokens.colorNeutralForeground2,
+  },
+  control: {
+    flexShrink: 0,
+  },
+  dropdown: {
+    minWidth: "120px",
+    maxWidth: "120px",
+    paddingBottom: "1.5px",
+    border: "none",
+    boxShadow: tokens.shadow2,
+    "::after": {
+      display: "none",
+    },
+    backgroundColor: tokens.colorNeutralBackground4,
+    ":hover": {
+      backgroundColor: tokens.colorNeutralBackground4Hover,
+    },
+    ":active": {
+      backgroundColor: tokens.colorNeutralBackground4Pressed,
+    },
+  },
+  dropdownListbox: {
+    minWidth: "120px",
+    maxWidth: "120px",
+    backgroundColor: tokens.colorNeutralBackground5,
+  },
+  dropdownOption: {
+    position: "relative",
+    paddingLeft: "12px",
+    paddingTop: "4px",
+    backgroundColor: tokens.colorNeutralBackground5,
+    ":hover": {
+      backgroundColor: tokens.colorNeutralBackground5Hover,
+    },
+    ":active": {
+      backgroundColor: tokens.colorNeutralBackground5Pressed,
+    },
+    "&[aria-selected='true']": {
+      backgroundColor: tokens.colorNeutralBackground5Selected,
+    },
+    "&[aria-selected='true']:hover": {
+      backgroundColor: tokens.colorNeutralBackground4Hover,
+    },
+    "&[aria-selected='true']::before": {
+      content: '""',
+      position: "absolute",
+      left: "4px",
+      top: "8px",
+      bottom: "8px",
+      width: "3px",
+      borderRadius: "2px",
+      backgroundColor: tokens.colorBrandForeground1,
+    },
+  },
+  controlContainer: {
+    display: "flex",
+    alignItems: "center",
+    gap: "2px",
+    flexShrink: 0,
+  },
+  slider: {
+    width: "150px",
+    "& .fui-Slider__thumb": {
+      border: `4px solid ${tokens.colorNeutralBackground4Selected}`,
+      boxShadow: tokens.shadow2,
+    },
+    flexShrink: 0,
+  },
+  sliderValueText: {
+    fontSize: tokens.fontSizeBase300,
+    color: tokens.colorNeutralForeground1,
+    marginRight: "4px",
+    minWidth: "35px",
+    textAlign: "right",
+    flexShrink: 0,
+  },
+  switch: {
+    flexShrink: 0,
+  },
+  switchValueText: {
+    fontSize: tokens.fontSizeBase300,
+    color: tokens.colorNeutralForeground1,
+    marginRight: "4px",
+    minWidth: "20px",
+    textAlign: "right",
+    flexShrink: 0,
+  },
+});
 
 export const SettingsPage = () => {
+  const styles = useStyles();
+  const { theme, setTheme } = useTheme();
+
   return (
-    <div>
-      <Text size={600} weight="semibold">Settings</Text>
-      <Text>Settings page content to be added...</Text>
+    <div className={styles.container}>
+      {/* 主题设置 */}
+      <Card className={styles.card}>
+        <Color24Regular className={styles.icon} />
+        <div className={styles.content}>
+          <Text className={styles.header}>Application theme</Text>
+          <Text className={styles.description}>
+            Select which application theme to display
+          </Text>
+        </div>
+        <Dropdown 
+          className={styles.dropdown}
+          listbox={{ className: styles.dropdownListbox }}
+          positioning="below-start"
+          value={theme}
+          selectedOptions={[theme]}
+          onOptionSelect={(_, data) => {
+            setTheme(data.optionValue as "Light" | "Dark");
+          }}
+        >
+          <Option 
+            key="light" 
+            value="Light"
+            className={styles.dropdownOption}
+            checkIcon={null}
+          >
+            Light
+          </Option>
+          <Option 
+            key="dark" 
+            value="Dark"
+            className={styles.dropdownOption}
+            checkIcon={null}
+          >
+            Dark
+          </Option>
+        </Dropdown>
+      </Card>
+
+      {/* 窗口透明度设置 */}
+      <Card className={styles.card}>
+        <TransparencySquare24Regular className={styles.icon} />
+        <div className={styles.content}>
+          <Text className={styles.header}>Window opacity</Text>
+          <Text className={styles.description}>
+            Adjust the transparency of the application window
+          </Text>
+        </div>
+        <div className={styles.controlContainer}>
+          <Slider
+            className={styles.slider}
+            min={10}
+            max={100}
+          />
+          <Text className={styles.sliderValueText}>{Math.round(100)}%</Text>
+        </div>
+      </Card>
+
+      {/* 音量设置 */}
+      <Card className={styles.card}>
+        <Speaker224Regular className={styles.icon} />
+        <div className={styles.content}>
+          <Text className={styles.header}>Audio volume</Text>
+          <Text className={styles.description}>
+            Adjust the audio output volume
+          </Text>
+        </div>
+        <div className={styles.controlContainer}>
+          <Slider
+            className={styles.slider}
+            min={0}
+            max={100}
+            defaultValue={0}
+          />
+          <Text className={styles.sliderValueText}>100%</Text>
+        </div>
+      </Card>
+
+      {/* 波形图显示开关 */}
+      <Card className={styles.card}>
+        <PulseSquare24Regular className={styles.icon} />
+        <div className={styles.content}>
+          <Text className={styles.header}>Waveform display</Text>
+          <Text className={styles.description}>
+            Show the audio waveform during playback
+          </Text>
+        </div>
+        <div className={styles.controlContainer}>
+          <Switch 
+            className={styles.switch}
+            defaultChecked={false}
+          />
+          <Text className={styles.switchValueText}>Off</Text>
+        </div>
+      </Card>
     </div>
   );
 };

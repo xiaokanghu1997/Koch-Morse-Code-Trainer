@@ -1,5 +1,8 @@
+import { useEffect } from "react";
 import { FluentProvider } from "@fluentui/react-components";
 import { makeStyles, tokens } from "@fluentui/react-components";
+import { ThemeProvider, useTheme } from "./contexts/ThemeContext";
+import { kochLightTheme } from "./themes/kochLightTheme";
 import { kochDarkTheme } from "./themes/kochDarkTheme";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { MainLayout } from "./layouts/MainLayout";
@@ -19,12 +22,26 @@ const useStyles = makeStyles({
   },
 });
 
-function App() {
+function AppContent() {
   const styles = useStyles();
+  const { theme } = useTheme();
+
+  // 禁用右键菜单
+  useEffect(() => {
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+    };
+    
+    document.addEventListener('contextmenu', handleContextMenu);
+    
+    return () => {
+      document.removeEventListener('contextmenu', handleContextMenu);
+    };
+  }, []);
 
   return (
     <div className={styles.appWrapper}>
-      <FluentProvider theme={kochDarkTheme}>
+      <FluentProvider theme={theme === "Dark" ? kochDarkTheme : kochLightTheme}>
         <Routes>
           <Route path="/" element={<MainLayout />}>
             <Route index element={<Navigate to="/training" replace />} />
@@ -39,6 +56,14 @@ function App() {
         </Routes>
       </FluentProvider>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
   );
 }
 

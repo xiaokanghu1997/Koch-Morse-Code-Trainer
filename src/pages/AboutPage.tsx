@@ -6,7 +6,7 @@ import {
   tokens
 } from "@fluentui/react-components";
 import {
-  AppGeneric24Regular,
+  Apps24Regular,
   TargetArrow24Regular,
   Mail24Regular,
   Heart24Regular
@@ -24,7 +24,7 @@ const useStyles = makeStyles({
     flexDirection: "row",
     alignItems: "center",
     gap: "16px",
-    backgroundColor: tokens.colorNeutralBackground1Selected,
+    backgroundColor: tokens.colorNeutralBackground3,
   },
   icon: {
     color: tokens.colorBrandForeground1,
@@ -56,13 +56,13 @@ export const AboutPage = () => {
   const styles = useStyles();
   
   const appTitle = "Koch - Morse Code Trainer";
-  const version = "v0.0.0";
+  const version = "Version 0.0.0";
 
   return (
     <div className={styles.container}>
       {/* 软件信息 */}
       <Card className={styles.card}>
-        <AppGeneric24Regular className={styles.icon} />
+        <Apps24Regular className={styles.icon} />
         <div className={styles.content}>
           <Text className={styles.header}>{appTitle}</Text>
           <Text className={styles.description}>

@@ -9,7 +9,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 const useStyles = makeStyles({
   titleBar: {
     height: "32px",
-    backgroundColor: tokens.colorNeutralBackground2,
+    backgroundColor: tokens.colorNeutralBackground1,
     borderBottom: "none",
     display: "flex",
     justifyContent: "space-between",
