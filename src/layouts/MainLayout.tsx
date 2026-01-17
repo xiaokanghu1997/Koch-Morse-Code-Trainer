@@ -47,6 +47,7 @@ const useStyles = makeStyles({
     flex: "1",
     padding: "10px",
     overflow: "auto",
+    borderTopLeftRadius: "8px",
     backgroundColor: tokens.colorNeutralBackground2,
   },
   emptyHeader: {

@@ -53,16 +53,29 @@ const useStyles = makeStyles({
     // @ts-ignore
     "-webkit-app-region": "no-drag",
     ":hover": {
-      backgroundColor: tokens.colorNeutralBackground1Hover,
+      backgroundColor: tokens.colorNeutralBackground3Hover,
     },
     ":active": {
-      backgroundColor:  tokens.colorNeutralBackground1Pressed,
+      backgroundColor: tokens.colorNeutralBackground3Pressed,
     },
   },
   closeButton: {
+    width: "46px",
+    height: "100%",
+    border: "none",
+    backgroundColor: "transparent",
+    color: tokens.colorNeutralForeground1,
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    // @ts-ignore
+    "-webkit-app-region": "no-drag",
     ":hover": {
       backgroundColor: "#c42b1c",
-      color: "white",
+    },
+    ":active": {
+      backgroundColor: "#a32214",
     },
   },
 });
@@ -105,10 +118,7 @@ export const TitleBar = () => {
         <button className={styles.controlButton} onClick={handleMinimize}>
           <Subtract16Regular />
         </button>
-        <button 
-          className={`${styles.controlButton} ${styles.closeButton}`} 
-          onClick={handleClose}
-        >
+        <button className={styles.closeButton} onClick={handleClose}>
           <Dismiss16Regular />
         </button>
       </div>

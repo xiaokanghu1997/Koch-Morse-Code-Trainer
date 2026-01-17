@@ -27,6 +27,7 @@ fn set_window_opacity(window: tauri::Window, opacity: f64) -> Result<(), String>
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![set_window_opacity])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

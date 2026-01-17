@@ -78,7 +78,7 @@ export const AboutPage = () => {
         <div className={styles.content}>
           <Text className={styles.header}>Purpose</Text>
           <Text className={styles.description}>
-            Morse code listening practice
+            Koch-method listening and copying practice
           </Text>
         </div>
         <Text className={styles.value}>
@@ -104,11 +104,11 @@ export const AboutPage = () => {
         <div className={styles.content}>
           <Text className={styles.header}>Acknowledgements</Text>
           <Text className={styles.description}>
-            Thanks for the inspiration
+            Thanks for the inspiration and support
           </Text>
         </div>
         <Text className={styles.value}>
-          Inspired by <Link href="https://lcwo.net" target="_blank">LCWO.net</Link>
+          Inspired and supported by <Link href="https://fkurz.net/ham/jscwlib.html" target="_blank">jscwlib</Link>
         </Text>
       </Card>
     </div>
