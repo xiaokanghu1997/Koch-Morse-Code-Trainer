@@ -16,8 +16,15 @@ import {
   PauseCircle20Regular, 
   SoundWaveCircleSparkle20Regular
 } from "@fluentui/react-icons";
-import { useState } from "react";
+import { useEffect } from "react";
+import { useMorseGenerator } from "../hooks/useMorseGenerator";
+import { useGeneratorStore } from "../stores/generatorStore";
+import { useTrainingStore } from "../stores/trainingStore";
+import { CourseManager } from "../services/courseManager";
+import { TextGenerator } from "../services/textGenerator";
+import type { TrainingSet, PracticeMode } from "../lib/types";
 
+// 样式定义
 const useStyles = makeStyles({
   container: {
     display: "flex",
@@ -179,14 +186,17 @@ const useStyles = makeStyles({
   },
 });
 
+// 工具函数
 function clampNumber(value: number, min: number, max: number) {
   if (isNaN(value)) return min;
   return Math.min(Math.max(value, min), max);
 }
 
+// 生成器页面组件
 export const GeneratorPage = () => {
   const styles = useStyles();
 
+  // Tooltips 提示文本
   const tips = {
     trainingSet: "Select the character set used to generate practice material",
     practiceMode: "Choose how characters are distributed during training",
@@ -199,29 +209,86 @@ export const GeneratorPage = () => {
     startDelay: "Waiting time before playback starts",
     prefixSuffix: "Add standard practice markers before and after each practice",
   };
-  
-  const [trainingSet, setTrainingSet] = useState("Koch-LCWO");
-  const [distribution, setDistribution] = useState("Gradual");
-  const [groupLength, setGroupLength] = useState("5");
-  const [groupSpacing, setGroupSpacing] = useState("1");
-  const [duration, setDuration] = useState("1");
-  const [charSpeed, setCharSpeed] = useState(20);
-  const [effSpeed, setEffSpeed] = useState(10);
-  const [tone, setTone] = useState(600);
-  const [startDelay, setStartDelay] = useState("3");
-  const [usePrefixSuffix, setUsePrefixSuffix] = useState(false);
 
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [countdown, setCountdown] = useState(20);
+  // 从 Store 中获取配置和操作函数
+  const { config, updateConfig, setGeneratedText } = useGeneratorStore();
 
-  const handleSpin =
-  (min: number, max: number, setter: (v: string)=>void) =>
-  (_: any, data: any) => {
-    const raw = Number(data.value ?? data.displayValue);
-    const clamped = clampNumber(raw, min, max);
-    setter(String(clamped));
+  // 使用生成器 Hook
+  const {
+    playPreview,
+    stopPreview,
+    isPreviewPlaying,
+    previewCountdown,
+    saveConfig,
+    loadConfig,
+  } = useMorseGenerator();
+
+  // 初始化加载配置
+  useEffect(() => {
+    const savedConfig = loadConfig();
+    if (savedConfig) {
+      updateConfig(savedConfig);
+      console.log("Loaded saved config");
+    }
+  }, [loadConfig, updateConfig]);
+
+  // 配置自动保存
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      saveConfig(config);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [config, saveConfig]);
+
+  // 处理预览按钮点击
+  const handlePreview = () => { 
+    if (isPreviewPlaying) {
+      stopPreview();
+    } else {
+      playPreview(config);
+    }
   };
 
+  // 处理生成按钮点击
+  const { currentLesson } = useTrainingStore();
+  const handleGenerate = () => {
+    try {
+      const courseManager = new CourseManager(config.trainingSet);
+      const lesson = courseManager.getLesson(currentLesson);
+      const textGen = new TextGenerator();
+      const text = textGen.generate({
+        charSet: lesson.chars,
+        mode: config.practiceMode,
+        groupLength: config. groupLength,
+        groupSpacing: config.groupSpacing,
+        targetDuration: config.duration * 60,
+        audioConfig: {
+          charSpeed: config.charSpeed,
+          effSpeed: config.effSpeed,
+          tone: config.tone,
+          volume: 0.8,
+        },
+        usePrefixSuffix: config.usePrefixSuffix,
+      })
+      setGeneratedText(text);
+      console.log("Generated text:", text);
+    } catch (error) {
+      console.error("Error generating text:", error);
+    }
+  };
+
+  // 处理 SpinButton 变化
+  const handleSpin = (
+    min: number, 
+    max: number, 
+    field: keyof typeof config
+  ) => (_: any, data: any) => {
+    const raw = Number(data. value ??  data. displayValue);
+    const clamped = clampNumber(raw, min, max);
+    updateConfig({ [field]: clamped });
+  };
+
+  // 渲染
   return (
     <div className={styles.container}>
       <div className={styles.content}>
@@ -244,9 +311,11 @@ export const GeneratorPage = () => {
             <Dropdown 
               className={styles.dropdown}
               listbox={{ className: styles.dropdownListbox }}
-              value={trainingSet}
-              selectedOptions={[trainingSet]}
-              onOptionSelect={(_, data) => setTrainingSet(data.optionValue as string)}
+              value={config.trainingSet}
+              selectedOptions={[config.trainingSet]}
+              onOptionSelect={(_, data) => 
+                updateConfig({ trainingSet: data.optionValue as TrainingSet })
+              }
             >
               <Option value="Koch-LCWO" className={styles.dropdownOption} checkIcon={null}>
                 Koch-LCWO
@@ -280,9 +349,11 @@ export const GeneratorPage = () => {
             <Dropdown 
               className={styles.dropdown}
               listbox={{ className: styles.dropdownListbox }}
-              value={distribution}
-              selectedOptions={[distribution]}
-              onOptionSelect={(_, data) => setDistribution(data.optionValue as string)}
+              value={config.practiceMode}
+              selectedOptions={[config.practiceMode]}
+              onOptionSelect={(_, data) => 
+                updateConfig({ practiceMode: data.optionValue as PracticeMode })
+              }
             >
               <Option value="Uniform" className={styles.dropdownOption} checkIcon={null}>
                 Uniform
@@ -317,8 +388,8 @@ export const GeneratorPage = () => {
               className={styles.spinbutton}
               min={1}
               max={10}
-              value={Number(groupLength)}
-              onChange={handleSpin(1, 10, setGroupLength)}
+              value={config.groupLength}
+              onChange={handleSpin(1, 10, "groupLength")}
             />
             <Text>chars</Text>
           </div>
@@ -341,8 +412,8 @@ export const GeneratorPage = () => {
               className={styles.spinbutton}
               min={1}
               max={10}
-              value={Number(groupSpacing)}
-              onChange={handleSpin(1, 10, setGroupSpacing)}
+              value={config.groupSpacing}
+              onChange={handleSpin(1, 10, "groupSpacing")}
             />
             <Text>dits</Text>
           </div>
@@ -365,8 +436,8 @@ export const GeneratorPage = () => {
               className={styles.spinbutton}
               min={1}
               max={10}
-              value={Number(duration)}
-              onChange={handleSpin(1, 10, setDuration)}
+              value={config.duration}
+              onChange={handleSpin(1, 10, "duration")}
             />
             <Text>min</Text>
           </div>
@@ -393,10 +464,10 @@ export const GeneratorPage = () => {
                 className={styles.slider}
                 min={5}
                 max={50}
-                value={charSpeed}
-                onChange={(_, data) => setCharSpeed(data.value)}
+                value={config.charSpeed}
+                onChange={(_, data) => updateConfig({ charSpeed: data.value })}
               />
-              <Text className={styles.sliderValueText}>{charSpeed} WPM</Text>
+              <Text className={styles.sliderValueText}>{config.charSpeed} WPM</Text>
             </div>
           </div>
 
@@ -419,10 +490,10 @@ export const GeneratorPage = () => {
                 className={styles.slider}
                 min={0}
                 max={50}
-                value={effSpeed}
-                onChange={(_, data) => setEffSpeed(data.value)}
+                value={config.effSpeed}
+                onChange={(_, data) => updateConfig({ effSpeed: data.value })}
               />
-              <Text className={styles.sliderValueText}>{effSpeed} WPM</Text>
+              <Text className={styles.sliderValueText}>{config.effSpeed} WPM</Text>
             </div>
           </div>
 
@@ -445,10 +516,10 @@ export const GeneratorPage = () => {
                 className={styles.slider}
                 min={300}
                 max={1500}
-                value={tone}
-                onChange={(_, data) => setTone(data.value)}
+                value={config.tone}
+                onChange={(_, data) => updateConfig({ tone: data.value })}
               />
-              <Text className={styles.sliderValueText}>{tone} Hz</Text>
+              <Text className={styles.sliderValueText}>{config.tone} Hz</Text>
             </div>
           </div>
 
@@ -470,8 +541,8 @@ export const GeneratorPage = () => {
               className={styles.spinbutton}
               min={1}
               max={30}
-              value={Number(startDelay)}
-              onChange={handleSpin(1, 30, setStartDelay)}
+              value={config.startDelay}
+              onChange={handleSpin(1, 30, "startDelay")}
             />
             <Text>s</Text>
           </div>
@@ -493,8 +564,10 @@ export const GeneratorPage = () => {
             <div className={styles.controlContainer}>
               <Checkbox 
                 label="VVV = / AR"
-                checked={usePrefixSuffix}
-                onChange={(_, data) => setUsePrefixSuffix(data.checked === true)}
+                checked={config.usePrefixSuffix}
+                onChange={(_, data) => 
+                  updateConfig({ usePrefixSuffix: data.checked === true })
+                }
               />
             </div>
           </div>
@@ -505,18 +578,23 @@ export const GeneratorPage = () => {
       <div className={styles.actionBar}>
         <div className={styles.countdownContainer}>
           <Timer20Regular />
-          <Text className={styles.countdownText}>{countdown} s</Text>
+          <Text className={styles.countdownText}>
+            {isPreviewPlaying ? `${previewCountdown} s` : '20 s'}
+          </Text>
         </div>
+        {/* 预览按钮 */}
         <Button
           className={styles.button}
-          icon={isPlaying ? <PauseCircle20Regular /> : <PlayCircle20Regular />}
-          onClick={() => setIsPlaying(!isPlaying)}
+          icon={isPreviewPlaying ? <PauseCircle20Regular /> : <PlayCircle20Regular />}
+          onClick={handlePreview}
         >
-          {isPlaying ? "Pause" : "Preview"}
+          {isPreviewPlaying ? "Pause" : "Preview"}
         </Button>
+        {/* 生成按钮 */}
         <Button
           className={styles.button}
           icon={<SoundWaveCircleSparkle20Regular />}
+          onClick={handleGenerate}
         >
           Generate
         </Button>
