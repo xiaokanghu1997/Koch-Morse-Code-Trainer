@@ -1,6 +1,7 @@
 import { KOCH_SEQUENCES, PREVIEW_CONFIG } from '../lib/constants';
 import { TimingCalculator } from '../lib';
 import type { TrainingSet, AudioConfig } from '../lib/types';
+import { log } from '../utils/logger';
 
 /**
  * 预览生成器类
@@ -131,9 +132,10 @@ export class PreviewGenerator {
       iterations++;
     }
 
-    console.log(
-      `Preview: ${iterations} iterations, final duration: ${actualDuration.toFixed(1)}s`
-    );
+    log.debug('Preview refined', 'PreviewGenerator', {
+      iterations,
+      finalDuration: actualDuration.toFixed(1),
+    });
 
     return text;
   }

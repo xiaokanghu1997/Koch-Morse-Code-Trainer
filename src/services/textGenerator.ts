@@ -1,6 +1,7 @@
 import { MorseEncoder, TimingCalculator } from '../lib';
 import { PREFIX_SUFFIX } from '../lib/constants';
 import type { TextGeneratorOptions, PracticeMode } from '../lib/types';
+import { log } from '../utils/logger';
 
 /**
  * 文本生成器类
@@ -57,7 +58,10 @@ export class TextGenerator {
 
     // 6.验证并调整时长（可选：迭代优化）
     const actualDuration = timingCalc.calculateTextDuration(text);
-    console.log(`Generated text: ${chars.length} chars, ${actualDuration.toFixed(1)}s`);
+    log.debug('Text generated', 'TextGenerator', { 
+      charCount: chars.length, 
+      duration: actualDuration.toFixed(1) 
+    });
 
     return text;
   }

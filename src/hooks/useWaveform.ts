@@ -1,4 +1,5 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
+import { log } from '../utils/logger';
 
 /**
  * 波形配置接口
@@ -84,7 +85,7 @@ export const useWaveform = (
     const bufferLength = analyserNode.frequencyBinCount;
     dataArrayRef.current = new Uint8Array(bufferLength);
 
-    console.log('Waveform initialized, buffer length:', bufferLength);
+    log.info('Waveform initialized', 'Waveform', { bufferLength });
 
     // 清理
     return () => {
@@ -168,14 +169,14 @@ export const useWaveform = (
    */
   const start = useCallback(() => {
     if (!analyserNode) {
-      console.warn('Cannot start waveform: no analyser node');
+      log.warn('Cannot start waveform: no analyser node', 'Waveform');
       return;
     }
 
     if (isActive) return;
 
     setIsActive(true);
-    console.log('Waveform started');
+    log.info('Waveform started', 'Waveform');
   }, [analyserNode, isActive]);
 
   /**
@@ -191,7 +192,7 @@ export const useWaveform = (
       animationFrameRef.current = null;
     }
 
-    console.log('Waveform stopped');
+    log.info('Waveform stopped', 'Waveform');
   }, [isActive]);
 
   /**

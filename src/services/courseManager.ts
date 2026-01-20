@@ -64,12 +64,23 @@ export class CourseManager {
     const chars = this.sequence.slice(0, lessonNum + 1);
     const newChar = this.sequence[lessonNum];  // 新字符是第N+1个
 
+    // 生成输出格式
+    const paddedNum = lessonNum.toString().padStart(2, '0');
+    let description: string;
+
+    if (lessonNum === 1) {
+      // 特殊处理第1课
+      description = `${paddedNum} - ${chars.split('').join(', ')}`;
+    } else {
+      description = `${paddedNum} - ${newChar}`;
+    }
+
     return {
       id: lessonNum,
       chars,
       newChar,
       charSet: this.trainingSet,
-      description: `Lesson ${lessonNum}: ${chars} (New: ${newChar})`,
+      description,
     };
   }
 

@@ -7,6 +7,10 @@ import {
   Checkbox,
   SpinButton,
   Tooltip,
+  MessageBar,
+  MessageBarBody,
+  MessageBarTitle,
+  MessageBarActions,
   makeStyles,
   tokens
 } from "@fluentui/react-components";
@@ -14,15 +18,19 @@ import {
   Timer20Regular,
   PlayCircle20Regular, 
   PauseCircle20Regular, 
-  SoundWaveCircleSparkle20Regular
+  SoundWaveCircleSparkle20Regular,
+  CheckmarkCircle20Filled,
+  DismissCircle16Filled,
+  Dismiss20Regular,
 } from "@fluentui/react-icons";
-import { useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMorseGenerator } from "../hooks/useMorseGenerator";
 import { useGeneratorStore } from "../stores/generatorStore";
 import { useTrainingStore } from "../stores/trainingStore";
 import { CourseManager } from "../services/courseManager";
 import { TextGenerator } from "../services/textGenerator";
 import type { TrainingSet, PracticeMode } from "../lib/types";
+import { log } from "../utils/logger";
 
 // 样式定义
 const useStyles = makeStyles({
@@ -64,7 +72,9 @@ const useStyles = makeStyles({
   dropdown: {
     minWidth: "125px",
     maxWidth: "125px",
+    height: "32px",
     paddingBottom: "1.5px",
+    transform: "translateY(1.5px)",
     border: "none",
     boxShadow: tokens.shadow2,
     "::after": {
@@ -84,6 +94,7 @@ const useStyles = makeStyles({
     backgroundColor: tokens.colorNeutralBackground4,
   },
   dropdownOption: {
+    height: "32px",
     position: "relative",
     paddingLeft: "12px",
     paddingTop: "4px",
@@ -113,7 +124,10 @@ const useStyles = makeStyles({
   },
   spinbutton: {
     width: "60px",
+    height: "32px",
     border: "none",
+    paddingBottom: "1.5px",
+    transform: "translateY(1.5px)",
     boxShadow: tokens.shadow2,
     backgroundColor: tokens.colorNeutralBackground3,
     "::before": {
@@ -134,6 +148,7 @@ const useStyles = makeStyles({
   },
   slider: {
     width: "150px",
+    transform: "translateY(1px)",
     "& .fui-Slider__thumb": {
       border: `4px solid ${tokens.colorNeutralBackground3Selected}`,
       boxShadow: tokens.shadow2,
@@ -147,18 +162,34 @@ const useStyles = makeStyles({
     textAlign: "right",
     flexShrink: 0,
   },
-  actionBar: {
-    display: "flex",
-    justifyContent: "flex-end",
-    gap: "12px",
-    paddingTop: "12px",
-    borderTop: `1px solid ${tokens.colorNeutralStroke2}`,
-  },
   tooltip: {
     backgroundColor: tokens.colorNeutralBackground1Hover,
     boxShadow: tokens.shadow2,
     maxWidth: "360px",
     whiteSpace: "normal",
+  },
+  actionBar: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+    gap: "0px",
+    height: "44px",
+    borderTop: `1px solid ${tokens.colorNeutralStroke2}`,
+  },
+  messageContainer: {
+    flex: 1,
+    display: "flex",
+    alignItems: "center",
+    marginBottom: "-6px",
+  },
+  messageBar: {
+    maxWidth: "450px",
+    boxShadow: tokens.shadow2,
+  },
+  actionContainer: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
   },
   countdownContainer: {
     display: "flex",
@@ -174,6 +205,7 @@ const useStyles = makeStyles({
     width: "110px",
     height: "32px",
     border: "none",
+    transform: "translateY(1.2px)",
     boxShadow: tokens.shadow2,
     fontWeight: tokens.fontWeightRegular,
     backgroundColor: tokens.colorNeutralBackground3,
@@ -184,6 +216,9 @@ const useStyles = makeStyles({
       backgroundColor: tokens.colorNeutralBackground3Pressed,
     },
   },
+  buttonText: {
+    paddingBottom: "1.2px",
+  },
 });
 
 // 工具函数
@@ -192,10 +227,14 @@ function clampNumber(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
+function roundToNearest(value: number, step: number): number {
+  return Math.round(value / step) * step;
+}
+
 // 生成器页面组件
 export const GeneratorPage = () => {
   const styles = useStyles();
-
+  
   // Tooltips 提示文本
   const tips = {
     trainingSet: "Select the character set used to generate practice material",
@@ -209,6 +248,14 @@ export const GeneratorPage = () => {
     startDelay: "Waiting time before playback starts",
     prefixSuffix: "Add standard practice markers before and after each practice",
   };
+
+  // 消息栏状态
+  type MessageType = "success" | "error" | null;
+  const [message, setMessage] = useState<{
+    type: MessageType;
+    title: string;
+    content: string;
+  } | null>(null);
 
   // 从 Store 中获取配置和操作函数
   const { config, updateConfig, setGeneratedText } = useGeneratorStore();
@@ -228,17 +275,19 @@ export const GeneratorPage = () => {
     const savedConfig = loadConfig();
     if (savedConfig) {
       updateConfig(savedConfig);
-      console.log("Loaded saved config");
+      log.info("Loaded saved configuration", "GeneratorPage");
     }
   }, [loadConfig, updateConfig]);
 
-  // 配置自动保存
-  useEffect(() => {
-    const timer = setTimeout(() => {
+  // 配置保存
+  const saveCurrentConfig = () => {
+    try {
       saveConfig(config);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [config, saveConfig]);
+      log.info("Configuration saved", "GeneratorPage");
+    } catch (error) {
+      log.error("Error saving configuration", "GeneratorPage", error);
+    }
+  };
 
   // 处理预览按钮点击
   const handlePreview = () => { 
@@ -253,27 +302,61 @@ export const GeneratorPage = () => {
   const { currentLesson } = useTrainingStore();
   const handleGenerate = () => {
     try {
+      // 清除之前的消息
+      setMessage(null);
+
+      // 创建课程管理器和文本生成器
       const courseManager = new CourseManager(config.trainingSet);
-      const lesson = courseManager.getLesson(currentLesson);
       const textGen = new TextGenerator();
+
+      // 获取当前课程的字符集
+      const lesson = courseManager.getLesson(currentLesson);
+
+      // 生成文本
       const text = textGen.generate({
         charSet: lesson.chars,
         mode: config.practiceMode,
-        groupLength: config. groupLength,
+        groupLength: config.groupLength,
         groupSpacing: config.groupSpacing,
         targetDuration: config.duration * 60,
         audioConfig: {
           charSpeed: config.charSpeed,
           effSpeed: config.effSpeed,
           tone: config.tone,
-          volume: 0.8,
+          volume: 1.0,
         },
         usePrefixSuffix: config.usePrefixSuffix,
-      })
+      });
+
+      // 保存生成的文本到 Store
       setGeneratedText(text);
-      console.log("Generated text:", text);
+
+      // 保存配置
+      saveCurrentConfig();
+
+      // 显示成功消息
+      setMessage({
+        type: "success",
+        title: "Training material generated successfully",
+        content: `${config.trainingSet} | ${config.practiceMode} | ${text.length} chars | ${config.duration} min`,
+      });
+      log.info("Training material generated", "GeneratorPage", {
+        trainingSet: config.trainingSet,
+        practiceMode: config.practiceMode,
+        charCount: text.length,
+        duration: config.duration,
+      });
+
+      // 3秒后自动隐藏消息
+      setTimeout(() => setMessage(null), 3000);
     } catch (error) {
-      console.error("Error generating text:", error);
+      // 显示错误消息
+      setMessage({
+        type: "error",
+        title: "Generation failed",
+        content: error instanceof Error ? error.message : 'Unknown error occurred',
+      });
+      log.error("Error generating text", "GeneratorPage", error);
     }
   };
 
@@ -286,6 +369,44 @@ export const GeneratorPage = () => {
     const raw = Number(data. value ??  data. displayValue);
     const clamped = clampNumber(raw, min, max);
     updateConfig({ [field]: clamped });
+  };
+
+  const toneRef = useRef<number>(config.tone);
+  const [isDragging, setIsDragging] = useState(false);
+  const [tempToneValue, setTempToneValue] = useState<number | null>(null);
+  // 处理 tone 变化（带拖拽状态跟踪）
+  const handleToneChangeStart = () => {
+    setIsDragging(true);
+    setTempToneValue(config.tone);
+  };
+
+  const handleToneChange = (value: number) => {
+    // 更新临时值（用于显示当前拖拽位置）
+    toneRef.current = value;
+    
+    // 如果正在拖拽，显示临时值
+    if (isDragging) {
+      const roundedValue = roundToNearest(value, 5);
+      setTempToneValue(roundedValue);
+    } else {
+      // 如果不是拖拽，直接更新配置
+      const roundedValue = roundToNearest(value, 5);
+      updateConfig({ tone: roundedValue });
+    }
+  };
+
+  const handleToneChangeEnd = () => {
+    setIsDragging(false);
+    // 拖拽结束时，应用最终值
+    if (tempToneValue !== null) {
+      const finalValue = clampNumber(
+        roundToNearest(tempToneValue, 5),
+        300,
+        1500
+      );
+      updateConfig({ tone: finalValue });
+    }
+    setTempToneValue(null);
   };
 
   // 渲染
@@ -516,10 +637,16 @@ export const GeneratorPage = () => {
                 className={styles.slider}
                 min={300}
                 max={1500}
-                value={config.tone}
-                onChange={(_, data) => updateConfig({ tone: data.value })}
+                value={isDragging && tempToneValue !== null ? tempToneValue : config.tone}
+                onChange={(_, data) => handleToneChange(data.value)}
+                onPointerDown={handleToneChangeStart}
+                onPointerUp={handleToneChangeEnd}
+                onKeyDown={handleToneChangeStart}
+                onKeyUp={handleToneChangeEnd}
               />
-              <Text className={styles.sliderValueText}>{config.tone} Hz</Text>
+              <Text className={styles.sliderValueText}>
+                {isDragging && tempToneValue !== null ? tempToneValue : config.tone} Hz
+              </Text>
             </div>
           </div>
 
@@ -576,28 +703,61 @@ export const GeneratorPage = () => {
 
       {/* 操作栏 */}
       <div className={styles.actionBar}>
-        <div className={styles.countdownContainer}>
-          <Timer20Regular />
-          <Text className={styles.countdownText}>
-            {isPreviewPlaying ? `${previewCountdown} s` : '20 s'}
-          </Text>
+        <div className={styles.messageContainer}>
+          {message && (
+            <MessageBar
+              className={styles.messageBar}
+              intent={message.type === "success" ? "success" : "error"}
+              icon={
+                message.type === 'success'
+                  ? <CheckmarkCircle20Filled />
+                  : <DismissCircle16Filled />
+              }
+            >
+              <MessageBarBody>
+                <MessageBarTitle>{message.title}</MessageBarTitle>
+                <div>{message.content}</div>
+              </MessageBarBody>
+              <MessageBarActions
+                containerAction={
+                  <Button
+                    appearance="transparent"
+                    icon={<Dismiss20Regular />}
+                    onClick={() => setMessage(null)}
+                  />
+                }
+              />
+            </MessageBar>
+          )}
         </div>
-        {/* 预览按钮 */}
-        <Button
-          className={styles.button}
-          icon={isPreviewPlaying ? <PauseCircle20Regular /> : <PlayCircle20Regular />}
-          onClick={handlePreview}
-        >
-          {isPreviewPlaying ? "Pause" : "Preview"}
-        </Button>
-        {/* 生成按钮 */}
-        <Button
-          className={styles.button}
-          icon={<SoundWaveCircleSparkle20Regular />}
-          onClick={handleGenerate}
-        >
-          Generate
-        </Button>
+        <div className={styles.actionContainer}>
+          <div className={styles.countdownContainer}>
+            <Timer20Regular />
+            <Text className={styles.countdownText}>
+              {isPreviewPlaying ? `${previewCountdown} s` : '20 s'}
+            </Text>
+          </div>
+          {/* 预览按钮 */}
+          <Button
+            className={styles.button}
+            icon={isPreviewPlaying ? <PauseCircle20Regular /> : <PlayCircle20Regular />}
+            onClick={handlePreview}
+          >
+            <Text className={styles.buttonText}>
+              {isPreviewPlaying ? "Pause" : "Preview"}
+            </Text>
+          </Button>
+          {/* 生成按钮 */}
+          <Button
+            className={styles.button}
+            icon={<SoundWaveCircleSparkle20Regular />}
+            onClick={handleGenerate}
+          >
+            <Text className={styles.buttonText}>
+              Generate
+            </Text>
+          </Button>
+        </div>
       </div>
     </div>
   );

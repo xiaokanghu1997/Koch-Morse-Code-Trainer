@@ -13,7 +13,7 @@ export const KOCH_SEQUENCES: Record<TrainingSet, string> = {
    * 来源: Learn CW Online (lcwo.net)
    * 特点: 优先学习常用字母，逐步引入数字和符号
    */
-  'Koch-LCWO': "KMURESNAPTLWI.JZ=FOY,VG5/Q92H38B? 47C1D60X",
+  'Koch-LCWO': "KMURESNAPTLWI.JZ=FOY,VG5/Q92H38B?47C1D60X",
   
   /**
    * Letters: 26个英文字母（按使用频率排序）
@@ -32,7 +32,7 @@ export const KOCH_SEQUENCES: Record<TrainingSet, string> = {
    * Punctuation: 标点符号（按常用程度）
    * 特点: 句号、逗号等优先
    */
-  'Punctuation': ".,? /=+-()@: ;'\"! ",
+  'Punctuation': ".,?/=+-()@:;'\"!",
 } as const;
 
 // ==================== 摩尔斯码映射表 ====================

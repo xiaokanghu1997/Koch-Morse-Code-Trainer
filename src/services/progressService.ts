@@ -1,5 +1,6 @@
 import { Store } from '@tauri-apps/plugin-store';
 import type { ProgressData, LessonProgress, GlobalStats } from '../lib/types';
+import { log } from '../utils/logger';
 
 /**
  * 进度服务类
@@ -40,15 +41,15 @@ export class ProgressService {
 
       if (data) {
         this.cache = data;
-        console.log('Progress data loaded');
+        log.info('Progress data loaded', 'ProgressService');
       } else {
         // 创建默认数据
         this.cache = this.createDefaultData();
         await this.saveData();
-        console.log('Default progress data created');
+        log.info('Default progress data created', 'ProgressService');
       }
     } catch (error) {
-      console.error('Failed to initialize ProgressService:', error);
+      log.error('Failed to initialize ProgressService', 'ProgressService', error);
       this.cache = this.createDefaultData();
     }
   }
@@ -77,7 +78,7 @@ export class ProgressService {
       const data = await this.store.get('progressData');
       return data as ProgressData | null;
     } catch (error) {
-      console.error('Failed to load data:', error);
+      log.error('Failed to load data', 'ProgressService', error);
       return null;
     }
   }
@@ -92,7 +93,7 @@ export class ProgressService {
       await this.store.set('progressData', this.cache);
       await this.store.save();
     } catch (error) {
-      console.error('Failed to save data:', error);
+      log.error('Failed to save data', 'ProgressService', error);
       throw error;
     }
   }
@@ -118,7 +119,7 @@ export class ProgressService {
     this.cache! .currentLesson = lessonNum;
     await this.saveData();
 
-    console.log(`Current lesson set to ${lessonNum}`);
+    log.info('Current lesson updated', 'ProgressService', { lessonNum });
   }
 
   // ==================== 课程进度管理 ====================
@@ -210,7 +211,10 @@ export class ProgressService {
 
     await this.saveData();
 
-    console.log(`Accuracy saved: Lesson ${lessonNum}, ${(accuracy * 100).toFixed(1)}%`);
+    log.info('Accuracy saved', 'ProgressService', { 
+      lessonNum, 
+      accuracy: (accuracy * 100).toFixed(1) + '%'
+    });
   }
 
   /**
@@ -308,7 +312,7 @@ export class ProgressService {
     this.cache!.stats.characterErrors = {};
     await this.saveData();
 
-    console.log('Character errors cleared');
+    log.info('Character errors cleared', 'ProgressService');
   }
 
   // ==================== 练习时长管理 ====================
@@ -348,7 +352,7 @@ export class ProgressService {
     this.cache = this.createDefaultData();
     await this.saveData();
 
-    console.log('Progress reset');
+    log.info('Progress reset', 'ProgressService');
   }
 
   /**
@@ -375,7 +379,7 @@ export class ProgressService {
     this.cache = data;
     await this.saveData();
 
-    console.log('Data imported');
+    log.info('Data imported', 'ProgressService');
   }
 
   /**
@@ -476,9 +480,9 @@ export class ProgressService {
     if (!this.store) return;
     try {
       await this.store.save();
-      console.log('Progress data saved');
+      log.info('Progress data saved on dispose', 'ProgressService');
     } catch (error) {
-      console.error('Failed to save on dispose:', error);
+      log.error('Failed to save on dispose', 'ProgressService', error);
     }
   }
 }

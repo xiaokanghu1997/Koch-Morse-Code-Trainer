@@ -4,6 +4,7 @@ import { TextGenerator } from '../services/textGenerator';
 import { PreviewGenerator } from '../services/previewGenerator';
 import { PREVIEW_CONFIG } from '../lib/constants';
 import type { GeneratorConfig } from '../lib/types';
+import { log } from '../utils/logger';
 
 /**
  * useMorseGenerator Hook返回值类型
@@ -149,7 +150,10 @@ export const useMorseGenerator = (): UseMorseGeneratorReturn => {
       volume: config.volume,
     });
 
-    console.log('Preview text:', previewText);
+    log.debug('Preview text generated', 'MorseGenerator', { 
+      textLength: previewText.length,
+      text: previewText. substring(0, 50) + '...',
+    });
 
     // 播放
     playerRef.current.play(previewText, {
@@ -186,9 +190,9 @@ export const useMorseGenerator = (): UseMorseGeneratorReturn => {
   const saveConfig = useCallback((config: GeneratorConfig) => {
     try {
       localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(config));
-      console.log('Config saved');
+      log.info('Configuration saved', 'MorseGenerator');
     } catch (error) {
-      console.error('Failed to save config:', error);
+      log.error('Failed to save configuration', 'MorseGenerator', error);
     }
   }, []);
 
@@ -200,11 +204,11 @@ export const useMorseGenerator = (): UseMorseGeneratorReturn => {
       const saved = localStorage.getItem(CONFIG_STORAGE_KEY);
       if (saved) {
         const config = JSON.parse(saved);
-        console.log('Config loaded');
+        log.info('Configuration loaded', 'MorseGenerator', config);
         return config;
       }
     } catch (error) {
-      console.error('Failed to load config:', error);
+      log.error('Failed to load configuration', 'MorseGenerator', error);
     }
     return null;
   }, []);

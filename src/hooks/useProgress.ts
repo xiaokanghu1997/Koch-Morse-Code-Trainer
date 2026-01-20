@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ProgressService } from '../services/progressService';
 import type { LessonProgress, GlobalStats } from '../lib/types';
+import { log } from '../utils/logger';
 
 /**
  * useProgress Hook返回值类型
@@ -91,10 +92,10 @@ export const useProgress = (): UseProgressReturn => {
         const stats = await progressService.getGlobalStats();
         setGlobalStats(stats);
 
-        console.log('✅ Progress data loaded');
-      } catch (err) {
-        console.error('Failed to initialize progress:', err);
-        setError(err instanceof Error ? err.message : 'Unknown error');
+        log.info('Progress data loaded', 'Progress');
+      } catch (error) {
+        log.error('Failed to initialize progress', 'Progress', error);
+        setError(error instanceof Error ? error.message : 'Unknown error');
       } finally {
         setIsLoading(false);
       }
@@ -117,10 +118,10 @@ export const useProgress = (): UseProgressReturn => {
     try {
       await progressService.saveCurrentLesson(num);
       setCurrentLessonState(num);
-    } catch (err) {
-      console.error('Failed to set current lesson:', err);
-      setError(err instanceof Error ? err.message : 'Failed to set lesson');
-      throw err;
+    } catch (error) {
+      log.error('Failed to set current lesson', 'Progress', error);
+      setError(error instanceof Error ? error.message : 'Failed to set lesson');
+      throw error;
     }
   }, [progressService]);
 
@@ -132,9 +133,9 @@ export const useProgress = (): UseProgressReturn => {
   const getLessonProgress = useCallback(async (lessonNum: number) => {
     try {
       return await progressService.getLessonProgress(lessonNum);
-    } catch (err) {
-      console.error('Failed to get lesson progress:', err);
-      throw err;
+    } catch (error) {
+      log.error('Failed to get lesson progress', 'Progress', error);
+      throw error;
     }
   }, [progressService]);
 
@@ -144,9 +145,9 @@ export const useProgress = (): UseProgressReturn => {
   const incrementPracticeCount = useCallback(async (lessonNum: number) => {
     try {
       await progressService.incrementPracticeCount(lessonNum);
-    } catch (err) {
-      console.error('Failed to increment practice count:', err);
-      throw err;
+    } catch (error) {
+      log.error('Failed to increment practice count', 'Progress', error);
+      throw error;
     }
   }, [progressService]);
 
@@ -157,9 +158,9 @@ export const useProgress = (): UseProgressReturn => {
     async (lessonNum: number, accuracy: number) => {
       try {
         await progressService.saveAccuracy(lessonNum, accuracy);
-      } catch (err) {
-        console.error('Failed to save accuracy:', err);
-        throw err;
+      } catch (error) {
+        log.error('Failed to save accuracy', 'Progress', error);
+        throw error;
       }
     },
     [progressService]
@@ -172,9 +173,9 @@ export const useProgress = (): UseProgressReturn => {
     async (lessonNum: number) => {
       try {
         return await progressService.getAccuracyHistory(lessonNum);
-      } catch (err) {
-        console.error('Failed to get accuracy history:', err);
-        throw err;
+      } catch (error) {
+        log.error('Failed to get accuracy history', 'Progress', error);
+        throw error;
       }
     },
     [progressService]
@@ -191,9 +192,9 @@ export const useProgress = (): UseProgressReturn => {
         await progressService.recordCharacterError(char);
         // 刷新薄弱字符列表
         await refreshWeakCharacters();
-      } catch (err) {
-        console.error('Failed to record character error:', err);
-        throw err;
+      } catch (error) {
+        log.error('Failed to record character error', 'Progress', error);
+        throw error;
       }
     },
     [progressService]
@@ -208,9 +209,9 @@ export const useProgress = (): UseProgressReturn => {
         await progressService.recordCharacterErrors(chars);
         // 刷新薄弱字符列表
         await refreshWeakCharacters();
-      } catch (err) {
-        console.error('Failed to record character errors:', err);
-        throw err;
+      } catch (error) {
+        log.error('Failed to record character errors', 'Progress', error);
+        throw error;
       }
     },
     [progressService]
@@ -223,8 +224,8 @@ export const useProgress = (): UseProgressReturn => {
     try {
       const weak = await progressService.getWeakCharacters(10);
       setWeakCharacters(weak);
-    } catch (err) {
-      console.error('Failed to refresh weak characters:', err);
+    } catch (error) {
+      log.error('Failed to refresh weak characters', 'Progress', error);
     }
   }, [progressService]);
 
@@ -240,8 +241,8 @@ export const useProgress = (): UseProgressReturn => {
 
       const stats = await progressService.getGlobalStats();
       setGlobalStats(stats);
-    } catch (err) {
-      console.error('Failed to refresh global stats:', err);
+    } catch (error) {
+      log.error('Failed to refresh global stats', 'Progress', error);
     }
   }, [progressService]);
 
@@ -261,11 +262,11 @@ export const useProgress = (): UseProgressReturn => {
       setTotalPracticeTime(0);
       setGlobalStats(null);
       
-      console.log('✅ Progress reset');
-    } catch (err) {
-      console.error('Failed to reset progress:', err);
-      setError(err instanceof Error ? err.message : 'Failed to reset');
-      throw err;
+      log.info('Progress reset successfully', 'Progress');
+    } catch (error) {
+      log.error('Failed to reset progress', 'Progress', error);
+      setError(error instanceof Error ? error.message : 'Failed to reset');
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -277,9 +278,9 @@ export const useProgress = (): UseProgressReturn => {
   const exportData = useCallback(async () => {
     try {
       return await progressService.exportData();
-    } catch (err) {
-      console.error('Failed to export data:', err);
-      throw err;
+    } catch (error) {
+      log.error('Failed to export data', 'Progress', error);
+      throw error;
     }
   }, [progressService]);
 
@@ -299,11 +300,11 @@ export const useProgress = (): UseProgressReturn => {
         await refreshWeakCharacters();
         await refreshGlobalStats();
         
-        console.log('✅ Data imported');
-      } catch (err) {
-        console.error('Failed to import data:', err);
-        setError(err instanceof Error ? err.message : 'Failed to import');
-        throw err;
+        log.info('Data imported successfully', 'Progress');
+      } catch (error) {
+        log.error('Failed to import data', 'Progress', error);
+        setError(error instanceof Error ? error.message : 'Failed to import');
+        throw error;
       } finally {
         setIsLoading(false);
       }

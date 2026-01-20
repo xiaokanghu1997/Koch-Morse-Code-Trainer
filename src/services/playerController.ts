@@ -1,6 +1,7 @@
 import { AudioGenerator } from '../lib';
 import { TextGenerator } from './textGenerator';
 import type { AudioConfig, PlaybackState, AudioEvent } from '../lib/types';
+import { log } from '../utils/logger';
 
 /**
  * 字符播放回调函数类型
@@ -81,7 +82,7 @@ export class PlayerController {
   initialize(): void {
     if (!this.audioGenerator.isInitialized()) {
       this.audioGenerator.initialize();
-      console.log('PlayerController initialized');
+      log.info('PlayerController initialized', 'PlayerController');
     }
   }
 
@@ -146,7 +147,10 @@ export class PlayerController {
     // 11.启动进度追踪
     this.startProgressTracking();
 
-    console.log(`Playing: "${text}" (${totalDuration.toFixed(1)}s)`);
+    log.info('Playing text', 'PlayerController', {
+       textLength: text.length,
+       duration: totalDuration.toFixed(1), 
+    });
   }
 
   /**
@@ -176,7 +180,7 @@ export class PlayerController {
    */
   pause(): void {
     if (this.currentState.status !== 'playing') {
-      console.warn('Cannot pause: not playing');
+      log.warn('Cannot pause: not playing', 'PlayerController');
       return;
     }
 
@@ -195,7 +199,9 @@ export class PlayerController {
       pausedAt,
     });
 
-    console.log(`Paused at ${pausedAt.toFixed(1)}s`);
+    log.info('Playback paused', 'PlayerController', { 
+      pausedAt: pausedAt.toFixed(1) 
+    });
   }
 
   /**
@@ -205,7 +211,7 @@ export class PlayerController {
    */
   resume(): void {
     if (this.currentState.status !== 'paused') {
-      console.warn('Cannot resume: not paused');
+      log.warn('Cannot resume: not paused', 'PlayerController');
       return;
     }
 
@@ -227,7 +233,9 @@ export class PlayerController {
     // 5.重启进度追踪
     this.startProgressTracking();
 
-    console.log(`Resumed from ${this.currentState.pausedAt.toFixed(1)}s`);
+    log.info('Playback resumed', 'PlayerController', { 
+      resumedFrom: this.currentState.pausedAt.toFixed(1) 
+    });
   }
 
   /**
@@ -253,7 +261,7 @@ export class PlayerController {
       text: '',
     });
 
-    console.log('Stopped');
+    log.info('Playback stopped', 'PlayerController');
   }
 
   /**
@@ -264,11 +272,39 @@ export class PlayerController {
   replay(): void {
     const { text } = this.currentState;
     if (! text || ! this.currentConfig) {
-      console.warn('Cannot replay: no text to play');
+      log.warn('Cannot replay: no text to play', 'PlayerController');
       return;
     }
 
     this.play(text, this.currentConfig);
+  }
+
+  /**
+   * 设置播放进度
+   * 
+   * @param milliseconds - 目标位置（毫秒）
+   */
+  setPosition(milliseconds: number): void {
+    if (! this.audioGenerator || ! this.currentState.text) {
+      return;
+    }
+
+    const targetSeconds = milliseconds / 1000;
+
+    // 停止当前播放
+    const wasPlaying = this.currentState.status === 'playing';
+    if (wasPlaying) {
+      this.pause();
+    }
+
+    // 更新状态
+    this.currentState.currentTime = targetSeconds;
+    this.currentState.pausedAt = targetSeconds;
+
+    // 如果之前在播放，继续播放
+    if (wasPlaying) {
+      this.resume();
+    }
   }
 
   // ==================== 回调调度 ====================
@@ -307,7 +343,9 @@ export class PlayerController {
       }
     }
 
-    console.log(`Scheduled ${this.scheduledTimers.length} character callbacks`);
+    log.debug('Character callbacks scheduled', 'PlayerController', {
+      count: this.scheduledTimers.length,
+    });
   }
 
   /**
@@ -372,7 +410,10 @@ export class PlayerController {
         status: 'idle',
       });
 
-      console.log(`Playback finished: ${duration.toFixed(1)}s, ${charCount} chars`);
+      log.info('Playback finished', 'PlayerController', { 
+        duration: duration.toFixed(1), 
+        charCount
+      });
     }, duration * 1000);
   }
 
@@ -595,6 +636,6 @@ export class PlayerController {
     // 销毁音频生成器
     this.audioGenerator.dispose();
 
-    console.log('PlayerController disposed');
+    log.info('PlayerController disposed', 'PlayerController');
   }
 }

@@ -1,10 +1,13 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use tauri_plugin_log::log;
 #[cfg(target_os = "windows")]
 use windows::Win32::Foundation::*;
 #[cfg(target_os = "windows")]
 use windows::Win32::UI::WindowsAndMessaging::*;
+#[cfg(target_os = "windows")]
+use tauri_plugin_log::{Target, TargetKind};
 
 #[tauri::command]
 fn set_window_opacity(window: tauri::Window, opacity: f64) -> Result<(), String> {
@@ -27,6 +30,14 @@ fn set_window_opacity(window: tauri::Window, opacity: f64) -> Result<(), String>
 
 fn main() {
     tauri::Builder::default()
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .targets([
+                    Target::new(TargetKind::LogDir { file_name: None }),
+                ])
+                .level(log::LevelFilter::Info)
+                .build(),
+        )
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![set_window_opacity])
         .run(tauri::generate_context!())

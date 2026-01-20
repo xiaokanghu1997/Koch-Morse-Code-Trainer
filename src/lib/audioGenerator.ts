@@ -2,6 +2,7 @@ import { TIMING_CONSTANTS } from './constants';
 import { MorseEncoder } from './encoder';
 import { TimingCalculator } from './timing';
 import type { AudioConfig, AudioEvent } from './types';
+import { log } from '../utils/logger';
 
 /**
  * 音频生成器类
@@ -76,10 +77,10 @@ export class AudioGenerator {
       this.oscillator.start();
       
       this.initialized = true;
-      console.log('AudioGenerator initialized successfully');
+      log.info('AudioGenerator initialized successfully', 'AudioGenerator');
       
     } catch (error) {
-      console.error('Failed to initialize AudioGenerator:', error);
+      log.error('Failed to initialize AudioGenerator:', 'AudioGenerator', error);
       throw new Error('Web Audio API not supported in this browser');
     }
   }
@@ -87,7 +88,7 @@ export class AudioGenerator {
   // ==================== 事件生成方法 ====================
 
   /**
-   * 生成完整的音频事件序列
+   * 生成完整的音频事件序列（使用平滑的音量过渡避免杂音）
    * 
    * 流程:
    * 1.解析文本为摩尔斯码
@@ -108,6 +109,8 @@ export class AudioGenerator {
     const events: AudioEvent[] = [];
     let currentTime = 0;
     let charIndex = 0;
+
+    const fadeDuration = TIMING_CONSTANTS.FADE_DURATION;
     
     // 3.遍历文本的每个字符
     for (let i = 0; i < text.length; i++) {
@@ -153,28 +156,31 @@ export class AudioGenerator {
           type: 'gain',
           value: 0,
         });
-        
+
         events.push({
-          time: currentTime + TIMING_CONSTANTS.FADE_DURATION,
+          time: currentTime + fadeDuration,
           type: 'gain',
           value: config.volume,
         });
         
-        // 元素持续
-        currentTime += elementDuration;
+        // 保持音量
+        const fadeOutStart = currentTime + elementDuration - fadeDuration;
+        if (elementDuration > 2 * fadeDuration) {
+          events.push({
+            time: fadeOutStart,
+            type: 'gain',
+            value: config.volume,
+          });
+        }
         
         // 添加淡出事件
         events.push({
-          time: currentTime - TIMING_CONSTANTS.FADE_DURATION,
-          type: 'gain',
-          value: config.volume,
-        });
-        
-        events.push({
-          time: currentTime,
+          time: currentTime + elementDuration,
           type: 'gain',
           value: 0,
         });
+        
+        currentTime += elementDuration;
         
         // 元素间隔（最后一个元素后不加）
         if (j < elements.length - 1) {
@@ -222,14 +228,22 @@ export class AudioGenerator {
     
     // 2.记录播放开始时间
     this.playStartTime = this.audioContext.currentTime;
+
+    // 3.设置初始值
+    this.gainNode.gain.setValueAtTime(0, this.playStartTime);
     
-    // 3.调度所有事件
-    for (const event of events) {
+    // 4.调度所有事件
+    for (let i = 0; i < events.length; i++) {
+      const event = events[i];
       const scheduleTime = this.playStartTime + event.time;
       
       if (event.type === 'gain') {
-        // 音量变化事件
-        this.gainNode.gain.setValueAtTime(event.value, scheduleTime);
+        // 使用linearRampToValueAtTime实现平滑过渡
+        if (i === 0) {
+          this.gainNode.gain.setValueAtTime(event.value, scheduleTime);
+        } else {
+          this.gainNode.gain.linearRampToValueAtTime(event.value, scheduleTime);
+        }
       } else if (event.type === 'frequency') {
         // 频率变化事件（如果需要动态改变音调）
         if (this.oscillator) {
@@ -240,7 +254,7 @@ export class AudioGenerator {
     
     // 4.返回总时长
     const lastEvent = events[events.length - 1];
-    return lastEvent ?  lastEvent.time : 0;
+    return lastEvent ? lastEvent.time : 0;
   }
 
   // ==================== 播放控制方法 ====================
@@ -282,7 +296,7 @@ export class AudioGenerator {
       // 立即设置为静音
       this.gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
     } catch (error) {
-      console.warn('Failed to cancel scheduled values:', error);
+      log.warn('Failed to cancel scheduled values:', 'AudioGenerator', error);
     }
   }
 
@@ -414,10 +428,9 @@ export class AudioGenerator {
       }
 
       this.initialized = false;
-      console.log('AudioGenerator disposed');
-      
+      log.info('AudioGenerator disposed', 'AudioGenerator');
     } catch (error) {
-      console.error('Error disposing AudioGenerator:', error);
+      log.error('Error disposing AudioGenerator:', 'AudioGenerator', error);
     }
   }
 

@@ -55,7 +55,9 @@ const useStyles = makeStyles({
   dropdown: {
     minWidth: "120px",
     maxWidth: "120px",
+    height: "32px",
     paddingBottom: "1.5px",
+    transform: "translateY(1.5px)",
     border: "none",
     boxShadow: tokens.shadow2,
     "::after": {
@@ -75,6 +77,7 @@ const useStyles = makeStyles({
     backgroundColor: tokens.colorNeutralBackground5,
   },
   dropdownOption: {
+    height: "32px",
     position: "relative",
     paddingLeft: "12px",
     paddingTop: "4px",
@@ -122,6 +125,7 @@ const useStyles = makeStyles({
     marginRight: "4px",
     minWidth: "35px",
     textAlign: "right",
+    paddingBottom: "1.5px",
     flexShrink: 0,
   },
   switch: {
@@ -133,6 +137,7 @@ const useStyles = makeStyles({
     marginRight: "4px",
     minWidth: "20px",
     textAlign: "right",
+    paddingBottom: "1.5px",
     flexShrink: 0,
   },
 });
