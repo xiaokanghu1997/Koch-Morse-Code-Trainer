@@ -31,8 +31,6 @@ const useStyles = makeStyles({
     display: "flex",
     flexDirection: "column",
     height: "100vh",
-    borderRadius: "10px",
-    border: `1.5px solid ${tokens.colorNeutralStroke1}`
   },
   mainContent: {
     display: "flex",

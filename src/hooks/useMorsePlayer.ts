@@ -1,263 +1,166 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { PlayerController } from '../services/playerController';
-import type { AudioConfig, PlaybackState } from '../lib/types';
-import { log } from '../utils/logger';
+import { useState, useRef, useEffect, useCallback } from "react";
+import { PlayerController } from "../services/playerController";
+import { useSettingsStore } from "../stores/settingsStore";
+import type { GeneratorConfig, PlaybackState } from "../lib/types";
+import { log } from "../utils/logger";
 
-/**
- * 字符播放回调函数类型
- */
-type CharacterPlayCallback = (char: string, index: number) => void;
-
-/**
- * 播放完成回调函数类型
- */
-type PlaybackFinishedCallback = () => void;
-
-/**
- * useMorsePlayer Hook返回值类型
- */
-interface UseMorsePlayerReturn {
-  // 播放控制
-  playText: (text: string, config: AudioConfig) => Promise<void>;
-  playCharacter: (char: string, config: AudioConfig, repeat?: number) => Promise<void>;
-  pause: () => void;
-  resume: () => void;
-  stop: () => void;
-  replay: () => void;
-  setPosition: (milliseconds: number) => void;
-  
-  // 状态
-  state: PlaybackState;
+export interface UseMorsePlayerReturn {
+  /** 播放状态 */
+  playbackState: PlaybackState;
+  /** 是否正在播放 */
   isPlaying: boolean;
+  /** 是否暂停 */
   isPaused: boolean;
+  /** 是否空闲 */
   isIdle: boolean;
-  remainingTime: number;
-  
-  // 事件监听
-  onCharacterPlay: (callback: CharacterPlayCallback) => void;
-  onPlaybackFinished: (callback: PlaybackFinishedCallback) => void;
-  
-  // 参数设置
-  setFrequency: (freq: number) => void;
-  setVolume: (volume: number) => void;
-  
-  // 波形数据（可选）
-  getAnalyserNode: () => AnalyserNode | null;
+  /** 预加载 */
+  preload: (text: string, config: GeneratorConfig) => void;
+  /** 播放 */
+  play: (text: string, config: GeneratorConfig) => Promise<void>;
+  /** 暂停 */
+  pause: () => void;
+  /** 恢复 */
+  resume: () => void;
+  /** 停止 */
+  stop: () => void;
+  /** 重播 */
+  replay: () => Promise<void>;
+  /** 跳转 */
+  seek: (time: number) => void;
 }
 
 /**
- * 摩尔斯播放器Hook
+ * 摩尔斯播放器 Hook
+ * 
+ * 功能：
+ * - 播放/暂停/停止/重播
+ * - 进度控制（seek）
+ * - 自动同步音量
  */
 export const useMorsePlayer = (): UseMorsePlayerReturn => {
-  // ==================== 状态管理 ====================
-  
-  /** 播放状态 */
-  const [state, setState] = useState<PlaybackState>({
-    status: 'idle',
+  const [playbackState, setPlaybackState] = useState<PlaybackState>({
+    status: "idle",
     currentTime: 0,
     totalDuration: 0,
     pausedAt: 0,
-    currentCharIndex: 0,
-    currentChar: null,
-    text: '',
   });
-  
-  /** 剩余时间 */
-  const [remainingTime, setRemainingTime] = useState(0);
-  
-  // ==================== Refs ====================
-  
-  /** 播放控制器实例 */
+
   const playerRef = useRef<PlayerController | null>(null);
-  
-  /** 字符播放回调列表 */
-  const charCallbacksRef = useRef<CharacterPlayCallback[]>([]);
-  
-  /** 播放完成回调列表 */
-  const finishCallbacksRef = useRef<PlaybackFinishedCallback[]>([]);
-  
-  // ==================== 初始化 ====================
-  
+  const { volume } = useSettingsStore();
+
+  // 初始化播放器
+
   useEffect(() => {
-    // 创建播放控制器
     const player = new PlayerController();
-    player.initialize();
-    playerRef.current = player;
-
+    
     // 监听状态变化
-    const unsubscribeState = player.onStateChange((newState) => {
-      setState(newState);
-      setRemainingTime(player.getRemainingTime());
+    player.onStateChange((state) => {
+      setPlaybackState(state);
     });
 
-    // 监听字符播放
-    const unsubscribeChar = player.onCharacterPlay((char, index) => {
-      charCallbacksRef.current.forEach(callback => callback(char, index));
-    });
-
-    // 监听播放完成
-    const unsubscribeFinish = player.onPlaybackFinished(() => {
-      finishCallbacksRef.current.forEach(callback => callback());
-    });
-
-    // 清理
+    // 设置音量
+    player.setVolume(volume / 100);
+    
+    playerRef.current = player;
+    
     return () => {
-      unsubscribeState();
-      unsubscribeChar();
-      unsubscribeFinish();
       player.dispose();
     };
   }, []);
 
-  // ==================== 播放控制方法 ====================
-  
-  /**
-   * 播放文本
-   */
-  const playText = useCallback(async (text: string, config: AudioConfig) => {
-    if (!playerRef.current) return;
-    
+  // 音量同步
+
+  useEffect(() => {
+    if (playerRef.current) {
+      playerRef.current.setVolume(volume / 100);
+    }
+  }, [volume]);
+
+  // 播放控制方法
+
+  /** 预加载 */ 
+  const preload = useCallback((text: string, config: GeneratorConfig) => {
+    if (!playerRef.current) {
+      log.warn("PlayerController not initialized", "useMorsePlayer");
+      return;
+    }
+
+    playerRef.current.preload(text, {
+      charSpeed: config.charSpeed,
+      effSpeed: config.effSpeed,
+      tone: config.tone,
+    });
+  }, []);
+
+  /** 播放 */
+  const play = useCallback(async (text: string, config: GeneratorConfig) => {
+    if (!playerRef.current) {
+      log.warn("PlayerController not initialized", "useMorsePlayer");
+      return;
+    }
+
     try {
-      await playerRef.current.play(text, config);
+      await playerRef.current.play(text, {
+        charSpeed: config.charSpeed,
+        effSpeed: config.effSpeed,
+        tone: config.tone,
+      });
+      log.info("Playback started", "useMorsePlayer");
     } catch (error) {
-      log.error('Failed to play text', 'MorsePlayer', error);
-      throw error;
+      log.error("Failed to start playback", "useMorsePlayer", error);
+      return;
     }
   }, []);
 
-  /**
-   * 播放单个字符
-   */
-  const playCharacter = useCallback(
-    async (char: string, config: AudioConfig, repeat: number = 1) => {
-      if (!playerRef.current) return;
-      
-      try {
-        await playerRef.current.playCharacter(char, config, repeat);
-      } catch (error) {
-        log.error('Failed to play character', 'MorsePlayer', error);
-        throw error;
-      }
-    },
-    []
-  );
-
-  /**
-   * 暂停
-   */
+  /** 暂停 */
   const pause = useCallback(() => {
-    if (!playerRef.current) return;
-    playerRef.current.pause();
+    playerRef.current?.pause();
   }, []);
 
-  /**
-   * 恢复
-   */
+  /** 恢复 */
   const resume = useCallback(() => {
-    if (!playerRef.current) return;
-    playerRef.current.resume();
+    playerRef.current?.resume();
   }, []);
 
-  /**
-   * 停止
-   */
+  /** 停止 */
   const stop = useCallback(() => {
-    if (!playerRef.current) return;
-    playerRef.current.stop();
+    playerRef.current?.stop();
   }, []);
 
-  /**
-   * 重播
-   */
-  const replay = useCallback(() => {
-    if (!playerRef.current) return;
-    playerRef.current.replay();
+  /** 重播 */
+  const replay = useCallback(async () => {
+    if (!playerRef.current) {
+      log.warn("PlayerController not initialized", "useMorsePlayer");
+      return;
+    }
+
+    try {
+      await playerRef.current.replay();
+      log.info("Replay started", "useMorsePlayer");
+    } catch (error) {
+      log.error("Failed to replay", "useMorsePlayer", error);
+      return;
+    }
   }, []);
 
-  /**
-   * 设置播放位置
-   */
-  const setPosition = useCallback((milliseconds: number) => {
-    if (!playerRef.current) return;
-    playerRef.current.setPosition(milliseconds);
+  /** 跳转到指定位置 */
+  const seek = useCallback((time: number) => {
+    playerRef.current?.seek(time);
   }, []);
 
-  // ==================== 事件监听方法 ====================
-  
-  /**
-   * 注册字符播放回调
-   */
-  const onCharacterPlay = useCallback((callback: CharacterPlayCallback) => {
-    charCallbacksRef.current.push(callback);
-  }, []);
+  // 返回接口
 
-  /**
-   * 注册播放完成回调
-   */
-  const onPlaybackFinished = useCallback((callback: PlaybackFinishedCallback) => {
-    finishCallbacksRef.current.push(callback);
-  }, []);
-
-  // ==================== 参数设置方法 ====================
-  
-  /**
-   * 设置音调频率
-   */
-  const setFrequency = useCallback((freq: number) => {
-    if (!playerRef.current) return;
-    playerRef.current.setFrequency(freq);
-  }, []);
-
-  /**
-   * 设置音量
-   */
-  const setVolume = useCallback((volume: number) => {
-    if (!playerRef.current) return;
-    playerRef.current.setVolume(volume);
-  }, []);
-
-  /**
-   * 获取 AnalyserNode（用于波形可视化）
-   */
-  const getAnalyserNode = useCallback((): AnalyserNode | null => {
-    if (!playerRef.current) return null;
-    return playerRef.current.getAnalyserNode();
-  }, []);
-
-  // ==================== 计算属性 ====================
-  
-  const isPlaying = state.status === 'playing';
-  const isPaused = state.status === 'paused';
-  const isIdle = state.status === 'idle';
-
-  // ==================== 返回值 ====================
-  
   return {
-    // 播放控制
-    playText,
-    playCharacter,
+    playbackState,
+    isPlaying: playbackState.status === "playing",
+    isPaused: playbackState.status === "paused",
+    isIdle: playbackState.status === "idle",
+    preload,
+    play,
     pause,
     resume,
     stop,
     replay,
-    setPosition,
-    
-    // 状态
-    state,
-    isPlaying,
-    isPaused,
-    isIdle,
-    remainingTime,
-    
-    // 事件监听
-    onCharacterPlay,
-    onPlaybackFinished,
-    
-    // 参数设置
-    setFrequency,
-    setVolume,
-    
-    // 波形数据
-    getAnalyserNode,
+    seek,
   };
 };

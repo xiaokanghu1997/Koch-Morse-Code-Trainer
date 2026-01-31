@@ -1,7 +1,7 @@
-import { MorseEncoder, TimingCalculator } from '../lib';
-import { PREFIX_SUFFIX } from '../lib/constants';
-import type { TextGeneratorOptions, PracticeMode } from '../lib/types';
-import { log } from '../utils/logger';
+import { MorseEncoder } from "../lib/encoder";
+import { PREFIX_SUFFIX } from "../lib/constants";
+import type { TextGeneratorOptions, PracticeModes } from "../lib/types";
+import { log } from "../utils/logger";
 
 /**
  * 文本生成器类
@@ -12,55 +12,50 @@ export class TextGenerator {
    * 
    * @param options - 生成选项
    * @returns 格式化的文本
-   * 
-   * @example
-   * generate({
-   *   charSet: 'KMUR',
-   *   mode: 'Gradual',
-   *   groupLength: 5,
-   *   groupSpacing: 1,
-   *   targetDuration: 60,
-   *   audioConfig: { charSpeed: 20, effSpeed: 10, tone: 600, volume: 1 }
-   * })
-   * // => "KMURK RMUKU URKMR ..."
    */
   generate(options: TextGeneratorOptions): string {
     const {
       charSet,
       mode,
       groupLength,
-      groupSpacing,
-      targetDuration,
-      audioConfig,
-      usePrefixSuffix = false,
+      randomGroupLength,
+      groupSpace,
+      groupCount,
+      usePrefixSuffix,
     } = options;
 
-    // 1.估算需要的字符数量
-    const timingCalc = new TimingCalculator(audioConfig);
-    const estimatedCharCount = timingCalc.estimateCharCountForDuration(
-      targetDuration,
-      groupLength
-    );
-
-    // 2.计算字符权重
+    // 计算字符权重
     const weights = this.calculateWeights(charSet, mode);
 
-    // 3.生成字符序列
-    const chars = this.generateCharacters(charSet, estimatedCharCount, weights);
+    // 生成文本
+    let text: string;
+    if (randomGroupLength) {
+      // 随机组长度
+      text = this.generateWithRandomGroups(
+        charSet,
+        groupCount,
+        groupSpace,
+        weights
+      );
+    } else {
+      // 固定组长度
+      text = this.generateWithFixedGroups(
+        charSet,
+        groupLength,
+        groupCount,
+        groupSpace,
+        weights
+      );
+    }
 
-    // 4.格式化为分组文本
-    let text = this.formatWithGroups(chars, groupLength, groupSpacing);
-
-    // 5.添加前后缀（如果需要）
+    // 添加前后缀（如果需要）
     if (usePrefixSuffix) {
       text = this.addPrefixSuffix(text);
     }
 
-    // 6.验证并调整时长（可选：迭代优化）
-    const actualDuration = timingCalc.calculateTextDuration(text);
-    log.debug('Text generated', 'TextGenerator', { 
-      charCount: chars.length, 
-      duration: actualDuration.toFixed(1) 
+    log.debug("Text generated", "TextGenerator", { 
+      length: text.length,
+      groups: groupCount,
     });
 
     return text;
@@ -75,24 +70,24 @@ export class TextGenerator {
    * @param mode - 练习模式
    * @returns 权重数组（与字符顺序对应）
    */
-  private calculateWeights(charSet: string, mode: PracticeMode): number[] {
-    const chars = charSet.split('');
+  private calculateWeights(charSet: string, mode: PracticeModes): number[] {
+    const chars = charSet.split("");
     const n = chars.length;
 
     switch (mode) {
-      case 'Uniform':
+      case "Uniform":
         // 均匀分布：所有字符权重相同
         return new Array(n).fill(1.0);
 
-      case 'New focus':
+      case "New focus":
         // 新字符重点：最后一个字符2倍权重
         return [...new Array(n - 1).fill(1.0), 2.0];
 
-      case 'Gradual':
+      case "Gradual":
         // 渐进式：最后一个字符1.5倍权重
         return [...new Array(n - 1).fill(1.0), 1.5];
 
-      case 'Weighted':
+      case "Weighted":
         // 难度加权：根据摩尔斯码长度
         return MorseEncoder.getDifficultyWeights(charSet);
 
@@ -101,10 +96,10 @@ export class TextGenerator {
     }
   }
 
-  // ==================== 字符生成 ====================
+  // ==================== 文本字符生成 ====================
 
   /**
-   * 生成随机字符序列
+   * 生成字符序列
    * 
    * @param charSet - 字符集
    * @param count - 字符数量
@@ -116,7 +111,7 @@ export class TextGenerator {
     count: number,
     weights: number[]
   ): string[] {
-    const chars = charSet.split('');
+    const chars = charSet.split("");
     const result: string[] = [];
 
     // 计算累积权重（用于加权随机选择）
@@ -147,58 +142,99 @@ export class TextGenerator {
     return result;
   }
 
-  // ==================== 格式化方法 ====================
-
   /**
-   * 格式化为分组文本
+   * 生成固定长度的字符序列
    * 
-   * @param chars - 字符数组
+   * @param charSet - 字符集
    * @param groupLength - 每组长度
-   * @param groupSpacing - 组间间隔（dits）
-   * @param timingCalc - 时序计算器
+   * @param groupCount - 组数
+   * @param groupSpace - 组间间隔
+   * @param weights - 字符权重
    * @returns 格式化后的文本
-   * 
-   * @example
-   * formatWithGroups(['K','M','U','R','K'], 2, 1, calc)
-   * // => "KM UR K"
    */
-  private formatWithGroups(
-    chars: string[],
+  private generateWithFixedGroups(
+    charSet: string,
     groupLength: number,
-    groupSpacing: number,
+    groupCount: number,
+    groupSpace: number,
+    weights: number[]
   ): string {
-    const groups: string[] = [];
+
+    // 生成所需总字符数
+    const totalCharCount = groupLength * groupCount;
+    // 生成字符序列
+    const chars = this.generateCharacters(charSet, totalCharCount, weights);
 
     // 按groupLength分组
+    const groups: string[] = [];
     for (let i = 0; i < chars.length; i += groupLength) {
-      const group = chars.slice(i, i + groupLength).join('');
+      const group = chars.slice(i, i + groupLength).join("");
       groups.push(group);
     }
 
-    // 组间用空格连接
-    let text = groups.join(' ');
+    // groupSpace 表示组间隔的倍数（基于 WORD_SPACE_RATIO）
+    if (groupSpace === 1) {
+      // 标准间隔：一个空格 = WORD_SPACE_RATIO (7 dits)
+      return groups.join(" ");
+    } else {
+      // n倍间隔：n个空格 = n * WORD_SPACE_RATIO (7 dits)
+      const spaces = " ".repeat(groupSpace);
+      return groups.join(spaces);
+    }
+  }
 
-    // 如果需要额外的组间间隔（groupSpacing > 1）
-    // 我们通过添加多个空格来模拟（每个空格=单词间隔）
-    if (groupSpacing > 1) {
-      const extraSpaces = ' '.repeat(groupSpacing - 1);
-      text = groups.join(' ' + extraSpaces);
+  /**
+   * 生成随机长度的字符序列
+   * 
+   * @param charSet - 字符集
+   * @param groupCount - 组数
+   * @param groupSpace - 组间间隔
+   * @param weights - 字符权重
+   * @returns 格式化后的文本
+   */
+  private generateWithRandomGroups(
+    charSet: string,
+    groupCount: number,
+    groupSpace: number,
+    weights: number[]
+  ): string {
+    const groups: string[] = [];
+
+    // 生成指定数量的组
+    for (let i = 0; i < groupCount; i++) {
+      // 随机生成组长度（2到7）
+      const currentGroupLength = Math.floor(Math.random() * 6) + 2;
+      // 生成该组的字符
+      const chars = this.generateCharacters(charSet, currentGroupLength, weights);
+      // 转为字符串
+      groups.push(chars.join(""));
     }
 
-    return text;
+    // groupSpace 表示组间隔的倍数（基于 WORD_SPACE_RATIO）
+    if (groupSpace === 1) {
+      // 标准间隔：一个空格 = WORD_SPACE_RATIO (7 dits)
+      return groups.join(" ");
+    } else {
+      // n倍间隔：n个空格 = n * WORD_SPACE_RATIO (7 dits)
+      const spaces = " ".repeat(groupSpace);
+      return groups.join(spaces);
+    }
   }
+
+  // ==================== 前后缀添加 ====================
 
   /**
    * 添加前后缀
    * 
    * @param text - 原始文本
+   * @param groupSpace - 组间间隔
    * @returns 添加前后缀的文本
    */
   private addPrefixSuffix(text: string): string {
-    return PREFIX_SUFFIX.PREFIX + text + PREFIX_SUFFIX.SUFFIX;
+    return PREFIX_SUFFIX.PREFIX + " " + text + " " + PREFIX_SUFFIX.SUFFIX;
   }
 
-  // ==================== 工具方法 ====================
+  // ==================== 单字符生成 ====================
 
   /**
    * 生成单个字符的重复序列
@@ -208,22 +244,8 @@ export class TextGenerator {
    * @param char - 字符
    * @param count - 重复次数
    * @returns 文本
-   * 
-   * @example
-   * generateSingleCharacter('K', 5)
-   * // => "K K K K K"
    */
   generateSingleCharacter(char: string, count: number): string {
-    return new Array(count).fill(char).join(' ');
-  }
-
-  /**
-   * 验证生成的文本
-   * 
-   * @param text - 文本
-   * @returns 是否有效
-   */
-  validateText(text: string): boolean {
-    return MorseEncoder.isValidText(text);
+    return new Array(count).fill(char).join("");
   }
 }

@@ -48,3 +48,122 @@ input[type="number"],
 textarea {
   cursor: text ! important;
 }
+
+/* Windows 11 Fluent Overlay Scrollbar */
+
+/* ========== 主题变量定义 ========== */
+
+/* 浅色主题（默认） */
+:root {
+  --fluent-scrollbar-thumb: rgba(90, 90, 90, 0.6);
+  --fluent-scrollbar-thumb-hover: rgba(90, 90, 90, 0.8);
+  --fluent-scrollbar-thumb-active: rgba(90, 90, 90, 0.9);
+  --fluent-scrollbar-track: transparent;
+  --fluent-scrollbar-track-hover: rgba(0, 0, 0, 0.03);
+}
+
+/* 深色主题 */
+[data-theme="dark"],
+.dark-theme {
+  --fluent-scrollbar-thumb: rgba(255, 255, 255, 0.4);
+  --fluent-scrollbar-thumb-hover: rgba(255, 255, 255, 0.6);
+  --fluent-scrollbar-thumb-active: rgba(255, 255, 255, 0.9);
+  --fluent-scrollbar-track: transparent;
+  --fluent-scrollbar-track-hover: rgba(255, 255, 255, 0.03);
+}
+
+/* ========== Fluent 滚动条样式 ========== */
+
+.fluent-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--fluent-scrollbar-thumb) var(--fluent-scrollbar-track);
+}
+
+.fluent-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.fluent-scrollbar::-webkit-scrollbar-track {
+  background: var(--fluent-scrollbar-track);
+  border-radius: 10px;
+}
+
+.fluent-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--fluent-scrollbar-thumb);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: background 0.2s ease, width 0.2s ease;
+}
+
+.fluent-scrollbar:hover::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.fluent-scrollbar:hover::-webkit-scrollbar-track {
+  background: var(--fluent-scrollbar-track-hover);
+}
+
+.fluent-scrollbar:hover::-webkit-scrollbar-thumb {
+  background: var(--fluent-scrollbar-thumb-hover);
+}
+
+.fluent-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--fluent-scrollbar-thumb-hover);
+}
+
+.fluent-scrollbar::-webkit-scrollbar-thumb:active {
+  background: var(--fluent-scrollbar-thumb-active);
+}
+
+/* Fluent UI 组件特定样式 */
+.fui-Textarea textarea,
+.fui-Listbox,
+.fui-Dropdown__listbox {
+  scrollbar-width: thin;
+  scrollbar-color: var(--fluent-scrollbar-thumb) var(--fluent-scrollbar-track);
+}
+
+.fui-Textarea textarea::-webkit-scrollbar,
+.fui-Listbox::-webkit-scrollbar,
+.fui-Dropdown__listbox::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.fui-Textarea textarea::-webkit-scrollbar-track,
+.fui-Listbox::-webkit-scrollbar-track,
+.fui-Dropdown__listbox::-webkit-scrollbar-track {
+  background: var(--fluent-scrollbar-track);
+  border-radius: 10px;
+}
+
+.fui-Textarea textarea::-webkit-scrollbar-thumb,
+.fui-Listbox::-webkit-scrollbar-thumb,
+.fui-Dropdown__listbox::-webkit-scrollbar-thumb {
+  background: var(--fluent-scrollbar-thumb);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: background 0.2s ease;
+}
+
+.fui-Textarea:hover textarea::-webkit-scrollbar-thumb,
+.fui-Listbox:hover::-webkit-scrollbar-thumb,
+.fui-Dropdown__listbox:hover::-webkit-scrollbar-thumb {
+  background: var(--fluent-scrollbar-thumb-hover);
+}
+
+.fui-Textarea textarea::-webkit-scrollbar-thumb:hover,
+.fui-Listbox::-webkit-scrollbar-thumb:hover,
+.fui-Dropdown__listbox::-webkit-scrollbar-thumb:hover {
+  background: var(--fluent-scrollbar-thumb-hover);
+}
+
+.fui-Textarea textarea::-webkit-scrollbar-thumb:active,
+.fui-Listbox::-webkit-scrollbar-thumb:active,
+.fui-Dropdown__listbox::-webkit-scrollbar-thumb:active {
+  background: var(--fluent-scrollbar-thumb-active);
+}

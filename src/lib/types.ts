@@ -1,4 +1,4 @@
-// ==================== 字符集和模式类型 ====================
+// ==================== 基础类型 ====================
 /**
  * 训练字符集类型
  * - Koch-LCWO: 标准Koch方法序列（41字符）
@@ -6,7 +6,7 @@
  * - Numbers: 10个数字
  * - Punctuation: 标点符号
  */
-export type TrainingSet = "Koch-LCWO" | "Letters" | "Numbers" | "Punctuation";
+export type DatasetNames = "Koch-LCWO" | "Letters" | "Numbers" | "Punctuation";
 
 /**
  * 练习模式类型
@@ -15,16 +15,34 @@ export type TrainingSet = "Koch-LCWO" | "Letters" | "Numbers" | "Punctuation";
  * - Gradual: 渐进式（新字符1.5倍权重）
  * - Weighted: 难度加权（根据摩尔斯码长度）
  */
-export type PracticeMode = "Uniform" | "New focus" | "Gradual" | "Weighted";
+export type PracticeModes = "Uniform" | "New focus" | "Gradual" | "Weighted";
 
 /**
  * 播放状态
  * - idle: 空闲（未播放或已停止）
- * - loading: 加载中（生成音频事件）
  * - playing: 播放中
  * - paused: 已暂停
  */
-export type PlaybackStatus = 'idle' | 'loading' | 'playing' | 'paused';
+export type PlaybackStatus = "idle" | "playing" | "paused";
+
+/**
+ * 字符比对结果类型
+ * - correct: 正确
+ * - incorrect: 错误
+ * - extra: 多余
+ * - missing: 缺失
+ */
+export type ComparisonTypes = "correct" | "incorrect" | "extra" | "missing";
+
+/**
+ * 时间段统计类型
+ * - default: 默认（时间戳）
+ * - hour: 按小时统计
+ * - day: 按天统计
+ * - month: 按月统计
+ * - year: 按年统计
+ */
+export type TimeStatTypes = "default" | "hour" | "day" | "month" | "year";
 
 // ==================== 配置接口 ====================
 /**
@@ -40,9 +58,6 @@ export interface AudioConfig {
   
   /** 音调频率（赫兹） */
   tone: number;             // 300-1500 Hz
-  
-  /** 音量（0-1） */
-  volume: number;           // 0.0 - 1.0
 }
 
 /**
@@ -51,25 +66,96 @@ export interface AudioConfig {
  */
 export interface GeneratorConfig extends AudioConfig {
   /** 训练字符集 */
-  trainingSet: TrainingSet;
+  datasetName: DatasetNames;
   
   /** 练习模式 */
-  practiceMode: PracticeMode;
+  practiceMode: PracticeModes;
   
   /** 每组字符长度 */
-  groupLength: number;      // 1-10
+  groupLength: number;      // 1-10 字符
+
+  /** 是否随机每组字符长度 */
+  randomGroupLength: boolean;
   
-  /** 组间间隔（以dit为单位） */
-  groupSpacing: number;     // 1-10 dits
+  /** 组间间隔 */
+  groupSpace: number;       // 1-10 空格单位
   
-  /** 音频总时长（分钟） */
-  duration: number;         // 1-10 minutes
+  /** 组数 */
+  groupCount: number;       // 1-30 组
   
   /** 启动延迟时间（秒） */
-  startDelay: number;       // 1-30 seconds
+  startDelay: number;       // 1-10 秒
   
-  /** 是否使用前后缀（VVV = ...+） */
+  /** 是否使用前后缀（VVV = ... AR） */
   usePrefixSuffix: boolean;
+}
+
+// ==================== 文本生成接口 ====================
+
+/**
+ * 文本生成选项接口
+ */
+export interface TextGeneratorOptions {
+  /** 字符集 */
+  charSet: string;
+  /** 练习模式 */
+  mode: PracticeModes;
+  /** 每组字符长度（固定长度模式） */
+  groupLength: number;
+  /** 是否随机组长度 */
+  randomGroupLength: boolean;
+  /** 组间间隔（空格数） */
+  groupSpace: number;
+  /** 组数 */
+  groupCount: number;
+  /** 是否使用前后缀 */
+  usePrefixSuffix: boolean;
+}
+
+// ==================== 时序配置接口 ====================
+
+/**
+ * 时序配置接口
+ * 定义摩尔斯码各部分的时间长度（秒）
+ */
+export interface TimingConfig {
+  /** 点的时长 */
+  ditTime: number;
+  
+  /** 划的时长 */
+  dahTime: number;
+
+  /** 元素间隔（点划之间） */
+  elementSpace: number;
+  
+  /** 字符间隔 */
+  charSpace: number;
+
+  /** 单词间隔 */
+  wordSpace: number;
+}
+
+// ==================== 音频事件接口 ====================
+
+/**
+ * 音频事件接口（内部使用）
+ * 定义播放过程中触发的各种事件
+ */
+export interface AudioEvent {
+  /** 事件发生时间（秒） */
+  time: number;
+
+  /** 事件类型 */
+  type: "gain" | "frequency";
+
+  /** 事件值 */
+  value: number;
+
+  /** 关联字符 */
+  char?: string;
+  
+  /** 字符索引 */
+  charIndex?: number;
 }
 
 // ==================== 播放状态接口 ====================
@@ -90,191 +176,180 @@ export interface PlaybackState {
   
   /** 暂停时的时间点（秒） */
   pausedAt: number;
-  
-  /** 当前播放的字符索引 */
-  currentCharIndex: number;
-  
-  /** 当前播放的字符 */
-  currentChar: string | null;
-  
-  /** 当前播放的文本内容 */
-  text: string;
 }
 
-// ==================== 课程数据接口 ====================
+// ==================== 课程信息接口 ====================
 
 /**
- * 课程数据接口
- * 描述Koch方法的单个课程
+ * 课程信息接口
+ * 包含课程的编号、字符、显示格式
  */
-export interface LessonData {
-  /** 课程编号（1-based） */
-  id: number;
-  
-  /** 当前课程包含的所有字符 */
-  chars: string;            // 例如: "KM", "KMU", "KMUR"
-  
-  /** 本课新引入的字符 */
-  newChar: string;          // 例如: "M", "U", "R"
-  
-  /** 所属字符集 */
-  charSet: TrainingSet;
-  
-  /** 课程描述（自动生成） */
-  description: string;      // 例如: "Lesson 3: KMU (New: U)"
-}
-
-// ==================== 音频事件接口 ====================
-
-/**
- * 音频事件类型
- * - gain: 音量变化（控制点划）
- * - frequency: 频率变化（控制音调）
- */
-export type AudioEventType = 'gain' | 'frequency';
-
-/**
- * 音频事件接口
- * 描述时间轴上的单个音频事件
- */
-export interface AudioEvent {
-  /** 事件发生的时间点（相对于播放开始，秒） */
-  time: number;
-  
-  /** 事件类型 */
-  type: AudioEventType;
-  
-  /** 事件值（音量0-1或频率Hz） */
-  value: number;
-  
-  /** 关联的字符（可选，用于字符回调） */
-  char?: string;
-  
-  /** 字符在文本中的索引（可选） */
-  charIndex?: number;
-}
-
-// ==================== 摩尔斯元素类型 ====================
-
-/**
- * 摩尔斯码元素
- * - .: dit（短音）
- * - -: dah（长音）
- * - (space): 间隔
- */
-export type MorseElement = '.' | '-' | ' ';
-
-// ==================== 时序配置接口 ====================
-
-/**
- * 时序配置接口
- * 存储计算得到的所有时间参数
- */
-export interface TimingConfig {
-  /** dit时长（秒） */
-  ditTime: number;
-  
-  /** dah时长（秒） */
-  dahTime: number;
-  
-  /** 元素间隔时长（秒） - 点划之间 */
-  elementSpace: number;
-  
-  /** 字符间隔时长（秒） */
-  charSpace: number;
-  
-  /** 单词间隔时长（秒） */
-  wordSpace: number;
-  
-  /** 自定义组间间隔时长（秒） */
-  groupSpace?: number;
-}
-
-// ==================== 文本生成选项接口 ====================
-
-/**
- * 文本生成选项接口
- * 用于TextGenerator.generate()方法
- */
-export interface TextGeneratorOptions {
-  /** 可用字符集（字符串形式） */
-  charSet: string;          // 例如: "KMUR"
-  
-  /** 练习模式 */
-  mode: PracticeMode;
-  
-  /** 每组字符长度 */
-  groupLength: number;
-  
-  /** 组间间隔（dits） */
-  groupSpacing: number;
-  
-  /** 目标时长（秒） */
-  targetDuration: number;
-  
-  /** 音频配置（用于计算字符数量） */
-  audioConfig: AudioConfig;
-  
-  /** 是否使用前后缀 */
-  usePrefixSuffix?: boolean;
-}
-
-// ==================== 进度数据接口 ====================
-
-/**
- * 单课程进度接口
- */
-export interface LessonProgress {
+export interface Lesson {
   /** 课程编号 */
-  lessonNum: number;
+  lessonNumber: number;
   
-  /** 已完成练习次数 */
-  practiceCount: number;
-  
-  /** 准确率历史记录 */
-  accuracyHistory: number[];
-  
-  /** 最后练习日期 */
-  lastPracticeDate: string;  // ISO 8601格式
+  /** 课程字符 */
+  characters: string[];
+
+  /** 显示格式：第1课 "01 - K, M"，第2课 "02 - U" */
+  displayText: string;
+}
+
+// ==================== 练习记录接口 ====================
+
+/**
+ * 单次练习记录
+ * 包含练习时间戳、时长、准确率
+ */
+export interface TrainingRecord {
+  /** 练习时间戳 */
+  timestamp: string;
+
+  /** 练习时长（秒） */
+  duration: number;
+
+  /** 准确率（0-100） */
+  accuracy: number;
 }
 
 /**
- * 全局统计接口
+ * 课程练习记录
+ * 包含该次课程的总练习时长、总练习次数、平均准确率及单次记录列表
  */
-export interface GlobalStats {
+export interface LessonRecords {
   /** 总练习时长（秒） */
-  totalPracticeTime: number;
-  
-  /** 字符错误统计 */
-  characterErrors: Record<string, number>;  // { 'K': 15, 'M': 10, ...}
-  
-  /** 最后练习日期 */
-  lastPracticeDate: string;
+  totalDuration: number;
+
+  /** 总练习次数 */
+  recordCount: number;
+
+  /** 平均准确率（0-100） */
+  averageAccuracy: number;
+
+  /** 单次练习记录列表 */
+  records: TrainingRecord[];
 }
 
 /**
- * 完整进度数据接口（存储在Tauri Store中）
+ * 数据集练习记录
+ * 包含所有课程的总练习时长、总练习次数、平均准确率及各课程记录列表
  */
-export interface ProgressData {
-  /** 当前学习课程 */
-  currentLesson: number;
-  
-  /** 各课程的进度 */
-  lessons: Record<number, Omit<LessonProgress, 'lessonNum'>>;
-  
-  /** 全局统计 */
-  stats: GlobalStats;
+export interface DatasetRecords {
+  /** 总练习时长（秒） */
+  totalDuration: number;
+
+  /** 总练习次数 */
+  recordCount: number;
+
+  /** 平均准确率（0-100） */
+  averageAccuracy: number;
+
+  /** 各课程练习记录列表 */
+  lessons: Record<number, LessonRecords>;
 }
 
-// ==================== 工具类型 ====================
+/**
+ * 整体练习记录
+ * 包含所有数据集的总练习时长、总练习次数、平均准确率及各数据集记录列表
+ */
+export interface GlobalRecords {
+  /** 总练习时长（秒） */
+  totalDuration: number;
+
+  /** 总练习次数 */
+  recordCount: number;
+
+  /** 平均准确率（0-100） */
+  averageAccuracy: number;
+
+  /** 各数据集练习记录列表 */
+  datasets: Record<string, DatasetRecords>;
+}
+
+// =================== 准确率计算接口 ====================
+
+/** 
+ * 字符比对结果
+ * 包含字符、比对类型及索引位置
+ */
+export interface ComparisonResult {
+  /** 字符 */
+  char: string;
+
+  /** 比对类型 */
+  type: ComparisonTypes;
+
+  /** 字符位置索引 */
+  index: number;
+}
+
+/** 
+ * 准确率计算结果
+ * 包含准确率、正确字符数、总字符数、字符比对结果列表及正确答案
+ */
+export interface AccuracyResult {
+  /** 准确率（0-100） */
+  accuracy: number;
+
+  /** 字符比对结果列表 */
+  comparisons: ComparisonResult[];
+
+  /** 正确答案 */
+  correctText: string;
+}
+
+// ==================== 统计接口 ====================
 
 /**
- * 字符权重映射
- * 用于加权随机选择
+ * 时间段统计
+ * 包含时间标签、总练习时长、总练习次数及平均准确率
  */
-export type CharacterWeights = Map<string, number>;
+export interface TimeStats {
+  /** 时间标签 */
+  timeLabel: string;
+
+  /** 总练习时长（秒） */
+  totalDuration: number;
+
+  /** 总练习次数 */
+  recordCount: number;
+
+  /** 平均准确率（0-100） */
+  averageAccuracy: number;
+}
 
 /**
- * 摩尔斯码映射表类型
+ * 时间段统计结果
+ * 包含时间标签列表、练习时长列表、练习次数列表及平均准确率列表
  */
-export type MorseCodeMap = Record<string, string>;
+export interface TimeStatsResult {
+  /** 时间标签列表 */
+  timeLabels: string[];
+
+  /** 练习时长列表 */
+  totalDurations: number[];
+
+  /** 练习次数列表 */
+  recordCounts: number[];
+
+  /** 平均准确率列表 */
+  averageAccuracies: number[];
+
+  /** 详细数据 */
+  details: TimeStats[];
+}
+
+/**
+ * 时间范围统计
+ * 包含总练习时长、总练习次数及平均准确率
+ */
+export interface TimeRangeStats {
+  /** 总练习时长（秒） */
+  totalDuration: number;
+
+  /** 总练习次数 */
+  recordCount: number;
+
+  /** 平均准确率（0-100） */
+  averageAccuracy: number;
+}

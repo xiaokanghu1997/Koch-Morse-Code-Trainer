@@ -12,6 +12,7 @@ import {
   Heart24Regular
 } from "@fluentui/react-icons";
 
+// 样式定义
 const useStyles = makeStyles({
   container: {
     display: "flex",
@@ -42,7 +43,7 @@ const useStyles = makeStyles({
   },
   description: {
     fontSize: tokens.fontSizeBase200,
-    color: tokens.colorNeutralForeground2,
+    color: tokens.colorNeutralForeground3,
   },
   value: {
     fontSize: tokens.fontSizeBase300,
@@ -53,8 +54,10 @@ const useStyles = makeStyles({
 });
 
 export const AboutPage = () => {
+  // 使用样式
   const styles = useStyles();
   
+  // 软件信息
   const appTitle = "Koch - Morse Code Trainer";
   const version = "Version 0.0.0";
 

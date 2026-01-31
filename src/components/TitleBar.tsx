@@ -9,14 +9,13 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 const useStyles = makeStyles({
   titleBar: {
     height: "32px",
-    backgroundColor: tokens.colorNeutralBackground1,
+    backgroundColor: "transparent",
     borderBottom: "none",
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
     userSelect: "none",
-    // @ts-ignore
-    "-webkit-app-region": "drag",
+    WebkitAppRegion: "drag",
   },
   appIcon: {
     marginLeft: "8px",
@@ -41,7 +40,7 @@ const useStyles = makeStyles({
     height: "100%",
   },
   controlButton: {
-    width: "46px",
+    width: "50px",
     height: "100%",
     border: "none",
     backgroundColor: "transparent",
@@ -50,17 +49,16 @@ const useStyles = makeStyles({
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    // @ts-ignore
-    "-webkit-app-region": "no-drag",
+    WebkitAppRegion: "no-drag",
     ":hover": {
-      backgroundColor: tokens.colorNeutralBackground3Hover,
+      backgroundColor: tokens.colorNeutralBackground2Hover,
     },
     ":active": {
-      backgroundColor: tokens.colorNeutralBackground3Pressed,
+      backgroundColor: tokens.colorNeutralBackground2Pressed,
     },
   },
   closeButton: {
-    width: "46px",
+    width: "50px",
     height: "100%",
     border: "none",
     backgroundColor: "transparent",
@@ -69,13 +67,14 @@ const useStyles = makeStyles({
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    // @ts-ignore
-    "-webkit-app-region": "no-drag",
+    WebkitAppRegion: "no-drag",
     ":hover": {
-      backgroundColor: "#c42b1c",
+      backgroundColor: "#e81123",
+      color: "#ffffff",
     },
     ":active": {
       backgroundColor: "#a32214",
+      color: "#ffffff",
     },
   },
 });

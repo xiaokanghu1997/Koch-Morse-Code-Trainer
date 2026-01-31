@@ -1,7 +1,5 @@
-import { useEffect } from "react";
-import { FluentProvider } from "@fluentui/react-components";
-import { makeStyles, tokens } from "@fluentui/react-components";
-import { AppearanceProvider, useAppearance } from "./contexts/AppearanceContext";
+import { FluentProvider, makeStyles } from "@fluentui/react-components";
+import { useSettingsStore } from "./stores/settingsStore";
 import { kochLightTheme } from "./themes/kochLightTheme";
 import { kochDarkTheme } from "./themes/kochDarkTheme";
 import { Routes, Route, Navigate } from "react-router-dom";
@@ -13,35 +11,26 @@ import { GeneratorPage } from "./pages/GeneratorPage";
 import { AboutPage } from "./pages/AboutPage";
 import { SettingsPage } from "./pages/SettingsPage";
 
+// 样式定义
 const useStyles = makeStyles({
   appWrapper: {
-    borderRadius: "10px",
-    border: `1.5px solid ${tokens.colorNeutralStroke1}`,
     overflow: "hidden",
     height: "100vh",
   },
 });
 
-function AppContent() {
+function App() {
+  // 使用样式
   const styles = useStyles();
-  const { theme } = useAppearance();
-
-  // 禁用右键菜单
-  useEffect(() => {
-    const handleContextMenu = (e: MouseEvent) => {
-      e.preventDefault();
-    };
-    
-    document.addEventListener('contextmenu', handleContextMenu);
-    
-    return () => {
-      document.removeEventListener('contextmenu', handleContextMenu);
-    };
-  }, []);
+  // 获取主题设置
+  const { theme } = useSettingsStore();
 
   return (
     <div className={styles.appWrapper}>
-      <FluentProvider theme={theme === "Dark" ? kochDarkTheme : kochLightTheme}>
+      <FluentProvider 
+        theme={theme === "Dark" ? kochDarkTheme : kochLightTheme} 
+        data-theme={theme === "Dark" ? "dark" : "light"}
+      >
         <Routes>
           <Route path="/" element={<MainLayout />}>
             <Route index element={<Navigate to="/training" replace />} />
@@ -56,14 +45,6 @@ function AppContent() {
         </Routes>
       </FluentProvider>
     </div>
-  );
-}
-
-function App() {
-  return (
-    <AppearanceProvider>
-      <AppContent />
-    </AppearanceProvider>
   );
 }
 

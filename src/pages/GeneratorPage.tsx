@@ -18,19 +18,20 @@ import {
   Timer20Regular,
   PlayCircle20Regular, 
   PauseCircle20Regular, 
+  ArrowUndo16Regular,
   SoundWaveCircleSparkle20Regular,
   CheckmarkCircle20Filled,
   DismissCircle16Filled,
   Dismiss20Regular,
 } from "@fluentui/react-icons";
 import { useState, useEffect, useRef } from "react";
-import { useMorseGenerator } from "../hooks/useMorseGenerator";
+import { useTiming } from "../hooks/useTiming";
+import { useTextGenerator } from "../hooks/useTextGenerator";
+import { useMorsePlayer } from "../hooks/useMorsePlayer";
 import { useGeneratorStore } from "../stores/generatorStore";
-import { useTrainingStore } from "../stores/trainingStore";
-import { CourseManager } from "../services/courseManager";
-import { TextGenerator } from "../services/textGenerator";
-import type { TrainingSet, PracticeMode } from "../lib/types";
+import type { GeneratorConfig } from "../lib/types";
 import { log } from "../utils/logger";
+// import { useTrainingStore } from "../stores/trainingStore";
 
 // 样式定义
 const useStyles = makeStyles({
@@ -42,8 +43,8 @@ const useStyles = makeStyles({
   },
   content: {
     display: "grid",
-    gridTemplateColumns: "0.8fr 1fr",
-    gap: "45px",
+    gridTemplateColumns: "0.85fr 1fr",
+    gap: "35px",
     margin: "0",
     flex: 1,
   },
@@ -65,9 +66,6 @@ const useStyles = makeStyles({
     display: "flex",
     flexDirection: "column",
     gap: "2px",
-  },
-  control: {
-    flexShrink: 0,
   },
   dropdown: {
     minWidth: "125px",
@@ -140,6 +138,18 @@ const useStyles = makeStyles({
       backgroundColor: tokens.colorNeutralBackground3Pressed,
     },
   },
+  checkbox: {
+    "& .fui-Checkbox__label": {
+      marginLeft: "-6px",
+    },
+    marginRight: "-8px",
+  },
+  grouplengthContainer: {
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+    flexShrink: 0,
+  },
   controlContainer: {
     display: "flex",
     alignItems: "center",
@@ -195,7 +205,7 @@ const useStyles = makeStyles({
     display: "flex",
     alignItems: "center",
     gap: "6px",
-    color: tokens.colorNeutralForeground2,
+    marginRight: "6px",
   },
   countdownText: {
     width: "25px",
@@ -222,26 +232,28 @@ const useStyles = makeStyles({
 });
 
 // 工具函数
+/** 限制数字在指定范围内 */
 function clampNumber(value: number, min: number, max: number) {
   if (isNaN(value)) return min;
   return Math.min(Math.max(value, min), max);
 }
-
+/** 四舍五入到最接近的步长 */
 function roundToNearest(value: number, step: number): number {
   return Math.round(value / step) * step;
 }
 
 // 生成器页面组件
 export const GeneratorPage = () => {
+  // 使用样式
   const styles = useStyles();
   
   // Tooltips 提示文本
   const tips = {
-    trainingSet: "Select the character set used to generate practice material",
+    datasetName: "Select the character set used to generate practice material",
     practiceMode: "Choose how characters are distributed during training",
     groupLength: "Number of characters in each practice group",
-    groupSpacing: "Silent spacing between groups in dits",
-    duration: "Total length of generated training audio",
+    groupSpace: "Multiple of standard word space (7 dit) to separate groups",
+    groupCount: "Number of character groups to generate",
     charSpeed: "Morse element speed in words per minute",
     effSpeed: "Overall transmission speed using Farnsworth timing",
     tone: "Audio tone frequency of the Morse signal",
@@ -257,95 +269,121 @@ export const GeneratorPage = () => {
     content: string;
   } | null>(null);
 
-  // 从 Store 中获取配置和操作函数
-  const { config, updateConfig, setGeneratedText } = useGeneratorStore();
+  // 从 Store 中获取配置
+  const { savedConfig, saveConfig } = useGeneratorStore();
+
+  // 本地配置状态
+  const [currentConfig, setCurrentConfig] = useState<GeneratorConfig>(savedConfig);
 
   // 使用生成器 Hook
-  const {
-    playPreview,
-    stopPreview,
-    isPreviewPlaying,
-    previewCountdown,
-    saveConfig,
-    loadConfig,
-  } = useMorseGenerator();
+  const textGen = useTextGenerator();
+  const player = useMorsePlayer();
+  const timing = useTiming();
 
   // 初始化加载配置
   useEffect(() => {
-    const savedConfig = loadConfig();
-    if (savedConfig) {
-      updateConfig(savedConfig);
-      log.info("Loaded saved configuration", "GeneratorPage");
-    }
-  }, [loadConfig, updateConfig]);
+    setCurrentConfig(savedConfig);
+  }, []);
 
-  // 配置保存
-  const saveCurrentConfig = () => {
-    try {
-      saveConfig(config);
-      log.info("Configuration saved", "GeneratorPage");
-    } catch (error) {
-      log.error("Error saving configuration", "GeneratorPage", error);
+  // 配置变化时自动生成文本
+  useEffect(() => {
+    textGen.generate(currentConfig)
+  }, [currentConfig]);
+
+  // 文本时长变化时更新总时长
+  useEffect(() => {
+    timing.setTotalDuration(textGen.duration);
+  }, [textGen.duration]);
+
+  // 监听播放状态
+  useEffect(() => {
+    // 同步当前时间
+    timing.updateCurrentTime(player.playbackState.currentTime);
+    // 播放完成时停止计时
+    if (player.playbackState.status === "idle" && timing.phase === "playing") {
+      timing.stop();
     }
+  }, [player.playbackState]);
+
+  // 配置变化时自动生成文本
+  useEffect(() => {
+    // 如果正在播放或倒计时，先停止
+    if (timing.phase !== "idle" || player.isPlaying) {
+      player.stop();
+      timing.stop();
+    }
+    textGen.generate(currentConfig);
+  }, [currentConfig]);
+
+  // 配置更新
+  const updateConfig = (updates: Partial<GeneratorConfig>) => {
+    setCurrentConfig((prev) => ({
+      ...prev,
+      ...updates,
+    }));
   };
 
-  // 处理预览按钮点击
-  const handlePreview = () => { 
-    if (isPreviewPlaying) {
-      stopPreview();
+  // 预览按钮点击
+  const handlePreview = () => {
+    if (timing.phase === "delay") {
+      // 如果在延迟阶段，取消倒计时
+      timing.stop();
+      return;
+    }
+    
+    if (player.isPlaying) {
+      // 如果正在播放，暂停播放
+      player.pause();
+      timing.pause();
+    } else if (player.isPaused) {
+      // 如果已暂停，继续播放
+      player.resume();
+      timing.resume();
     } else {
-      playPreview(config);
+      // 如果空闲，开始播放
+      if (currentConfig.startDelay > 0) {
+        // 有启动延迟，先等待
+        timing.startDelay(currentConfig.startDelay, async () => {
+          await player.play(textGen.text, currentConfig);
+          timing.startPlaying(textGen.duration);
+        });
+      } else {
+        // 无启动延迟，直接播放
+        player.play(textGen.text, currentConfig);
+        timing.startPlaying(textGen.duration);
+      }
     }
   };
 
-  // 处理生成按钮点击
-  const { currentLesson } = useTrainingStore();
+  // 生成按钮点击
   const handleGenerate = () => {
     try {
       // 清除之前的消息
       setMessage(null);
 
-      // 创建课程管理器和文本生成器
-      const courseManager = new CourseManager(config.trainingSet);
-      const textGen = new TextGenerator();
+      // 保存配置到 store
+      saveConfig(currentConfig);
 
-      // 获取当前课程的字符集
-      const lesson = courseManager.getLesson(currentLesson);
-
-      // 生成文本
-      const text = textGen.generate({
-        charSet: lesson.chars,
-        mode: config.practiceMode,
-        groupLength: config.groupLength,
-        groupSpacing: config.groupSpacing,
-        targetDuration: config.duration * 60,
-        audioConfig: {
-          charSpeed: config.charSpeed,
-          effSpeed: config.effSpeed,
-          tone: config.tone,
-          volume: 1.0,
-        },
-        usePrefixSuffix: config.usePrefixSuffix,
-      });
-
-      // 保存生成的文本到 Store
-      setGeneratedText(text);
-
-      // 保存配置
-      saveCurrentConfig();
+      // 计算字符数提示
+      let charInfo: string;
+      if (currentConfig.randomGroupLength) {
+        // 随机模式：显示范围
+        const minChars = currentConfig.groupCount * 2;
+        const maxChars = currentConfig.groupCount * 7;
+        charInfo = `${minChars}-${maxChars} chars`;
+      } else {
+        // 固定模式：显示精确数量
+        const totalChars = currentConfig.groupCount * currentConfig.groupLength;
+        charInfo = `${totalChars} chars`;
+      }
 
       // 显示成功消息
       setMessage({
         type: "success",
         title: "Training material generated successfully",
-        content: `${config.trainingSet} | ${config.practiceMode} | ${text.length} chars | ${config.duration} min`,
+        content: `${currentConfig.datasetName} | ${currentConfig.practiceMode} | ${currentConfig.groupCount} groups | ${charInfo}`,
       });
-      log.info("Training material generated", "GeneratorPage", {
-        trainingSet: config.trainingSet,
-        practiceMode: config.practiceMode,
-        charCount: text.length,
-        duration: config.duration,
-      });
+      log.info("Training material generated", "GeneratorPage", currentConfig);
 
       // 3秒后自动隐藏消息
       setTimeout(() => setMessage(null), 3000);
@@ -354,7 +392,7 @@ export const GeneratorPage = () => {
       setMessage({
         type: "error",
         title: "Generation failed",
-        content: error instanceof Error ? error.message : 'Unknown error occurred',
+        content: error instanceof Error ? error.message : "Unknown error occurred",
       });
       log.error("Error generating text", "GeneratorPage", error);
     }
@@ -364,26 +402,25 @@ export const GeneratorPage = () => {
   const handleSpin = (
     min: number, 
     max: number, 
-    field: keyof typeof config
+    field: keyof GeneratorConfig
   ) => (_: any, data: any) => {
     const raw = Number(data. value ??  data. displayValue);
     const clamped = clampNumber(raw, min, max);
     updateConfig({ [field]: clamped });
   };
 
-  const toneRef = useRef<number>(config.tone);
+  // 音调拖拽控制
+  const toneRef = useRef<number>(currentConfig.tone);
   const [isDragging, setIsDragging] = useState(false);
   const [tempToneValue, setTempToneValue] = useState<number | null>(null);
   // 处理 tone 变化（带拖拽状态跟踪）
   const handleToneChangeStart = () => {
     setIsDragging(true);
-    setTempToneValue(config.tone);
+    setTempToneValue(currentConfig.tone);
   };
-
   const handleToneChange = (value: number) => {
     // 更新临时值（用于显示当前拖拽位置）
     toneRef.current = value;
-    
     // 如果正在拖拽，显示临时值
     if (isDragging) {
       const roundedValue = roundToNearest(value, 5);
@@ -394,7 +431,6 @@ export const GeneratorPage = () => {
       updateConfig({ tone: roundedValue });
     }
   };
-
   const handleToneChangeEnd = () => {
     setIsDragging(false);
     // 拖拽结束时，应用最终值
@@ -409,6 +445,66 @@ export const GeneratorPage = () => {
     setTempToneValue(null);
   };
 
+  // 时间显示逻辑
+  const getDisplayTime = () => {
+    if (timing.phase === "idle") {
+      // 空闲状态显示预估时长
+      return timing.formattedTotalDuration;
+    } else if (timing.phase === "delay") {
+      // 延迟状态显示剩余延迟时间
+      return timing.formattedDelayCountdown;
+    } else {
+      // 播放状态显示剩余播放时间
+      return timing.formattedCountdown;
+    }
+  };
+
+  /** 导入/导出/清空数据功能 
+  const { exportData, importData, clearAllData } = useTrainingStore();
+
+  // 导出数据
+  const handleExport = async () => {
+    if ('showSaveFilePicker' in window) {
+      // 使用现代 API
+      const handle = await (window as any).showSaveFilePicker({
+        suggestedName: `morse-training-backup-${Date.now()}.json`,
+        types: [{
+          description: 'JSON Files',
+          accept: { 'application/json': ['.json'] },
+        }],
+      });
+      
+      const jsonData = exportData();
+      const writable = await handle.createWritable();
+      await writable.write(jsonData);
+      await writable.close();
+    }
+  };
+
+  // 导入数据
+  const handleImport = async () => {
+    if ('showOpenFilePicker' in window) {
+      // 使用现代 API
+      const [fileHandle] = await (window as any).showOpenFilePicker({
+        types: [{
+          description: 'JSON Files',
+          accept: { 'application/json': ['.json'] },
+        }],
+        multiple: false,
+      });
+      
+      const file = await fileHandle.getFile();
+      const content = await file.text();
+      importData(content);
+    }
+  };
+
+  // 清空数据
+  const handleClear = () => {
+    clearAllData();
+  };
+  */
+
   // 渲染
   return (
     <div className={styles.container}>
@@ -420,7 +516,7 @@ export const GeneratorPage = () => {
             <div className={styles.textContent}>
               <Tooltip
                 content={{
-                  children: tips.trainingSet,
+                  children: tips.datasetName,
                   className: styles.tooltip,
                 }}
                 relationship="label"
@@ -432,10 +528,10 @@ export const GeneratorPage = () => {
             <Dropdown 
               className={styles.dropdown}
               listbox={{ className: styles.dropdownListbox }}
-              value={config.trainingSet}
-              selectedOptions={[config.trainingSet]}
+              value={currentConfig.datasetName}
+              selectedOptions={[currentConfig.datasetName]}
               onOptionSelect={(_, data) => 
-                updateConfig({ trainingSet: data.optionValue as TrainingSet })
+                updateConfig({ datasetName: data.optionValue as GeneratorConfig["datasetName"] })
               }
             >
               <Option value="Koch-LCWO" className={styles.dropdownOption} checkIcon={null}>
@@ -470,10 +566,10 @@ export const GeneratorPage = () => {
             <Dropdown 
               className={styles.dropdown}
               listbox={{ className: styles.dropdownListbox }}
-              value={config.practiceMode}
-              selectedOptions={[config.practiceMode]}
+              value={currentConfig.practiceMode}
+              selectedOptions={[currentConfig.practiceMode]}
               onOptionSelect={(_, data) => 
-                updateConfig({ practiceMode: data.optionValue as PracticeMode })
+                updateConfig({ practiceMode: data.optionValue as GeneratorConfig["practiceMode"] })
               }
             >
               <Option value="Uniform" className={styles.dropdownOption} checkIcon={null}>
@@ -502,17 +598,33 @@ export const GeneratorPage = () => {
                 relationship="label"
                 positioning="below-start"
               >
-                <Text>Group length (characters):</Text>
+                <Text>Group length:</Text>
               </Tooltip>
             </div>
-            <SpinButton
-              className={styles.spinbutton}
-              min={1}
-              max={10}
-              value={config.groupLength}
-              onChange={handleSpin(1, 10, "groupLength")}
+            <div
+              className={styles.grouplengthContainer}
+              style={{
+                opacity: currentConfig.randomGroupLength ? 0.5 : 1,
+                pointerEvents: currentConfig.randomGroupLength ? "none" : "auto"
+              }}
+            >
+              <SpinButton
+                className={styles.spinbutton}
+                min={1}
+                max={10}
+                value={currentConfig.groupLength}
+                onChange={handleSpin(1, 10, "groupLength")}
+              />
+              <Text>fixed</Text>
+            </div>
+            <Checkbox
+              className={styles.checkbox}
+              label="2-7 random"
+              checked={currentConfig.randomGroupLength}
+              onChange={(_, data) => 
+                updateConfig({ randomGroupLength: data.checked === true })
+              }
             />
-            <Text>chars</Text>
           </div>
 
           {/* 组间间隔 */}
@@ -520,47 +632,46 @@ export const GeneratorPage = () => {
             <div className={styles.textContent}>
               <Tooltip
                 content={{
-                  children: tips.groupSpacing,
+                  children: tips.groupSpace,
                   className: styles.tooltip,
                 }}
                 relationship="label"
                 positioning="below-start"
               >
-                <Text>Group spacing (dits):</Text>
+                <Text>Group space:</Text>
               </Tooltip>
             </div>
             <SpinButton
               className={styles.spinbutton}
               min={1}
               max={10}
-              value={config.groupSpacing}
-              onChange={handleSpin(1, 10, "groupSpacing")}
+              value={currentConfig.groupSpace}
+              onChange={handleSpin(1, 10, "groupSpace")}
             />
-            <Text>dits</Text>
+            <Text>× 7 dits</Text>
           </div>
 
-          {/* 音频总时长 */}
+          {/* 组数 */}
           <div className={styles.settingItem}>
             <div className={styles.textContent}>
               <Tooltip
                 content={{
-                  children: tips.duration,
+                  children: tips.groupCount,
                   className: styles.tooltip,
                 }}
                 relationship="label"
                 positioning="below-start"
               >
-                <Text>Duration (minutes):</Text>
+                <Text>Group count:</Text>
               </Tooltip>
             </div>
             <SpinButton
               className={styles.spinbutton}
               min={1}
-              max={10}
-              value={config.duration}
-              onChange={handleSpin(1, 10, "duration")}
+              max={30}
+              value={currentConfig.groupCount}
+              onChange={handleSpin(1, 30, "groupCount")}
             />
-            <Text>min</Text>
           </div>
         </div>
 
@@ -585,10 +696,10 @@ export const GeneratorPage = () => {
                 className={styles.slider}
                 min={5}
                 max={50}
-                value={config.charSpeed}
+                value={currentConfig.charSpeed}
                 onChange={(_, data) => updateConfig({ charSpeed: data.value })}
               />
-              <Text className={styles.sliderValueText}>{config.charSpeed} WPM</Text>
+              <Text className={styles.sliderValueText}>{currentConfig.charSpeed} WPM</Text>
             </div>
           </div>
 
@@ -611,10 +722,10 @@ export const GeneratorPage = () => {
                 className={styles.slider}
                 min={0}
                 max={50}
-                value={config.effSpeed}
+                value={currentConfig.effSpeed}
                 onChange={(_, data) => updateConfig({ effSpeed: data.value })}
               />
-              <Text className={styles.sliderValueText}>{config.effSpeed} WPM</Text>
+              <Text className={styles.sliderValueText}>{currentConfig.effSpeed} WPM</Text>
             </div>
           </div>
 
@@ -637,7 +748,7 @@ export const GeneratorPage = () => {
                 className={styles.slider}
                 min={300}
                 max={1500}
-                value={isDragging && tempToneValue !== null ? tempToneValue : config.tone}
+                value={isDragging && tempToneValue !== null ? tempToneValue : currentConfig.tone}
                 onChange={(_, data) => handleToneChange(data.value)}
                 onPointerDown={handleToneChangeStart}
                 onPointerUp={handleToneChangeEnd}
@@ -645,7 +756,7 @@ export const GeneratorPage = () => {
                 onKeyUp={handleToneChangeEnd}
               />
               <Text className={styles.sliderValueText}>
-                {isDragging && tempToneValue !== null ? tempToneValue : config.tone} Hz
+                {isDragging && tempToneValue !== null ? tempToneValue : currentConfig.tone} Hz
               </Text>
             </div>
           </div>
@@ -666,9 +777,9 @@ export const GeneratorPage = () => {
             </div>
             <SpinButton
               className={styles.spinbutton}
-              min={1}
+              min={0}
               max={30}
-              value={config.startDelay}
+              value={currentConfig.startDelay}
               onChange={handleSpin(1, 30, "startDelay")}
             />
             <Text>s</Text>
@@ -690,14 +801,43 @@ export const GeneratorPage = () => {
             </div>
             <div className={styles.controlContainer}>
               <Checkbox 
+                className={styles.checkbox}
                 label="VVV = / AR"
-                checked={config.usePrefixSuffix}
+                checked={currentConfig.usePrefixSuffix}
                 onChange={(_, data) => 
                   updateConfig({ usePrefixSuffix: data.checked === true })
                 }
               />
             </div>
           </div>
+
+          {/* 导入导出重置记录 
+          <div className={styles.settingItem}>
+            <div className={styles.textContent}>
+            </div>
+            <div className={styles.controlContainer}>
+              <Button
+                className={styles.button}
+                onClick={handleImport}
+              >
+                Import data
+              </Button>
+              <Button
+                className={styles.button}
+                onClick={handleExport}
+              >
+                Export data
+              </Button>
+              <Button
+                className={styles.button}
+                onClick={handleClear}
+              >
+                Clear data
+              </Button>
+            </div>
+          </div>
+          */}
+
         </div>
       </div>
 
@@ -709,7 +849,7 @@ export const GeneratorPage = () => {
               className={styles.messageBar}
               intent={message.type === "success" ? "success" : "error"}
               icon={
-                message.type === 'success'
+                message.type === "success"
                   ? <CheckmarkCircle20Filled />
                   : <DismissCircle16Filled />
               }
@@ -731,20 +871,31 @@ export const GeneratorPage = () => {
           )}
         </div>
         <div className={styles.actionContainer}>
+          {/* 倒计时显示 */}
           <div className={styles.countdownContainer}>
             <Timer20Regular />
             <Text className={styles.countdownText}>
-              {isPreviewPlaying ? `${previewCountdown} s` : '20 s'}
+              {getDisplayTime()}
             </Text>
           </div>
           {/* 预览按钮 */}
           <Button
             className={styles.button}
-            icon={isPreviewPlaying ? <PauseCircle20Regular /> : <PlayCircle20Regular />}
+            icon={
+              timing.phase === "delay"
+                ? <ArrowUndo16Regular />
+                : player.isPlaying 
+                  ? <PauseCircle20Regular /> 
+                  : <PlayCircle20Regular />
+            }
             onClick={handlePreview}
           >
             <Text className={styles.buttonText}>
-              {isPreviewPlaying ? "Pause" : "Preview"}
+              {timing.phase === "delay" 
+                ? "Cancel"
+                : player.isPlaying 
+                  ? "Pause" 
+                  : "Preview"}
             </Text>
           </Button>
           {/* 生成按钮 */}

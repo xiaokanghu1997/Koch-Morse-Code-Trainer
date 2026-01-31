@@ -1,20 +1,14 @@
-import { AudioGenerator } from '../lib';
-import { TextGenerator } from './textGenerator';
-import type { AudioConfig, PlaybackState, AudioEvent } from '../lib/types';
-import { log } from '../utils/logger';
-
-/**
- * 字符播放回调函数类型
- */
-type CharacterPlayCallback = (char: string, index: number, timestamp: number) => void;
-
-/**
- * 播放完成回调函数类型
- */
-type PlaybackFinishedCallback = (duration: number, charCount: number) => void;
+import { AudioGenerator } from "../lib/audio";
+import type { AudioConfig, PlaybackState, AudioEvent } from "../lib/types";
+import { log } from "../utils/logger";
 
 /**
  * 播放控制器类
+ * 
+ * 功能：
+ * - 播放/暂停/停止/重播
+ * - 进度条拖动
+ * - 状态管理
  */
 export class PlayerController {
   // ==================== 核心组件 ====================
@@ -22,155 +16,139 @@ export class PlayerController {
   /** 音频生成器实例 */
   private audioGenerator: AudioGenerator;
   
-  /** 当前播放状态 */
-  private currentState: PlaybackState;
+  /** 播放状态实例 */
+  private playbackState: PlaybackState;
   
+  // ==================== 内部状态 ====================
+  
+  /** 当前播放文本 */
+  private currentText: string = "";
+
   /** 当前音频配置 */
   private currentConfig: AudioConfig | null = null;
-  
-  /** 当前播放的事件序列 */
+
+  /** 当前生成的音频事件序列 */
   private currentEvents: AudioEvent[] = [];
   
-  // ==================== 回调管理 ====================
-  
-  /** 字符播放回调列表 */
-  private characterCallbacks: CharacterPlayCallback[] = [];
-  
-  /** 播放完成回调列表 */
-  private finishedCallbacks: PlaybackFinishedCallback[] = [];
-  
-  /** 状态变化回调列表 */
-  private stateChangeCallbacks: Array<(state: PlaybackState) => void> = [];
-  
-  // ==================== 定时器管理 ====================
-  
-  /** 字符回调定时器ID列表 */
-  private scheduledTimers: number[] = [];
-  
-  /** 进度更新定时器ID */
-  private progressTimer: number | null = null;
-  
-  /** 播放完成定时器ID */
-  private finishTimer: number | null = null;
+  // ==================== 进度追踪 ====================
 
-  /**
-   * 构造函数
-   */
+  /** 进度更新定时器 */
+  private progressInterval: number | null = null;
+
+  /** 进度更新间隔 */
+  private readonly PROGRESS_UPDATE_INTERVAL = 100; // ms
+  
+  // ==================== 回调 ====================
+
+  /** 状态变化回调 */
+  private stateChangeCallbacks?: (state: PlaybackState) => void;
+
+  // ==================== 构造函数 ====================
   constructor() {
     // 创建音频生成器
     this.audioGenerator = new AudioGenerator();
+
+    // 音频生成器初始化
+    this.audioGenerator.initialize();
     
     // 初始化状态
-    this.currentState = {
-      status: 'idle',
+    this.playbackState = {
+      status: "idle",
       currentTime: 0,
       totalDuration: 0,
       pausedAt: 0,
-      currentCharIndex: 0,
-      currentChar: null,
-      text: '',
     };
-  }
-
-  // ==================== 初始化方法 ====================
-
-  /**
-   * 初始化音频系统
-   * 
-   * 必须在播放前调用（通常在组件挂载时）
-   */
-  initialize(): void {
-    if (!this.audioGenerator.isInitialized()) {
-      this.audioGenerator.initialize();
-      log.info('PlayerController initialized', 'PlayerController');
-    }
   }
 
   // ==================== 播放控制方法 ====================
 
   /**
-   * 播放文本
+   * 预加载文本（生成事件序列但不播放）
    * 
-   * 完整流程:
-   * 1.停止当前播放
-   * 2.更新状态为loading
-   * 3.生成音频事件
-   * 4.调度音频和回调
-   * 5.开始播放
+   * @param text - 要预加载的文本
+   * @param config - 音频配置
+   */
+  preload(text: string, config: AudioConfig): void {
+    try {
+      // 保存当前文本和配置
+      this.currentText = text;
+      this.currentConfig = config;
+
+      // 设置音调
+      this.audioGenerator.setFrequency(config.tone);
+
+      // 生成事件序列
+      const events = this.audioGenerator.generateEvents(text, config);
+
+      // 保存到 PlayerController
+      this.audioGenerator.saveEvents(events);
+      this.currentEvents = events;
+
+      // 计算时长
+      const duration = events.length > 0 
+        ? events[events.length - 1].time
+        : 0;
+
+      // 更新总时长（但保持 idle 状态）
+      this.playbackState.totalDuration = duration;
+
+      // 触发状态回调
+      this.emitStateChange();
+
+      log.info("Content preloaded", "PlayerController", {
+        textLength: text.length,
+        duration: duration.toFixed(1),
+      });
+    } catch (error) {
+      log.error("Failed to preload content", "PlayerController", error);
+    }
+  }
+
+  /**
+   * 播放文本
    * 
    * @param text - 要播放的文本
    * @param config - 音频配置
    * @returns Promise（播放开始后resolve）
    */
   async play(text: string, config: AudioConfig): Promise<void> {
-    // 1.确保已初始化
-    this.initialize();
+    try {
+      // 保存当前文本和配置
+      this.currentText = text;
+      this.currentConfig = config;
 
-    // 2.停止当前播放
-    this.stop();
+      // 停止当前播放
+      this.stop();
 
-    // 3.更新状态为loading
-    this.updateState({
-      status: 'loading',
-      text,
-      currentTime: 0,
-      totalDuration: 0,
-      currentCharIndex: 0,
-      currentChar: null,
-    });
+      // 应用音频参数
+      this.audioGenerator.setFrequency(config.tone);
 
-    // 4.保存配置
-    this.currentConfig = config;
+      // 生成事件序列
+      this.currentEvents = this.audioGenerator.generateEvents(text, config);
 
-    // 5.应用音频参数
-    this.audioGenerator.setFrequency(config.tone);
-    this.audioGenerator.setVolume(config.volume);
+      // 调度音频播放
+      const duration = this.audioGenerator.schedule(this.currentEvents);
 
-    // 6.生成事件序列
-    this.currentEvents = this.audioGenerator.generateEvents(text, config);
+      // 更新状态
+      this.playbackState.status = "playing";
+      this.playbackState.currentTime = 0;
+      this.playbackState.totalDuration = duration;
+      this.playbackState.pausedAt = 0;
 
-    // 7.调度音频
-    const totalDuration = this.audioGenerator.schedule(this.currentEvents);
+      // 启动进度追踪
+      this.startProgressTracking();
 
-    // 8.调度字符回调
-    this.scheduleCharacterCallbacks(this.currentEvents);
+      // 触发状态回调
+      this.emitStateChange();
 
-    // 9.调度播放完成
-    this.schedulePlaybackFinished(totalDuration, text);
-
-    // 10.更新状态为playing
-    this.updateState({
-      status: 'playing',
-      totalDuration,
-    });
-
-    // 11.启动进度追踪
-    this.startProgressTracking();
-
-    log.info('Playing text', 'PlayerController', {
-       textLength: text.length,
-       duration: totalDuration.toFixed(1), 
-    });
-  }
-
-  /**
-   * 播放单个字符
-   * 
-   * @param char - 字符
-   * @param config - 音频配置
-   * @param repeat - 重复次数
-   */
-  async playCharacter(
-    char: string,
-    config: AudioConfig,
-    repeat: number = 1
-  ): Promise<void> {
-    // 生成重复文本（字符间用空格分隔）
-    const textGen = new TextGenerator();
-    const text = textGen.generateSingleCharacter(char, repeat);
-
-    // 播放
-    await this.play(text, config);
+      log.info("Playback started", "PlayerController", {
+        textLength: text.length,
+        duration: duration.toFixed(1), 
+      });
+    } catch (error) {
+      log.error("Failed to start playback", "PlayerController", error);
+      return;
+    }
   }
 
   /**
@@ -179,29 +157,23 @@ export class PlayerController {
    * 记录暂停时间点，暂停AudioContext
    */
   pause(): void {
-    if (this.currentState.status !== 'playing') {
-      log.warn('Cannot pause: not playing', 'PlayerController');
-      return;
-    }
+    if (this.playbackState.status !== "playing") return;
 
-    // 1.记录暂停时间
-    const pausedAt = this.audioGenerator.getCurrentTime();
-
-    // 2.暂停AudioContext
+    // 暂停音频
     this.audioGenerator.suspend();
 
-    // 3.清除所有定时器
-    this.clearTimers();
+    // 记录暂停时间
+    this.playbackState.pausedAt = this.audioGenerator.getCurrentTime();
+    this.playbackState.status = "paused";
+    this.playbackState.currentTime = this.playbackState.pausedAt;
 
-    // 4.更新状态
-    this.updateState({
-      status: 'paused',
-      pausedAt,
-    });
+    // 更新状态
+    this.stopProgressTracking();
 
-    log.info('Playback paused', 'PlayerController', { 
-      pausedAt: pausedAt.toFixed(1) 
-    });
+    // 触发状态回调
+    this.emitStateChange();
+
+    log.info("Playback paused", "PlayerController");
   }
 
   /**
@@ -210,32 +182,21 @@ export class PlayerController {
    * 从暂停点继续播放
    */
   resume(): void {
-    if (this.currentState.status !== 'paused') {
-      log.warn('Cannot resume: not paused', 'PlayerController');
-      return;
-    }
+    if (this.playbackState.status !== "paused") return;
 
-    // 1.恢复AudioContext
+    // 恢复音频
     this.audioGenerator.resume();
 
-    // 2.重新调度剩余的字符回调
-    this.rescheduleCallbacks();
+    // 更新状态
+    this.playbackState.status = "playing";
 
-    // 3.重新调度播放完成
-    const remaining = this.currentState.totalDuration - this.currentState.pausedAt;
-    this.schedulePlaybackFinished(remaining, this.currentState.text);
-
-    // 4.更新状态
-    this.updateState({
-      status: 'playing',
-    });
-
-    // 5.重启进度追踪
+    // 继续进度追踪
     this.startProgressTracking();
 
-    log.info('Playback resumed', 'PlayerController', { 
-      resumedFrom: this.currentState.pausedAt.toFixed(1) 
-    });
+    // 触发状态回调
+    this.emitStateChange();
+
+    log.info("Playback resumed", "PlayerController");
   }
 
   /**
@@ -244,336 +205,110 @@ export class PlayerController {
    * 完全停止并重置状态
    */
   stop(): void {
-    // 1.停止音频
+    if (this.playbackState.status === "idle") return;
+
+    // 停止音频
     this.audioGenerator.stop();
 
-    // 2.清除所有定时器
-    this.clearAllTimers();
+    // 确保 AudioContext 恢复初始状态
+    this.audioGenerator.resume();
 
-    // 3.重置状态
-    this.updateState({
-      status: 'idle',
-      currentTime: 0,
-      totalDuration: 0,
-      pausedAt: 0,
-      currentCharIndex: 0,
-      currentChar: null,
-      text: '',
-    });
+    // 停止进度追踪
+    this.stopProgressTracking();
 
-    log.info('Playback stopped', 'PlayerController');
+    // 重置状态
+    this.playbackState.status = "idle";
+    this.playbackState.currentTime = 0;
+    this.playbackState.pausedAt = 0;
+
+    // 触发状态回调
+    this.emitStateChange();
+
+    log.info("Playback stopped", "PlayerController");
   }
 
   /**
-   * 重新播放当前文本
+   * 重新播放
    * 
-   * 从头开始播放当前文本
+   * 从头开始播放
    */
-  replay(): void {
-    const { text } = this.currentState;
-    if (! text || ! this.currentConfig) {
-      log.warn('Cannot replay: no text to play', 'PlayerController');
+  async replay(): Promise<void> {
+    if (!this.currentText || !this.currentConfig) {
+      log.warn("No content to replay", "PlayerController");
       return;
     }
 
-    this.play(text, this.currentConfig);
+    await this.play(this.currentText, this.currentConfig);
   }
 
   /**
-   * 设置播放进度
+   * 跳转到指定时间
    * 
-   * @param milliseconds - 目标位置（毫秒）
+   * 跳转到指定位置进行播放
    */
-  setPosition(milliseconds: number): void {
-    if (! this.audioGenerator || ! this.currentState.text) {
+  seek(time: number): void {
+    if (!this.currentText || !this.currentConfig) {
+      log.warn("Cannot seek: no content loaded", "PlayerController");
       return;
     }
 
-    const targetSeconds = milliseconds / 1000;
+    // 限制时间范围
+    const clampedTime = Math.max(0, Math.min(time, this.playbackState.totalDuration));
+
+    // 记录之前的状态
+    const wasPlaying = this.playbackState.status === "playing";
 
     // 停止当前播放
-    const wasPlaying = this.currentState.status === 'playing';
-    if (wasPlaying) {
-      this.pause();
-    }
+    this.audioGenerator.stop();
+
+    // 从指定时间开始调度
+    this.audioGenerator.scheduleFrom(clampedTime);
 
     // 更新状态
-    this.currentState.currentTime = targetSeconds;
-    this.currentState.pausedAt = targetSeconds;
+    this.playbackState.currentTime = clampedTime;
 
-    // 如果之前在播放，继续播放
     if (wasPlaying) {
-      this.resume();
-    }
-  }
-
-  // ==================== 回调调度 ====================
-
-  /**
-   * 调度字符播放回调
-   * 
-   * @param events - 事件序列
-   */
-  private scheduleCharacterCallbacks(events: AudioEvent[]): void {
-    // 清除旧的定时器
-    this.clearCharacterTimers();
-
-    // 遍历事件，找出包含字符信息的事件
-    for (const event of events) {
-      if (event.char !== undefined && event.charIndex !== undefined) {
-        // 计算延迟时间（毫秒）
-        const delay = event.time * 1000;
-
-        // 创建定时器
-        const timerId = window.setTimeout(() => {
-          // 触发所有字符回调
-          this.characterCallbacks.forEach(callback => {
-            callback(event.char!, event.charIndex!, event.time);
-          });
-
-          // 更新状态
-          this.updateState({
-            currentCharIndex: event.charIndex! ,
-            currentChar: event.char! ,
-          });
-        }, delay);
-
-        // 保存定时器ID
-        this.scheduledTimers.push(timerId);
-      }
+      // 如果之前是播放状态，继续播放
+      this.playbackState.status = "playing";
+      this.startProgressTracking();
+    } else {
+      // 否则保持暂停状态
+      this.audioGenerator.suspend();
+      this.playbackState.status = "paused";
+      this.playbackState.pausedAt = clampedTime;
+      this.stopProgressTracking();
     }
 
-    log.debug('Character callbacks scheduled', 'PlayerController', {
-      count: this.scheduledTimers.length,
-    });
+    // 触发状态回调
+    this.emitStateChange();
+
+    log.info("Seek to time", "PlayerController", { time: clampedTime.toFixed(2) });
+  }
+
+  // ==================== 状态获取 ====================
+
+  /**
+   * 获取当前播放状态
+   */
+  getPlaybackState(): PlaybackState {
+    return { ...this.playbackState };
   }
 
   /**
-   * 重新调度回调（用于resume）
-   * 
-   * 只调度尚未触发的回调
+   * 获取当前播放时间
    */
-  private rescheduleCallbacks(): void {
-    const { pausedAt } = this.currentState;
-
-    // 清除旧定时器
-    this.clearCharacterTimers();
-
-    // 重新调度剩余的回调
-    for (const event of this.currentEvents) {
-      if (
-        event.char !== undefined &&
-        event.charIndex !== undefined &&
-        event.time > pausedAt
-      ) {
-        // 计算相对于当前时间的延迟
-        const delay = (event.time - pausedAt) * 1000;
-
-        const timerId = window.setTimeout(() => {
-          this.characterCallbacks.forEach(callback => {
-            callback(event.char!, event.charIndex!, event.time);
-          });
-
-          this.updateState({
-            currentCharIndex: event.charIndex!,
-            currentChar: event.char!,
-          });
-        }, delay);
-
-        this.scheduledTimers.push(timerId);
-      }
-    }
+  getCurrentTime(): number {
+    return this.playbackState.currentTime;
   }
 
   /**
-   * 调度播放完成回调
-   * 
-   * @param duration - 持续时间（秒）
-   * @param text - 文本
+   * 获取总播放时长
    */
-  private schedulePlaybackFinished(duration: number, text: string): void {
-    // 清除旧定时器
-    if (this.finishTimer !== null) {
-      window.clearTimeout(this.finishTimer);
-    }
-
-    // 创建新定时器
-    this.finishTimer = window.setTimeout(() => {
-      // 触发完成回调
-      const charCount = text.replace(/ /g, '').length;
-      this.finishedCallbacks.forEach(callback => {
-        callback(duration, charCount);
-      });
-
-      // 更新状态
-      this.updateState({
-        status: 'idle',
-      });
-
-      log.info('Playback finished', 'PlayerController', { 
-        duration: duration.toFixed(1), 
-        charCount
-      });
-    }, duration * 1000);
+  getTotalDuration(): number {
+    return this.playbackState.totalDuration;
   }
 
-  // ==================== 进度追踪 ====================
-
-  /**
-   * 启动进度追踪
-   * 
-   * 每100ms更新一次当前时间
-   */
-  private startProgressTracking(): void {
-    // 清除旧定时器
-    if (this.progressTimer !== null) {
-      window.clearInterval(this.progressTimer);
-    }
-
-    // 创建新定时器
-    this.progressTimer = window.setInterval(() => {
-      if (this.currentState.status === 'playing') {
-        const currentTime = this.audioGenerator.getCurrentTime();
-        this.updateState({ currentTime });
-      }
-    }, 100);  // 每100ms更新
-  }
-
-  // ==================== 定时器清理 ====================
-
-  /**
-   * 清除字符回调定时器
-   */
-  private clearCharacterTimers(): void {
-    this.scheduledTimers.forEach(id => window.clearTimeout(id));
-    this.scheduledTimers = [];
-  }
-
-  /**
-   * 清除所有定时器
-   */
-  private clearAllTimers(): void {
-    // 清除字符回调定时器
-    this.clearCharacterTimers();
-
-    // 清除进度定时器
-    if (this.progressTimer !== null) {
-      window.clearInterval(this.progressTimer);
-      this.progressTimer = null;
-    }
-
-    // 清除完成定时器
-    if (this.finishTimer !== null) {
-      window.clearTimeout(this.finishTimer);
-      this.finishTimer = null;
-    }
-  }
-
-  /**
-   * 清除定时器（用于pause）
-   */
-  private clearTimers(): void {
-    this.clearCharacterTimers();
-
-    if (this.progressTimer !== null) {
-      window.clearInterval(this.progressTimer);
-      this.progressTimer = null;
-    }
-
-    if (this.finishTimer !== null) {
-      window.clearTimeout(this.finishTimer);
-      this.finishTimer = null;
-    }
-  }
-
-  // ==================== 状态管理 ====================
-
-  /**
-   * 更新状态
-   * 
-   * @param updates - 部分状态更新
-   */
-  private updateState(updates: Partial<PlaybackState>): void {
-    this.currentState = {
-      ...this.currentState,
-      ...updates,
-    };
-
-    // 触发状态变化回调
-    this.stateChangeCallbacks.forEach(callback => {
-      callback(this.currentState);
-    });
-  }
-
-  /**
-   * 获取当前状态
-   */
-  getState(): PlaybackState {
-    return { ...this.currentState };
-  }
-
-  /**
-   * 获取剩余时间
-   */
-  getRemainingTime(): number {
-    return Math.max(0, this.currentState.totalDuration - this.currentState.currentTime);
-  }
-
-  // ==================== 回调注册 ====================
-
-  /**
-   * 注册字符播放回调
-   * 
-   * @param callback - 回调函数
-   * @returns 取消注册的函数
-   */
-  onCharacterPlay(callback: CharacterPlayCallback): () => void {
-    this.characterCallbacks.push(callback);
-
-    // 返回取消注册函数
-    return () => {
-      const index = this.characterCallbacks.indexOf(callback);
-      if (index > -1) {
-        this.characterCallbacks.splice(index, 1);
-      }
-    };
-  }
-
-  /**
-   * 注册播放完成回调
-   * 
-   * @param callback - 回调函数
-   * @returns 取消注册的函数
-   */
-  onPlaybackFinished(callback: PlaybackFinishedCallback): () => void {
-    this.finishedCallbacks.push(callback);
-
-    return () => {
-      const index = this.finishedCallbacks.indexOf(callback);
-      if (index > -1) {
-        this.finishedCallbacks.splice(index, 1);
-      }
-    };
-  }
-
-  /**
-   * 注册状态变化回调
-   * 
-   * @param callback - 回调函数
-   * @returns 取消注册的函数
-   */
-  onStateChange(callback: (state: PlaybackState) => void): () => void {
-    this.stateChangeCallbacks.push(callback);
-
-    return () => {
-      const index = this.stateChangeCallbacks.indexOf(callback);
-      if (index > -1) {
-        this.stateChangeCallbacks.splice(index, 1);
-      }
-    };
-  }
-
-  // ==================== 音频参数设置 ====================
+  // ==================== 参数设置 ====================
 
   /**
    * 设置音调频率
@@ -582,9 +317,6 @@ export class PlayerController {
    */
   setFrequency(frequency: number): void {
     this.audioGenerator.setFrequency(frequency);
-    if (this.currentConfig) {
-      this.currentConfig.tone = frequency;
-    }
   }
 
   /**
@@ -594,9 +326,79 @@ export class PlayerController {
    */
   setVolume(volume: number): void {
     this.audioGenerator.setVolume(volume);
-    if (this.currentConfig) {
-      this.currentConfig.volume = volume;
+  }
+
+  // ==================== 回调管理 ====================
+
+  /**
+   * 设置状态变化回调
+   * 
+   * @param callback - 回调函数
+   */
+  onStateChange(callback: (state: PlaybackState) => void): void {
+    this.stateChangeCallbacks = callback;
+  }
+
+  /**
+   * 触发状态变化回调
+   */
+  private emitStateChange(): void {
+    if (this.stateChangeCallbacks) {
+      this.stateChangeCallbacks(this.getPlaybackState());
     }
+  }
+
+  // ==================== 进度追踪 ====================
+
+  /**
+   * 启动进度追踪
+   */
+  private startProgressTracking(): void {
+    // 清除之前的定时器
+    this.stopProgressTracking();
+
+    // 启动新的定时器
+    this.progressInterval = setInterval(() => {
+      this.updateProgress();
+    }, this.PROGRESS_UPDATE_INTERVAL);
+  }
+
+  /**
+   * 停止进度追踪
+   */
+  private stopProgressTracking(): void {
+    if (this.progressInterval) {
+      clearInterval(this.progressInterval);
+      this.progressInterval = null;
+    }
+  }
+
+  /**
+   * 更新播放进度
+   */
+  private updateProgress(): void {
+    if (this.playbackState.status !== "playing") return;
+
+    // 获取当前播放时间
+    const currentTime = this.audioGenerator.getCurrentTime();
+    this.playbackState.currentTime = currentTime;
+
+    // 检查是否播放结束
+    if (currentTime >= this.playbackState.totalDuration) {
+      this.handlePlaybackComplete();
+      return;
+    }
+
+    // 触发状态回调
+    this.emitStateChange();
+  }
+
+  /**
+   * 处理播放完成
+   */
+  private handlePlaybackComplete(): void {
+    this.stop();
+    log.info("Playback completed", "PlayerController");
   }
 
   // ==================== 波形数据 ====================
@@ -628,14 +430,12 @@ export class PlayerController {
     // 停止播放
     this.stop();
 
-    // 清除所有回调
-    this.characterCallbacks = [];
-    this.finishedCallbacks = [];
-    this.stateChangeCallbacks = [];
-
     // 销毁音频生成器
     this.audioGenerator.dispose();
 
-    log.info('PlayerController disposed', 'PlayerController');
+    // 清除回调
+    this.stateChangeCallbacks = undefined;
+
+    log.info("PlayerController disposed", "PlayerController");
   }
 }

@@ -1,14 +1,14 @@
-import { debug, info, warn, error, trace } from '@tauri-apps/plugin-log';
+import { debug, info, warn, error, trace } from "@tauri-apps/plugin-log";
 
 /**
  * 日志级别
  */
 export enum LogLevel {
-  DEBUG = 'DEBUG',
-  INFO = 'INFO',
-  WARN = 'WARN',
-  ERROR = 'ERROR',
-  TRACE = 'TRACE',
+  DEBUG = "DEBUG",
+  INFO = "INFO",
+  WARN = "WARN",
+  ERROR = "ERROR",
+  TRACE = "TRACE",
 }
 
 /**
@@ -38,9 +38,9 @@ class Logger {
   private formatMessage(level: LogLevel, message: string, context?: string): string {
     const timestamp = this.config.enableTimestamp 
       ? new Date().toISOString().substring(11, 23)  // HH:mm:ss.SSS
-      : '';
+      : "";
     
-    const contextStr = context ? `[${context}]` : '';
+    const contextStr = context ? `[${context}]` : "";
     
     return `${timestamp} ${level} ${contextStr} ${message}`.trim();
   }
@@ -49,23 +49,20 @@ class Logger {
    * 格式化数据为字符串
    */
   private formatData(data: any): string {
-    if (data === undefined || data === null) return '';
+    if (data === undefined || data === null) return "";
     
     try {
-      if (typeof data === 'object') {
+      if (typeof data === "object") {
         return JSON.stringify(data, null, 2);
       }
       return String(data);
     } catch {
-      return '[Circular]';
+      return "[Circular]";
     }
   }
 
   /**
    * Debug 日志 - 详细的调试信息
-   * 
-   * @example
-   * log.debug('User config loaded', 'App', { theme: 'dark' });
    */
   debug(message: string, context?: string, data?: any) {
     const formatted = this.formatMessage(LogLevel.DEBUG, message, context);
@@ -77,9 +74,6 @@ class Logger {
 
   /**
    * Info 日志 - 一般信息
-   * 
-   * @example
-   * log.info('Application started', 'App');
    */
   info(message: string, context?: string, data?: any) {
     const formatted = this.formatMessage(LogLevel.INFO, message, context);
@@ -91,9 +85,6 @@ class Logger {
 
   /**
    * Warn 日志 - 警告信息
-   * 
-   * @example
-   * log.warn('Config file not found, using defaults', 'Config');
    */
   warn(message: string, context?: string, data?: any) {
     const formatted = this.formatMessage(LogLevel.WARN, message, context);
@@ -105,14 +96,11 @@ class Logger {
 
   /**
    * Error 日志 - 错误信息
-   * 
-   * @example
-   * log.error('Failed to load data', 'Database', error);
    */
   error(message: string, context?: string, err?: Error | any) {
     const formatted = this.formatMessage(LogLevel.ERROR, message, context);
     
-    let errorData = '';
+    let errorData = "";
     if (err instanceof Error) {
       errorData = JSON.stringify({
         message: err.message,
@@ -130,9 +118,6 @@ class Logger {
 
   /**
    * Trace 日志 - 函数调用追踪
-   * 
-   * @example
-   * log.trace('Entering function calculateSpeed', 'Calculator');
    */
   trace(message: string, context?: string) {
     const formatted = this.formatMessage(LogLevel.TRACE, message, context);

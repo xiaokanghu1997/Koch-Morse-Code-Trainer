@@ -14,9 +14,11 @@ import {
   Speaker224Regular,
   PulseSquare24Regular
 } from "@fluentui/react-icons";
-import { useAppearance } from "../contexts/AppearanceContext";
 import { invoke } from "@tauri-apps/api/core";
+import { log } from "../utils/logger";
+import { useSettingsStore } from "../stores/settingsStore";
 
+// 样式定义
 const useStyles = makeStyles({
   container: {
     display: "flex",
@@ -47,7 +49,7 @@ const useStyles = makeStyles({
   },
   description: {
     fontSize: tokens.fontSizeBase200,
-    color: tokens.colorNeutralForeground2,
+    color: tokens.colorNeutralForeground3,
   },
   control: {
     flexShrink: 0,
@@ -143,8 +145,30 @@ const useStyles = makeStyles({
 });
 
 export const SettingsPage = () => {
+  // 使用样式
   const styles = useStyles();
-  const { theme, setTheme, opacity, setOpacity } = useAppearance();
+
+  // 从 SettingsStore 获取设置状态和操作方法
+  const {
+    theme,
+    setTheme,
+    opacity,
+    setOpacity,
+    volume,
+    setVolume,
+    showWaveform,
+    setShowWaveform,
+  } = useSettingsStore();
+
+  // 处理透明度变化
+  const handleOpacityChange = (value: number) => {
+    setOpacity(value);
+    invoke("set_window_opacity", {
+      opacity: value / 100
+    }).catch((error) => {
+      log.error("Failed to set window opacity", "SettingsPage", error);
+    });
+  };
 
   return (
     <div className={styles.container}>
@@ -201,13 +225,7 @@ export const SettingsPage = () => {
             min={10}
             max={100}
             value={opacity}
-            onChange={(_, data) => {
-              const newOpacity = data.value;
-              setOpacity(newOpacity);
-              invoke('set_window_opacity', {
-                opacity: newOpacity / 100
-              }).catch(console.error);
-            }}
+            onChange={(_, data) => handleOpacityChange(data.value)}
           />
           <Text className={styles.sliderValueText}>{Math.round(opacity)}%</Text>
         </div>
@@ -227,9 +245,10 @@ export const SettingsPage = () => {
             className={styles.slider}
             min={0}
             max={100}
-            defaultValue={0}
+            value={volume}
+            onChange={(_, data) => setVolume(data.value)}
           />
-          <Text className={styles.sliderValueText}>100%</Text>
+          <Text className={styles.sliderValueText}>{Math.round(volume)}%</Text>
         </div>
       </Card>
 
@@ -245,9 +264,12 @@ export const SettingsPage = () => {
         <div className={styles.controlContainer}>
           <Switch 
             className={styles.switch}
-            defaultChecked={false}
+            checked={showWaveform}
+            onChange={(_, data) => setShowWaveform(data.checked)}
           />
-          <Text className={styles.switchValueText}>Off</Text>
+          <Text className={styles.switchValueText}>
+            {showWaveform ? "On" : "Off"}
+          </Text>
         </div>
       </Card>
     </div>

@@ -7,29 +7,27 @@ import {
   Textarea,
   MessageBar,
   MessageBarBody,
-  MessageBarTitle,
   makeStyles,
   tokens
 } from "@fluentui/react-components";
 import { 
   PlayCircle20Regular, 
   PauseCircle20Regular, 
+  ArrowUndo16Regular,
   ArrowClockwise20Regular,
   CheckmarkCircle20Regular,
-  CheckmarkCircle20Filled,
-  ErrorCircle20Filled,
-  Warning20Filled,
+  ChevronCircleRight20Regular,
 } from "@fluentui/react-icons";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useLayoutEffect } from "react";
+import { AccuracyResult } from "../lib/types";
+import { useTiming } from "../hooks/useTiming";
+import { useLessonManager } from "../hooks/useLessonManager";
+import { useTextGenerator } from "../hooks/useTextGenerator";
 import { useMorsePlayer } from "../hooks/useMorsePlayer";
-import { useProgress } from "../hooks/useProgress";
+import { HighlightedText } from "../components/HighlightedText";
+import { calculateAccuracy } from "../services/statisticalToolset";
 import { useTrainingStore } from "../stores/trainingStore";
-import { useSettingsStore } from "../stores/settingsStore";
-import { CourseManager } from "../services/courseManager";
-import { TextGenerator } from "../services/textGenerator";
-import { checkText, formatAccuracy, getAccuracyGrade } from "../utils/textChecker";
-import type { AudioConfig } from "../lib/types";
-import { log } from "../utils/logger";
+import { useGeneratorStore } from "../stores/generatorStore";
 
 // 样式定义
 const useStyles = makeStyles({
@@ -51,6 +49,8 @@ const useStyles = makeStyles({
     fontSize: tokens.fontSizeBase300,
   },
   lessonNumber: {
+    fontSize: "15px",
+    fontFamily: tokens.fontFamilyMonospace,
     fontWeight: tokens.fontWeightSemibold,
   },
   lessonSelector: {
@@ -83,8 +83,6 @@ const useStyles = makeStyles({
     height: "166px",
     overflowY: "auto",
     backgroundColor: tokens.colorNeutralBackground4,
-    scrollbarWidth: "thin",
-    scrollbarColor: `${tokens.colorNeutralStroke1} ${tokens.colorNeutralBackground4}`,
   },
   dropdownOption: {
     height: "32px",
@@ -138,9 +136,6 @@ const useStyles = makeStyles({
     ":hover": {
       color: tokens.colorBrandForeground1,
     },
-    ":active": {
-      transform: "scale(0.95)",  // 点击时轻微缩小
-    },
   },
   // 第三、四行：音频播放控制
   audioControlRow: {
@@ -168,18 +163,22 @@ const useStyles = makeStyles({
   slider: {
     width: "180px",
     transform: "translateY(1px)",
+    marginRight: "-14px",
     "& .fui-Slider__thumb": {
       border: `4px solid ${tokens.colorNeutralBackground3Selected}`,
       boxShadow: tokens.shadow2,
     },
-    marginRight: "-6px"
   },
   audioTimeContainer: {
     display: "flex",
     alignItems: "center",
     gap: "4px",
   },
-  timeText: {
+  currentTimeText: {
+    minWidth: "40px",
+    textAlign: "right",
+  },
+  totalTimeText: {
     minWidth: "30px",
   },
   button: {
@@ -209,6 +208,7 @@ const useStyles = makeStyles({
     flexDirection: "column",
     gap: "10px",
     paddingTop: "1px",
+    position: "relative",
   },
   textArea: {
     flex: 1,
@@ -220,16 +220,34 @@ const useStyles = makeStyles({
     "& textarea": {
       fontFamily: tokens.fontFamilyMonospace,
       fontSize: "15px",
+      lineHeight: "20px",
+      padding: "8px 12px",
     },
     ":hover": {
       backgroundColor: tokens.colorNeutralBackground3Hover,
     },
     ":focus-within": {
-    backgroundColor: tokens.colorNeutralBackground3Pressed,
+      backgroundColor: tokens.colorNeutralBackground3Pressed,
     },
     ":focus-within:hover": {
       backgroundColor: tokens.colorNeutralBackground3Pressed,
     },
+    "::selection": {
+      backgroundColor: tokens.colorCompoundBrandBackground,
+    },
+  },
+  resultOverlay: {
+    position: "absolute",
+    padding: "8px 12px",
+    borderRadius: tokens.borderRadiusMedium,
+    backgroundColor: tokens.colorNeutralBackground3,
+    overflowY: "auto",
+    overflowX: "hidden",
+    zIndex: 10,
+    pointerEvents: "auto",
+    height: "100%",
+    width: "100%",
+    boxSizing: "border-box",
   },
   // 第六行：结果检查按钮
   actionBar: {
@@ -243,8 +261,16 @@ const useStyles = makeStyles({
     marginBottom: "-6px",
   },
   messageBar: {
-    maxWidth: "450px",
+    height: "32px",
+    transform: "translateY(-1.2px)",
     boxShadow: tokens.shadow2,
+  },
+  messageBarBody: {
+    display: "inline-flex",
+    alignItems: "center",
+    paddingBottom: "1.2px",
+    paddingRight: "4px",
+    gap: "12px"
   },
   checkButton: {
     width: "140px",
@@ -266,333 +292,443 @@ const useStyles = makeStyles({
   },
 });
 
-// 格式化时间（秒 -> MM:SS）
-function formatTime(seconds: number): string {
-  if (!isFinite(seconds) || seconds < 0) {
-    return "00:00";
-  }
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-}
-
 export const TrainingPage = () => {
+  // 使用样式
   const styles = useStyles();
 
-  // Hooks
-  const { currentLesson, setCurrentLesson } = useTrainingStore();
-  const { volume } = useSettingsStore();
-  const {
-    playText: playMorseText,
-    playCharacter,
-    pause,
-    resume,
-    stop,
-    setPosition,
-    state: playerState,
-    isPlaying,
-    isPaused,
-  } = useMorsePlayer();
-  const {
-    saveAccuracy,
-    incrementPracticeCount,
-    recordCharacterErrors,
-  } = useProgress();
-  const [selectedChar, setSelectedChar] = useState<string>('');
-  const [isCharSeeking, setIsCharSeeking] = useState(false);
-  const [isTextSeeking, setIsTextSeeking] = useState(false);
-  const [charPreviewTime, setCharPreviewTime] = useState(0);
-  const [textPreviewTime, setTextPreviewTime] = useState(0);
+  // 获取配置
+  const { savedConfig } = useGeneratorStore();
 
-  // 状态管理
-  const [courseManager] = useState(() => new CourseManager('Koch-LCWO'));
-  const totalLessons = courseManager.getTotalLessons();
-  const allLessons = courseManager.getAllLessons();
-  const currentLessonData = allLessons.find(l => l.id === currentLesson) || allLessons[0];
-  const [lessonChars, setLessonChars] = useState('');
-  const [newChar, setNewChar] = useState('');
-  const [practiceText, setPracticeText] = useState('');
-  const [generatedText, setGeneratedText] = useState(''); // 标准答案
-  const [playMode, setPlayMode] = useState<'char' | 'text' | null>(null);
-  const [checkResult, setCheckResult] = useState<{
-    type: 'success' | 'warning' | 'error';
-    title: string;
-    content: string;
-  } | null>(null);
+  // 获取当前训练进度
+  const { 
+    currentDatasetName, 
+    currentLessonNumber,
+    setLessonNumber,
+    submitRecord,
+  } = useTrainingStore();
+  const { 
+    lessons, 
+    currentLesson, 
+    totalLessonNumber,
+  } = useLessonManager(currentDatasetName, currentLessonNumber);
+
+  // 字符播放器
+  const charTextGen = useTextGenerator();
+  const charPlayer = useMorsePlayer();
+  const charTiming = useTiming();
+
+  // 练习文本播放器
+  const textTextGen = useTextGenerator();
+  const textPlayer = useMorsePlayer();
+  const textTiming = useTiming();
+
+  // 字符播放器拖动状态
+  const [isCharSliderDragging, setIsCharSliderDragging] = useState(false);
+  const [charSliderValue, setCharSliderValue] = useState<number | null>(null);
+  const [charWasPlaying, setCharWasPlaying] = useState(false);
+
+  // 练习文本播放器拖动状态
+  const [isTextSliderDragging, setIsTextSliderDragging] = useState(false);
+  const [textSliderValue, setTextSliderValue] = useState<number | null>(null);
+  const [textWasPlaying, setTextWasPlaying] = useState(false);
+
+  // 追踪播放状态（控制 Restart 按钮）
+  const [charHasPlayed, setCharHasPlayed] = useState(false);
+  const [textHasPlayed, setTextHasPlayed] = useState(false);
+
+  // 追踪之前的 currentTime
+  const charPrevTimeRef = useRef<number>(0);
+  const textPrevTimeRef = useRef<number>(0);
+
+  // 当前点击播放的字符
+  const [currentPlayingChar, setCurrentPlayingChar] = useState<string>("");
+
+  // 课程显示
+  const currentLessonDisplay = lessons.find(
+    l => l.lessonNumber === currentLessonNumber)?.displayText || "";
+
+  // 练习文本输入与光标位置
+  const [inputText, setInputText] = useState<string>("");
+  const cursorPositionRef = useRef<{ start: number; end: number } | null>(null);
+
+  // 结果检查与显示
+  const [checkedResult, setCheckedResult] = useState<AccuracyResult | null>(null);
+
+  // 练习开始时间戳（毫秒）
+  const [practiceStartTime, setPracticeStartTime] = useState<number | null>(null);
+
+  // 结果评价文本
+  const resultMessage = {
+    "excellent": "Excellent performance with outstanding accuracy!",
+    "good": "Good performance meeting basic requirements!",
+    "close": "Close to passing but needs more practice!",
+    "again": "Needs much more practice to improve!",
+  };
   
-  // ==================== 音频配置 ====================
-  const audioConfig: AudioConfig = {
-    charSpeed: 20,
-    effSpeed: 15,
-    tone: 600,
-    volume: volume,
-  };
-
-  // 初始化课程数据
+  // 字符音频文本生成
   useEffect(() => {
-    try {
-      const lesson = courseManager.getLesson(currentLesson);
-      setLessonChars(lesson.chars);
-      setNewChar(lesson.newChar);
-      setSelectedChar(lesson.newChar);
-      log.info('Lesson loaded', 'TrainingPage', {
-        lessonNum: currentLesson,
-        chars: lesson.chars,
-        newChar: lesson.newChar,
-      });
-    } catch (error) {
-      log.error('Failed to load lesson', 'TrainingPage', error);
+    if (currentLesson.characters.length > 0) {
+      const lastChar = currentLesson.characters[currentLesson.characters.length - 1];
+      setCurrentPlayingChar(lastChar);
+      charTextGen.generateSingleChar(lastChar, 15, savedConfig);
     }
-  }, [currentLesson, courseManager]);
+  }, [currentLesson]);
 
-  // 生成练习文本
+  // 练习文本生成
   useEffect(() => {
-    if (!lessonChars) return;
-
-    try {
-      const textGen = new TextGenerator();
-      const text = textGen.generate({
-        charSet: lessonChars,
-        mode: 'Gradual',
-        groupLength: 5,
-        groupSpacing: 1,
-        targetDuration: 60, // 1分钟
-        audioConfig,
-        usePrefixSuffix: false,
-      });
-
-      setGeneratedText(text);
-      log.debug('Practice text generated', 'TrainingPage', {
-        textLength: text.length,
-      });
-    } catch (error) {
-      log.error('Failed to generate practice text', 'TrainingPage', error);
+    if (currentLesson.characters.length > 0) {
+      const charSet = currentLesson.characters.join("");
+      textTextGen.generate(savedConfig, charSet);
     }
-  }, [lessonChars]);
+  }, [currentLessonNumber, currentDatasetName]);
 
-  // 字符点击处理
-  const handleCharClick = async (char: string) => {
-    try {
-      setSelectedChar(char);
-      setNewChar(char);
-      stop();
-      setPlayMode(null);
-      setPlayMode('char');
-      await playCharacter(char, audioConfig, 5);
-      log.info('Character clicked', 'TrainingPage', { char });
-    } catch (error) {
-      log.error('Failed to play character', 'TrainingPage', error);
+  // 字符文本生成后，预加载到播放器
+  useEffect(() => {
+    if (charTextGen.text && charTextGen.duration > 0) {
+      // 预加载到播放器（不播放，只生成事件序列）
+      charPlayer.preload(charTextGen.text, savedConfig);
     }
-  };
+  }, [charTextGen.text]);
 
-  // 播放单字符
-  const handleCharPlay = async () => {
-    if (playMode === 'char' && isPlaying) {
-      pause();
-    } else if (playMode === 'char' && isPaused) {
-      resume();
-    } else {
-      stop();
-      setPlayMode('char');
-      try {
-        await playCharacter(newChar, audioConfig, 5); // 重复5次
-        log.info('Playing character', 'TrainingPage', { char: newChar });
-      } catch (error) {
-        log.error('Failed to play character', 'TrainingPage', error);
+  // 练习文本生成后，预加载到播放器
+  useEffect(() => {
+    if (textTextGen.text && textTextGen.duration > 0) {
+      // 预加载到播放器（不播放，只生成事件序列）
+      textPlayer.preload(textTextGen.text, savedConfig);
+    }
+  }, [textTextGen.text]);
+
+  // 字符音频时长同步
+  useEffect(() => {
+    charTiming.setTotalDuration(charTextGen.duration);
+  }, [charTextGen.duration]);
+
+  // 练习文本音频时长同步
+  useEffect(() => {
+    textTiming.setTotalDuration(textTextGen.duration);
+  }, [textTextGen.duration]);
+
+  // 字符音频播放状态同步
+  useEffect(() => {
+    charTiming.updateCurrentTime(charPlayer.playbackState.currentTime);
+    // 播放结束时停止计时
+    if (charPlayer.playbackState.status === "idle" && charTiming.phase === "playing") {
+      charTiming.stop();
+    }
+  }, [charPlayer.playbackState]);
+
+  // 练习文本音频播放状态同步
+  useEffect(() => {
+    textTiming.updateCurrentTime(textPlayer.playbackState.currentTime);
+    // 播放结束时停止计时
+    if (textPlayer.playbackState.status === "idle" && textTiming.phase === "playing") {
+      textTiming.stop();
+    }
+  }, [textPlayer.playbackState]);
+
+  // 监听字符音频 currentTime，检测播放完成
+  useEffect(() => {
+    const currentTime = charPlayer.playbackState.currentTime;
+    const prevTime = charPrevTimeRef.current;
+    if (
+      prevTime > 0 &&
+      currentTime === 0 &&
+      charPlayer.playbackState.status === "idle" &&
+      charHasPlayed
+    ) {
+      setCharHasPlayed(false);
+    }
+    charPrevTimeRef.current = currentTime;
+  }, [charPlayer.playbackState.currentTime, charPlayer.playbackState.status, charHasPlayed]);
+
+  // 监听练习文本 currentTime，检测播放完成
+  useEffect(() => {
+    const currentTime = textPlayer.playbackState.currentTime;
+    const prevTime = textPrevTimeRef.current;
+    if (
+      prevTime > 0 &&
+      currentTime === 0 &&
+      textPlayer.playbackState.status === "idle" &&
+      textHasPlayed
+    ) {
+      setTextHasPlayed(false);
+    }
+    textPrevTimeRef.current = currentTime;
+  }, [textPlayer.playbackState.currentTime, textPlayer.playbackState.status, textHasPlayed]);
+
+  // 课程切换时停止所有播放
+  useEffect(() => {
+    if (charPlayer.isPlaying || charPlayer.isPaused) {
+      charPlayer.stop();
+      charTiming.stop();
+      setCharHasPlayed(false);
+    }
+    if (textPlayer.isPlaying || textPlayer.isPaused) {
+      textPlayer.stop();
+      textTiming.stop();
+      setTextHasPlayed(false);
+    }
+    setInputText("");
+    setCheckedResult(null);
+    setPracticeStartTime(null);
+  }, [currentLessonNumber]);
+
+  // 在 DOM 更新后恢复光标位置
+  useLayoutEffect(() => {
+    if (cursorPositionRef.current) {
+      const textarea = document.getElementById("practice-textarea") as HTMLTextAreaElement;
+      if (textarea) {
+        textarea.setSelectionRange(
+          cursorPositionRef.current.start,
+          cursorPositionRef.current.end
+        );
+        cursorPositionRef.current = null; // 重置
       }
     }
-  };
+  }, [inputText]);
 
-  const handleCharRestart = async () => {
-    stop();
-    setPlayMode('char');
-    try {
-      await playCharacter(newChar, audioConfig, 5);
-      log.info('Character audio restarted', 'TrainingPage', { char: newChar });
-    } catch (error) {
-      log.error('Failed to restart character', 'TrainingPage', error);
+  // 点击字符播放
+  const handleCharClick = (char: string) => {
+    if (textPlayer.isPlaying) {
+      textPlayer.pause();
+      textTiming.pause();
+    }
+    if (charPlayer.isPlaying || charPlayer.isPaused) {
+      charPlayer.stop();
+      charTiming.stop();
+      setCharHasPlayed(false);
+    }
+    setCurrentPlayingChar(char);
+    charTextGen.generateSingleChar(char, 15, savedConfig);
+  }
+
+  // 字符音频播放控制
+  const handleCharPlay = () => {
+    if (textPlayer.isPlaying) {
+      textPlayer.pause();
+      textTiming.pause();
+    }
+
+    if (charPlayer.isPlaying) {
+      charPlayer.pause();
+      charTiming.pause();
+    } else if (charPlayer.isPaused) {
+      charPlayer.resume();
+      charTiming.resume();
+      setCharHasPlayed(true);
+    } else {
+      charPlayer.play(charTextGen.text, savedConfig);
+      charTiming.startPlaying(charTextGen.duration);
+      setCharHasPlayed(true);
     }
   };
 
-  // 播放练习文本
-  const handleTextPlay = async () => {
-    if (playMode === 'text' && isPlaying) {
-      pause();
-    } else if (playMode === 'text' && isPaused) {
-      resume();
-    } else {
-      if (!generatedText) {
-        log.warn('No practice text to play', 'TrainingPage');
-        return;
-      }
+  const handleCharRestart = () => {
+    // 重置进度为0，不播放
+    if (charPlayer.isPlaying || charPlayer.isPaused) {
+      charPlayer.stop();
+    }
+    charTiming.updateCurrentTime(0);
+    // 重置为未播放状态
+    setCharHasPlayed(false);
+  };
 
-      stop();
-      setPlayMode('text');
-      try {
-        await playMorseText(generatedText, audioConfig);
-        log.info('Playing practice text', 'TrainingPage', {
-          textLength: generatedText.length,
+  const handleCharSliderStart = () => {
+    setIsCharSliderDragging(true);
+    setCharSliderValue(charPlayer.playbackState.currentTime);
+    // 记录播放状态并暂停
+    if (charPlayer.isPlaying) {
+      setCharWasPlaying(true);
+      charPlayer.pause();
+      charTiming.pause();
+    } else {
+      setCharWasPlaying(false);
+    }
+  };
+
+  const handleCharSliderChange = (value: number) => {
+    if (isCharSliderDragging) {
+      setCharSliderValue(value);
+      // 实时更新播放进度
+      charTiming.updateCurrentTime(value);
+    }
+  };
+
+  const handleCharSliderEnd = () => {
+    setIsCharSliderDragging(false);
+    if (charSliderValue !== null) {
+      // 跳转到指定位置
+      charPlayer.seek(charSliderValue);
+      // 如果之前是播放状态，继续播放
+      if (charWasPlaying) {
+        charPlayer.resume();
+        charTiming.resume();
+      }
+    }
+    setCharSliderValue(null);
+    setCharWasPlaying(false);
+  };
+
+  // 练习文本音频播放控制
+  const handleTextPlay = () => {
+    if (charPlayer.isPlaying) {
+      charPlayer.pause();
+      charTiming.pause();
+    }
+
+    if (textTiming.phase === "delay") {
+      textTiming.stop();
+      return;
+    }
+
+    if (textPlayer.isPlaying) {
+      textPlayer.pause();
+      textTiming.pause();
+    } else if (textPlayer.isPaused) {
+      textPlayer.resume();
+      textTiming.resume();
+      setTextHasPlayed(true);
+    } else {
+      if (savedConfig.startDelay > 0) {
+        textTiming.startDelay(savedConfig.startDelay, async () => {
+          // 首次播放且倒计时完成，记录开始时间
+          if (practiceStartTime === null) {
+            setPracticeStartTime(Date.now());
+          }
+          await textPlayer.play(textTextGen.text, savedConfig);
+          textTiming.startPlaying(textTextGen.duration);
+          setTextHasPlayed(true);
         });
-      } catch (error) {
-        log.error('Failed to play practice text', 'TrainingPage', error);
+      } else {
+        if (practiceStartTime === null) {
+          setPracticeStartTime(Date.now());
+        }
+        textPlayer.play(textTextGen.text, savedConfig);
+        textTiming.startPlaying(textTextGen.duration);
+        setTextHasPlayed(true);
       }
     }
   };
 
-  const handleTextRestart = async () => {
-    if (!generatedText) return;
+  const handleTextRestart = () => {
+    // 重置进度为0，不播放
+    if (textPlayer.isPlaying || textPlayer.isPaused) {
+      textPlayer.stop();
+    }
+    textTiming.updateCurrentTime(0);
+    // 重置为未播放状态
+    setTextHasPlayed(false);
+    // 清空输入和结果
+    setInputText("");
+    setCheckedResult(null);
+  };
 
-    stop();
-    setPlayMode('text');
-    try {
-      await playMorseText(generatedText, audioConfig);
-      log.info('Practice text audio restarted', 'TrainingPage');
-    } catch (error) {
-      log.error('Failed to restart practice text', 'TrainingPage', error);
+  const handleTextSliderStart = () => {
+    setIsTextSliderDragging(true);
+    setTextSliderValue(textPlayer.playbackState.currentTime);
+    // 记录播放状态并暂停
+    if (textPlayer.isPlaying) {
+      setTextWasPlaying(true);
+      textPlayer.pause();
+      textTiming.pause();
+    } else {
+      setTextWasPlaying(false);
     }
   };
 
-  // 字符音频进度条按下
-  const handleCharSliderMouseDown = () => {
-    setIsCharSeeking(true);
-    log.debug('Character slider seeking started', 'TrainingPage');
-  };
-
-  // 字符音频进度条释放
-  const handleCharSliderMouseUp = () => {
-    setIsCharSeeking(false);
-    if (charPreviewTime > 0 && totalDuration > 0) {
-      const targetMs = charPreviewTime * 1000;
-      setPosition(targetMs);
-      log.debug('Character slider seeked', 'TrainingPage', {
-        targetTime: charPreviewTime,
-      });
+  const handleTextSliderChange = (value: number) => {
+    if (isTextSliderDragging) {
+      setTextSliderValue(value);
+      // 实时更新播放进度
+      textTiming.updateCurrentTime(value);
     }
   };
 
-  // 字符音频进度条变化
-  const handleCharSliderChange = (_:  any, data: { value: number }) => {
-    if (!totalDuration) return;
-  
-    // 计算预览时间（进度条值 0-1000 映射到 0-duration）
-    const previewSeconds = (data.value / 1000) * totalDuration;
-    setCharPreviewTime(previewSeconds);
-  };
-
-  // 练习文本音频进度条按下
-  const handleTextSliderMouseDown = () => {
-    setIsTextSeeking(true);
-    log.debug('Text slider seeking started', 'TrainingPage');
-  };
-
-  // 练习文本音频进度条释放
-  const handleTextSliderMouseUp = () => {
-    setIsTextSeeking(false);
-    if (textPreviewTime > 0 && totalDuration > 0) {
-      const targetMs = textPreviewTime * 1000;
-      setPosition(targetMs);
-      log.debug('Text slider seeked', 'TrainingPage', {
-        targetTime: textPreviewTime,
-      });
+  const handleTextSliderEnd = () => {
+    setIsTextSliderDragging(false);
+    if (textSliderValue !== null) {
+      // 跳转到指定位置
+      textPlayer.seek(textSliderValue);
+      // 如果之前是播放状态，继续播放
+      if (textWasPlaying) {
+        textPlayer.resume();
+        textTiming.resume();
+      }
     }
+    setTextSliderValue(null);
+    setTextWasPlaying(false);
   };
 
-  // 练习文本音频进度条变化
-  const handleTextSliderChange = (_:  any, data: { value: number }) => {
-    if (!totalDuration) return;
-  
-    // 计算预览时间（进度条值 0-1000 映射到 0-duration）
-    const previewSeconds = (data.value / 1000) * totalDuration;
-    setTextPreviewTime(previewSeconds);
+  // 输入框内容变化
+  const handleTextareaChange = (ev: React.FormEvent<HTMLTextAreaElement>, data: { value: string }) => {
+    const textarea = ev.target as HTMLTextAreaElement;
+    
+    // 保存光标位置到 ref
+    cursorPositionRef.current = {
+      start: textarea.selectionStart,
+      end: textarea.selectionEnd,
+    };
+    
+    // 转换为大写
+    setInputText(data.value.toUpperCase());
   };
 
-  // 检查结果
-  const handleCheckResult = async () => {
-    if (!practiceText.trim()) {
-      setCheckResult({
-        type: 'warning',
-        title: 'No input',
-        content: 'Please enter your answer before checking.',
-      });
+  // 结果检查
+  const handleCheckResult = () => {
+    // 获取生成的文本和用户输入
+    const correctText = textTextGen.text;
+    const userInput = inputText;
+    
+    // 检查是否为空
+    if (!correctText || !userInput) {
       return;
     }
+    
+    // 使用 calculateAccuracy 计算准确率（已经包含了比对逻辑）
+    const result = calculateAccuracy(userInput, correctText);
+    
+    // 保存结果
+    setCheckedResult(result);
 
-    if (!generatedText) {
-      log.warn('No generated text to compare', 'TrainingPage');
-      return;
-    }
-
-    try {
-      // 检查文本
-      const result = checkText(practiceText, generatedText);
-      
-      log.info('Text checked', 'TrainingPage', {
+    // 保存训练记录到 training store
+    if (practiceStartTime !== null) {
+      const endTime = Date.now();
+      const duration = (endTime - practiceStartTime) / 1000; // 秒
+      submitRecord(currentDatasetName, currentLessonNumber, {
+        timestamp: new Date(practiceStartTime).toISOString(),
+        duration: duration,
         accuracy: result.accuracy,
-        correctCount: result.correctCount,
-        totalCount: result.totalCount,
-      });
-
-      // 保存准确率
-      await saveAccuracy(currentLesson, result.accuracy);
-
-      // 记录错误字符
-      if (result.errorChars.length > 0) {
-        await recordCharacterErrors(result.errorChars);
-      }
-
-      // 增加练习次数
-      await incrementPracticeCount(currentLesson);
-
-      // 显示结果
-      const grade = getAccuracyGrade(result.accuracy);
-      setCheckResult({
-        type: grade.color,
-        title: `${grade.grade} - ${formatAccuracy(result.accuracy)}`,
-        content: `${result.correctCount}/${result.totalCount} correct.${grade.message}`,
-      });
-
-      // 自动隐藏消息
-      setTimeout(() => {
-        setCheckResult(null);
-      }, 8000);
-
-    } catch (error) {
-      log.error('Failed to check result', 'TrainingPage', error);
-      setCheckResult({
-        type: 'error',
-        title: 'Check failed',
-        content: 'An error occurred while checking your answer.',
       });
     }
   };
 
-  // 课程切换
-  const handleLessonChange = (lessonDescription: string) => {
-    const lesson = allLessons.find(l => l.description === lessonDescription);
-    if (!lesson) {
-      log.warn('Invalid lesson description', 'TrainingPage', { lessonDescription });
-      return;
+  // 进入下一次训练
+  const handleNextTraining = () => {
+    // 清空输入和结果
+    setInputText("");
+    setCheckedResult(null);
+
+    // 停止所有播放
+    if (charPlayer.isPlaying || charPlayer.isPaused) {
+      charPlayer.stop();
+      charTiming.stop();
+      setCharHasPlayed(false);
     }
-    setCurrentLesson(lesson.id);
-    setPracticeText(''); // 清空输入
-    setCheckResult(null); // 清空结果
-    stop(); // 停止播放
-    setPlayMode(null);
-    setSelectedChar(lesson.newChar);
-    setNewChar(lesson.newChar);
-    log.info('Lesson changed', 'TrainingPage', { 
-      lessonId: lesson.id,
-      description: lesson.description,
-    });
+    if (textPlayer.isPlaying || textPlayer.isPaused) {
+      textPlayer.stop();
+      textTiming.stop();
+      setTextHasPlayed(false);
+    }
+
+    // 重新生成练习文本
+    if (currentLesson.characters.length > 0) {
+      const charSet = currentLesson.characters.join("");
+      textTextGen.generate(savedConfig, charSet);
+    }
+
+    // 重置练习开始时间
+    setPracticeStartTime(null);
   };
-
-  // 计算播放时间
-  const currentTime = playerState.currentTime;
-  const totalDuration = playerState.totalDuration;
-
-  // 判断当前播放的是字符还是文本
-  const isCharMode = playMode === 'char';
-  const isTextMode = playMode === 'text';
 
   // 渲染
   return (
@@ -602,10 +738,10 @@ export const TrainingPage = () => {
         <Text className={styles.progressText}>
           You are currently on lesson{" "}
           <span className={styles.lessonNumber}>
-            {currentLesson.toString().padStart(2, '0')}
+            {currentLessonNumber.toString().padStart(2, "0")}
           </span> of{" "}
           <span className={styles.lessonNumber}>
-            {totalLessons.toString().padStart(2, '0')}
+            {totalLessonNumber.toString().padStart(2, "0")}
           </span> total lessons.
         </Text>
         <div className={styles.lessonSelector}>
@@ -613,18 +749,22 @@ export const TrainingPage = () => {
           <Dropdown
             className={styles.dropdown}
             listbox={{ className: styles.dropdownListbox }}
-            value={currentLessonData.description}
-            selectedOptions={[currentLessonData.description]}
-            onOptionSelect={(_, data) => handleLessonChange(data.optionValue as string)}
+            value={currentLessonDisplay}
+            selectedOptions={[currentLessonNumber.toString()]}
+            onOptionSelect={(_, data) => {
+              if (data.optionValue) {
+                setLessonNumber(Number(data.optionValue));
+              }
+            }}
           >
-            {allLessons.map((lesson) => (
-              <Option 
-                key={lesson.id} 
-                value={lesson.description} 
+            {lessons.map((lesson) => (
+              <Option
+                key={lesson.lessonNumber}
+                value={lesson.lessonNumber.toString()}
                 className={styles.dropdownOption}
                 checkIcon={null}
               >
-                {lesson.description}
+                {lesson.displayText}
               </Option>
             ))}
           </Dropdown>
@@ -635,12 +775,10 @@ export const TrainingPage = () => {
       <div className={styles.charactersRow}>
         <Text>Current lesson characters:</Text>
         <div className={styles.characterLabels}>
-          {lessonChars.split('').map((char, index) => (
+          {currentLesson.characters.map((char, index) => (
             <Text
-              key={`${char}-${index}`}
-              className={`${styles.clickableChar} ${
-                char === selectedChar
-              }`}
+              key={index}
+              className={styles.clickableChar}
               onClick={() => handleCharClick(char)}
             >
               {char}
@@ -653,57 +791,51 @@ export const TrainingPage = () => {
       <div className={styles.audioControlRow}>
         <div className={styles.audioLabel}>
           <Text>The sound of character:</Text>
-          <Text className={styles.currentChar}>{newChar}</Text>
+          <Text className={styles.currentChar}>
+            {currentPlayingChar}
+          </Text>
         </div>
         <div className={styles.audioControls}>
           <Slider
             className={styles.slider}
             min={0}
-            max={1000}
+            max={charTextGen.duration || 1000}
             value={
-              isCharMode
-                ? isCharSeeking
-                  ? Math.round((charPreviewTime / totalDuration) * 1000)
-                  : Math.round((currentTime / (totalDuration || 1)) * 1000)
-                : 0
+              isCharSliderDragging && charSliderValue !== null
+              ? charSliderValue 
+              : charPlayer.playbackState.currentTime
             }
-            onMouseDown={handleCharSliderMouseDown}
-            onMouseUp={handleCharSliderMouseUp}
-            onChange={handleCharSliderChange}
+            onChange={(_, data) => handleCharSliderChange(data.value as number)}
+            onPointerDown={handleCharSliderStart}
+            onPointerUp={handleCharSliderEnd}
           />
           <div className={styles.audioTimeContainer}>
-            <Text className={styles.timeText}>
-              {formatTime(
-                isCharMode 
-                  ? isCharSeeking 
-                    ? charPreviewTime 
-                    : currentTime 
-                  : 0
-              )}
+            <Text className={styles.currentTimeText}>
+              {charTiming.formattedCurrentTime}
             </Text>
             <Text>/</Text>
-            <Text className={styles.timeText}>
-              {formatTime(isCharMode ? totalDuration : 0)}
+            <Text className={styles.totalTimeText}>
+              {charTiming.formattedTotalDuration}
             </Text>
           </div>
           <Button
             className={styles.button}
             icon={
-              isCharMode && isPlaying 
-                ? <PauseCircle20Regular /> 
-                : <PlayCircle20Regular />
+              charPlayer.isPlaying 
+              ? <PauseCircle20Regular /> 
+              : <PlayCircle20Regular />
             }
             onClick={handleCharPlay}
           >
             <Text className={styles.buttonText}>
-              {isCharMode && isPlaying ? "Pause" : "Play"}
+              {charPlayer.isPlaying ? "Pause" : "Play"}
             </Text>
           </Button>
           <Button
             className={styles.button}
             icon={<ArrowClockwise20Regular />}
             onClick={handleCharRestart}
-            disabled={!isCharMode || playerState.status === 'idle'}
+            disabled={!charHasPlayed}
           >
             <Text className={styles.buttonText}>
               Restart
@@ -719,51 +851,51 @@ export const TrainingPage = () => {
           <Slider
             className={styles.slider}
             min={0}
-            max={1000}
+            max={textTextGen.duration || 1000}
             value={
-              isTextMode
-                ? isTextSeeking
-                  ? Math.round((textPreviewTime / totalDuration) * 1000)
-                  : Math.round((currentTime / (totalDuration || 1)) * 1000)
-                : 0
+              isTextSliderDragging && textSliderValue !== null 
+              ? textSliderValue 
+              : textPlayer.playbackState.currentTime
             }
-            onMouseDown={handleTextSliderMouseDown}
-            onMouseUp={handleTextSliderMouseUp}
-            onChange={handleTextSliderChange}
+            onChange={(_, data) => handleTextSliderChange(data.value as number)}
+            onPointerDown={handleTextSliderStart}
+            onPointerUp={handleTextSliderEnd}
           />
           <div className={styles.audioTimeContainer}>
-            <Text className={styles.timeText}>
-              {formatTime(
-                isTextMode 
-                  ? isTextSeeking
-                    ? textPreviewTime
-                    : currentTime
-                  : 0
-              )}
+            <Text className={styles.currentTimeText}>
+              {textTiming.phase === "delay"
+                ? "-" + textTiming.formattedDelayCountdown
+                : textTiming.formattedCurrentTime}
             </Text>
             <Text>/</Text>
-            <Text className={styles.timeText}>
-              {formatTime(isTextMode ? totalDuration : 0)}
+            <Text className={styles.totalTimeText}>
+              {textTiming.formattedTotalDuration}
             </Text>
           </div>
           <Button
             className={styles.button}
             icon={
-              isTextMode && isPlaying 
-                ? <PauseCircle20Regular /> 
-                : <PlayCircle20Regular />
+              textTiming.phase === "delay"
+                ? <ArrowUndo16Regular />
+                : textPlayer.isPlaying 
+                  ? <PauseCircle20Regular /> 
+                  : <PlayCircle20Regular />
             }
             onClick={handleTextPlay}
           >
             <Text className={styles.buttonText}>
-              {isTextMode && isPlaying ? "Pause" : "Play"}
+              {textTiming.phase === "delay" 
+                ? "Cancel" 
+                : textPlayer.isPlaying 
+                  ? "Pause" 
+                  : "Play"}
             </Text>
           </Button>
           <Button
             className={styles.button}
             icon={<ArrowClockwise20Regular />}
             onClick={handleTextRestart}
-            disabled={!isTextMode || playerState.status === 'idle'}
+            disabled={!textHasPlayed}
           >
             <Text className={styles.buttonText}>
               Restart
@@ -775,33 +907,47 @@ export const TrainingPage = () => {
       {/* 第五行：练习文本输入框 */}
       <div className={styles.textAreaContainer}>
         <Textarea
+          id="practice-textarea"
           className={styles.textArea}
           appearance="filled-darker"
           placeholder="Enter your practice text here ..."
-          value={practiceText}
-          onChange={(_, data) => setPracticeText(data.value)}
+          value={inputText}
+          onChange={handleTextareaChange}
+          disabled={checkedResult !== null}
         />
+
+        {/* 结果显示 */}
+        {checkedResult && (
+          <div className={`${styles.resultOverlay} fluent-scrollbar`}>
+            <HighlightedText result={checkedResult} />
+          </div>
+        )}
       </div>
 
       {/* 第六行：结果检查按钮 */}
       <div className={styles.actionBar}>
         {/* 左侧：结果消息 */}
         <div className={styles.messageContainer}>
-          {checkResult && (
+          {checkedResult !== null && (
             <MessageBar
               className={styles.messageBar}
-              intent={checkResult.type}
-              icon={
-                checkResult.type === 'success' 
-                  ? <CheckmarkCircle20Filled /> 
-                  : checkResult.type === 'warning'
-                  ? <Warning20Filled />
-                  : <ErrorCircle20Filled />
+              intent={
+                checkedResult.accuracy >= 90 ? "success" :
+                checkedResult.accuracy >= 80 ? "warning" :
+                "error"
               }
             >
               <MessageBarBody>
-                <MessageBarTitle>{checkResult.title}</MessageBarTitle>
-                <div>{checkResult.content}</div>
+                <span className={styles.messageBarBody}>
+                  <span>
+                    Accuracy: <strong>{checkedResult.accuracy.toFixed(2)}%</strong>
+                  </span>
+
+                  {checkedResult.accuracy >= 95 && resultMessage.excellent}
+                  {checkedResult.accuracy >= 90 && checkedResult.accuracy < 95 && resultMessage.good}
+                  {checkedResult.accuracy >= 80 && checkedResult.accuracy < 90 && resultMessage.close}
+                  {checkedResult.accuracy < 80 && resultMessage.again}
+                </span>
               </MessageBarBody>
             </MessageBar>
           )}
@@ -810,11 +956,17 @@ export const TrainingPage = () => {
         {/* 右侧：检查按钮 */}
         <Button
           className={styles.checkButton}
-          icon={<CheckmarkCircle20Regular />}
-          onClick={handleCheckResult}
+          icon={checkedResult ? <ChevronCircleRight20Regular /> : <CheckmarkCircle20Regular />}
+          onClick={() => {
+            if (checkedResult) {
+              handleNextTraining();
+            } else {
+              handleCheckResult();
+            }
+          }}
         >
           <Text className={styles.buttonText}>
-            Check result
+            {checkedResult ? "Next training" : "Check result"}
           </Text>
         </Button>
       </div>

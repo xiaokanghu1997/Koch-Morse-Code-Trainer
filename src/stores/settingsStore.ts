@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 /**
  * 设置状态接口
@@ -7,51 +7,33 @@ import { persist } from 'zustand/middleware';
 interface SettingsState {
   // ==================== 状态 ====================
   
-  /** 主音量（0-1） */
+  /** 主题 */
+  theme: "Light" | "Dark";
+
+  /** 窗口透明度（10-100） */
+  opacity: number;
+
+  /** 主音量（0-100） */
   volume: number;
-  
-  /** 深色主题 */
-  darkTheme: boolean;
-  
+
   /** 显示波形可视化 */
   showWaveform: boolean;
   
-  /** 自动播放下一个练习 */
-  autoPlayNext: boolean;
-  
-  /** 显示字符提示 */
-  showCharacterHints: boolean;
-  
-  // ==================== Actions ====================
-  
-  /** 设置音量 */
-  setVolume: (volume: number) => void;
-  
-  /** 切换主题 */
-  toggleTheme: () => void;
+  // ==================== 操作方法 ====================
   
   /** 设置主题 */
-  setTheme: (dark: boolean) => void;
-  
-  /** 切换波形显示 */
-  toggleWaveform: () => void;
-  
-  /** 设置波形显示 */
+  setTheme: (theme: "Light" | "Dark") => void;
+
+  /** 设置窗口透明度 */
+  setOpacity: (opacity: number) => void;
+
+  /** 设置主音量 */
+  setVolume: (volume: number) => void;
+
+  /** 切换波形可视化显示 */
   setShowWaveform: (show: boolean) => void;
-  
-  /** 切换自动播放 */
-  toggleAutoPlayNext: () => void;
-  
-  /** 设置自动播放 */
-  setAutoPlayNext: (auto: boolean) => void;
-  
-  /** 切换字符提示 */
-  toggleCharacterHints: () => void;
-  
-  /** 设置字符提示 */
-  setShowCharacterHints: (show: boolean) => void;
-  
-  /** 重置为默认值 */
+
+  /** 重置所有设置为默认值 */
   reset: () => void;
 }
 
@@ -59,11 +41,10 @@ interface SettingsState {
  * 默认设置
  */
 const DEFAULT_SETTINGS = {
-  volume: 0.8,
-  darkTheme: false,
+  theme: "Light" as const,
+  opacity: 100,
+  volume: 80,
   showWaveform: false,
-  autoPlayNext: false,
-  showCharacterHints: true,
 };
 
 /**
@@ -76,35 +57,30 @@ export const useSettingsStore = create<SettingsState>()(
       
       ...DEFAULT_SETTINGS,
       
-      // ==================== Actions ====================
-      
-      setVolume: (volume) =>
-        set({ volume: Math.max(0, Math.min(1, volume)) }),
-      
-      toggleTheme: () =>
-        set((state) => ({ darkTheme: !state.darkTheme })),
-      
-      setTheme: (dark) => set({ darkTheme: dark }),
-      
-      toggleWaveform: () =>
-        set((state) => ({ showWaveform: !state.showWaveform })),
-      
+      // ==================== 操作方法 ====================
+
+      /** 设置主题 */
+      setTheme: (theme) => set({ theme }),
+
+      /** 设置窗口透明度 */
+      setOpacity: (opacity) => set({ opacity: Math.max(10, Math.min(100, opacity)) }),
+
+      /** 设置主音量 */
+      setVolume: (volume) => set({ volume: Math.max(0, Math.min(100, volume)) }),
+
+      /** 切换波形可视化显示 */
       setShowWaveform: (show) => set({ showWaveform: show }),
-      
-      toggleAutoPlayNext: () =>
-        set((state) => ({ autoPlayNext: !state.autoPlayNext })),
-      
-      setAutoPlayNext: (auto) => set({ autoPlayNext: auto }),
-      
-      toggleCharacterHints: () =>
-        set((state) => ({ showCharacterHints: !state.showCharacterHints })),
-      
-      setShowCharacterHints: (show) => set({ showCharacterHints: show }),
-      
-      reset: () => set(DEFAULT_SETTINGS),
+
+      /** 重置所有设置为默认值 */
+      reset: () => set({ ...DEFAULT_SETTINGS }),
     }),
     {
-      name: 'morse-settings-storage', // localStorage key
+      name: "morse-settings-storage",
+      // 只持久化 theme 和 volume 设置
+      partialize: (state) => ({
+        theme: state.theme,
+        volume: state.volume,
+      }),
     }
   )
 );
