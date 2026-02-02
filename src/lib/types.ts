@@ -338,18 +338,3 @@ export interface TimeStatsResult {
   /** 详细数据 */
   details: TimeStats[];
 }
-
-/**
- * 时间范围统计
- * 包含总练习时长、总练习次数及平均准确率
- */
-export interface TimeRangeStats {
-  /** 总练习时长（秒） */
-  totalDuration: number;
-
-  /** 总练习次数 */
-  recordCount: number;
-
-  /** 平均准确率（0-100） */
-  averageAccuracy: number;
-}

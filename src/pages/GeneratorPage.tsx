@@ -24,7 +24,7 @@ import {
   DismissCircle16Filled,
   Dismiss20Regular,
 } from "@fluentui/react-icons";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useTiming } from "../hooks/useTiming";
 import { useTextGenerator } from "../hooks/useTextGenerator";
 import { useMorsePlayer } from "../hooks/useMorsePlayer";
@@ -242,24 +242,24 @@ function roundToNearest(value: number, step: number): number {
   return Math.round(value / step) * step;
 }
 
+// Tooltips 提示文本
+const tips = {
+  datasetName: "Select the character set used to generate practice material",
+  practiceMode: "Choose how characters are distributed during training",
+  groupLength: "Number of characters in each practice group",
+  groupSpace: "Multiple of standard word space (7 dit) to separate groups",
+  groupCount: "Number of character groups to generate",
+  charSpeed: "Morse element speed in words per minute",
+  effSpeed: "Overall transmission speed using Farnsworth timing",
+  tone: "Audio tone frequency of the Morse signal",
+  startDelay: "Waiting time before playback starts",
+  prefixSuffix: "Add standard practice markers before and after each practice",
+};
+
 // 生成器页面组件
 export const GeneratorPage = () => {
   // 使用样式
   const styles = useStyles();
-  
-  // Tooltips 提示文本
-  const tips = {
-    datasetName: "Select the character set used to generate practice material",
-    practiceMode: "Choose how characters are distributed during training",
-    groupLength: "Number of characters in each practice group",
-    groupSpace: "Multiple of standard word space (7 dit) to separate groups",
-    groupCount: "Number of character groups to generate",
-    charSpeed: "Morse element speed in words per minute",
-    effSpeed: "Overall transmission speed using Farnsworth timing",
-    tone: "Audio tone frequency of the Morse signal",
-    startDelay: "Waiting time before playback starts",
-    prefixSuffix: "Add standard practice markers before and after each practice",
-  };
 
   // 消息栏状态
   type MessageType = "success" | "error" | null;
@@ -287,7 +287,12 @@ export const GeneratorPage = () => {
 
   // 配置变化时自动生成文本
   useEffect(() => {
-    textGen.generate(currentConfig)
+    // 如果正在播放或倒计时，先停止
+    if (timing.phase !== "idle" || player.isPlaying) {
+      player.stop();
+      timing.stop();
+    }
+    textGen.generate(currentConfig);
   }, [currentConfig]);
 
   // 文本时长变化时更新总时长
@@ -304,16 +309,6 @@ export const GeneratorPage = () => {
       timing.stop();
     }
   }, [player.playbackState]);
-
-  // 配置变化时自动生成文本
-  useEffect(() => {
-    // 如果正在播放或倒计时，先停止
-    if (timing.phase !== "idle" || player.isPlaying) {
-      player.stop();
-      timing.stop();
-    }
-    textGen.generate(currentConfig);
-  }, [currentConfig]);
 
   // 配置更新
   const updateConfig = (updates: Partial<GeneratorConfig>) => {
@@ -446,18 +441,36 @@ export const GeneratorPage = () => {
   };
 
   // 时间显示逻辑
-  const getDisplayTime = () => {
+  const displayTime = useMemo(() => {
     if (timing.phase === "idle") {
-      // 空闲状态显示预估时长
       return timing.formattedTotalDuration;
     } else if (timing.phase === "delay") {
-      // 延迟状态显示剩余延迟时间
       return timing.formattedDelayCountdown;
     } else {
-      // 播放状态显示剩余播放时间
       return timing.formattedCountdown;
     }
-  };
+  }, [
+    timing.phase, 
+    timing.formattedTotalDuration, 
+    timing.formattedDelayCountdown, 
+    timing.formattedCountdown
+  ]);
+
+  // 预览按钮图标及文本
+  const previewButtonConfig = useMemo(() => {
+    if (timing.phase === "delay") {
+      return { icon: <ArrowUndo16Regular />, text: "Cancel" };
+    }
+    if (player.isPlaying) {
+      return { icon: <PauseCircle20Regular />, text: "Pause" };
+    }
+    return { icon: <PlayCircle20Regular />, text: "Preview" };
+  }, [timing.phase, player.isPlaying]);
+
+  // 其他
+  const displayToneValue = useMemo(() => {
+    return isDragging && tempToneValue !== null ? tempToneValue : currentConfig.tone;
+  }, [isDragging, tempToneValue, currentConfig.tone]);
 
   /** 导入/导出/清空数据功能 
   const { exportData, importData, clearAllData } = useTrainingStore();
@@ -748,7 +761,7 @@ export const GeneratorPage = () => {
                 className={styles.slider}
                 min={300}
                 max={1500}
-                value={isDragging && tempToneValue !== null ? tempToneValue : currentConfig.tone}
+                value={displayToneValue}
                 onChange={(_, data) => handleToneChange(data.value)}
                 onPointerDown={handleToneChangeStart}
                 onPointerUp={handleToneChangeEnd}
@@ -756,7 +769,7 @@ export const GeneratorPage = () => {
                 onKeyUp={handleToneChangeEnd}
               />
               <Text className={styles.sliderValueText}>
-                {isDragging && tempToneValue !== null ? tempToneValue : currentConfig.tone} Hz
+                {displayToneValue} Hz
               </Text>
             </div>
           </div>
@@ -875,27 +888,17 @@ export const GeneratorPage = () => {
           <div className={styles.countdownContainer}>
             <Timer20Regular />
             <Text className={styles.countdownText}>
-              {getDisplayTime()}
+              {displayTime}
             </Text>
           </div>
           {/* 预览按钮 */}
           <Button
             className={styles.button}
-            icon={
-              timing.phase === "delay"
-                ? <ArrowUndo16Regular />
-                : player.isPlaying 
-                  ? <PauseCircle20Regular /> 
-                  : <PlayCircle20Regular />
-            }
+            icon={previewButtonConfig.icon}
             onClick={handlePreview}
           >
             <Text className={styles.buttonText}>
-              {timing.phase === "delay" 
-                ? "Cancel"
-                : player.isPlaying 
-                  ? "Pause" 
-                  : "Preview"}
+              {previewButtonConfig.text}
             </Text>
           </Button>
           {/* 生成按钮 */}

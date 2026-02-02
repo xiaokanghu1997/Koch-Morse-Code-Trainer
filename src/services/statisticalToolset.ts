@@ -9,9 +9,8 @@ import type {
   TimeStatTypes,
   TimeStats,
   TimeStatsResult,
-  TimeRangeStats,
 } from "../lib/types";
-import { PREFIX_SUFFIX } from "../lib/constants";
+import { CHARACTER_SET, PREFIX_SUFFIX } from "../lib/constants";
 
 // ==================== 基础统计 ====================
 
@@ -536,7 +535,7 @@ export function getTimeStats(
 export function getDailyRecordCounts(
   records: TrainingRecord[],
   year: number
-): Record<string, number> {
+): Array<[string, number]> {
   // 过滤出指定年份的记录
   const yearRecords = records.filter((r) => {
     return new Date(r.timestamp).getFullYear() === year;
@@ -545,57 +544,104 @@ export function getDailyRecordCounts(
   // 按天统计练习次数
   const result = getTimeStats(yearRecords, "day");
 
-  // 转换为 Record 格式
-  const counMap: Record<string, number> = {};
+  // 转换为 Array 格式
+  const countMap: Record<string, number> = {};
   result.details.forEach((detail, index) => {
     // 生成完整日期字符串：YYYY-MM-DD
     const fullDate = `${year}-${result.timeLabels[index]}`;
-    counMap[fullDate] = detail.recordCount;
+    countMap[fullDate] = detail.recordCount;
   });
-  return counMap;
+  return Object.entries(countMap).map(([date, count]) => [date, count]);
 }
 
 /**
- * 获取某年内各数据集的统计信息
+ * 获取各数据集的统计信息
  * 
  * @param globalRecords - 全局训练记录统计信息
- * @param year - 指定年份
  * @returns 包含各数据集统计信息的数组
  */
-export function getDatasetStatsByYear(
+export function getAllDatasetStats(
   globalRecords: GlobalRecords,
-  year: number
-): Array<{ datasetName: string } & TimeRangeStats> {
-  const datasetStats: Array<{ datasetName: string } & TimeRangeStats> = [];
+): Array<{ 
+  datasetName: string;
+  lessonProgress: string;
+  totalRecordCount: string;
+  totalDuration: string;
+  averageAccuracy: string;
+}> {
+  const allDatasetNames = Object.keys(CHARACTER_SET) as Array<keyof typeof CHARACTER_SET>;
 
-  Object.entries(globalRecords.datasets).forEach(([datasetName, dataset]) => {
-    // 收集该数据集的所有练习记录
-    const allRecords: TrainingRecord[] = [];
-    Object.values(dataset.lessons).forEach((lesson) => {
-      allRecords.push(...lesson.records);
-    });
+  const datasetStats: Array<any> = [];
 
-    // 过滤出指定年份的记录
-    const yearRecords = allRecords.filter((r) => {
-      return new Date(r.timestamp).getFullYear() === year;
-    });
+  // 遍历所有数据集
+  allDatasetNames.forEach((datasetName) => {
+    const dataset = globalRecords.datasets[datasetName];
 
-    if (yearRecords.length === 0) {
-      return;
+    let totalDuration = 0;
+    let recordCount = 0;
+    let averageAccuracy = 0;
+    let completedLessons = 0;
+
+    // 如果该数据集存在记录
+    if (dataset) {
+      // 收集该数据集的所有练习记录
+      totalDuration = dataset.totalDuration;
+      recordCount = dataset.recordCount;
+      averageAccuracy = dataset.averageAccuracy;
+      completedLessons = Object.keys(dataset.lessons).length;
     }
 
-    // 统计信息
-    const totalDuration = yearRecords.reduce((sum, r) => sum + r.duration, 0);
-    const totalAccuracy = yearRecords.reduce((sum, r) => sum + r.accuracy, 0);
+    // 获取总课程数
+    const totalLessons = String(getTotalLessons(datasetName));
 
+    // 统计信息
     datasetStats.push({
       datasetName,
-      totalDuration: totalDuration,
-      recordCount: yearRecords.length,
-      averageAccuracy: totalAccuracy / yearRecords.length,
+      lessonProgress: `${String(completedLessons)} / ${totalLessons}`,
+      totalRecordCount: recordCount.toString(),
+      totalDuration: formatDuration(totalDuration),
+      averageAccuracy: formatAccuracy(averageAccuracy),
     });
   });
   return datasetStats;
+}
+
+/**
+ * 获取某年的概览统计
+ * 
+ * @param records - 训练记录
+ * @param year - 年份
+ * @returns 概览统计数据
+ */
+export function getYearOverviewStats(
+  records: TrainingRecord[],
+  year: number
+): {
+  totalRecordCount: number;
+  totalDuration: number;
+  averageAccuracy: number;
+} {
+  // 过滤指定年份的记录
+  const yearRecords = records.filter((r) => {
+    return new Date(r.timestamp).getFullYear() === year;
+  });
+
+  if (yearRecords.length === 0) {
+    return {
+      totalRecordCount: 0,
+      totalDuration: 0,
+      averageAccuracy: 0,
+    };
+  }
+
+  const totalDuration = yearRecords.reduce((sum, r) => sum + r.duration, 0);
+  const totalAccuracy = yearRecords.reduce((sum, r) => sum + r.accuracy, 0);
+
+  return {
+    totalRecordCount: yearRecords.length,
+    totalDuration,
+    averageAccuracy: totalAccuracy / yearRecords.length,
+  };
 }
 
 /**
@@ -614,4 +660,44 @@ export function getAllYears(records: TrainingRecord[]): number[] {
   const years = Array.from(yearSet);
   years.sort((a, b) => a - b);  // 升序排序
   return years;
+}
+
+// ==================== 格式化工具 ====================
+
+/**
+ * 格式化时长（秒 -> 可读格式）
+ * - 小于60秒: "45s"
+ * - 小于1小时: "3m 14s"
+ * - 大于1小时: "1h 23m"
+ */
+export function formatDuration(seconds: number): string {
+  if (seconds < 60) {
+    const secs = Math.floor(seconds);
+    return `${secs}s`;
+  } else if (seconds < 3600) {
+    const minutes = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${minutes}m ${secs}s`;
+  } else {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return `${hours}h ${minutes}m`;
+  }
+}
+
+/**
+ * 格式化精确度
+ */
+export function formatAccuracy(accuracy: number): string {
+  return `${accuracy.toFixed(2)}%`;
+}
+
+/**
+ * 获取数据集的总课程数
+ */
+export function getTotalLessons(datasetName: string): number {
+  if (datasetName in CHARACTER_SET) {
+    return CHARACTER_SET[datasetName as keyof typeof CHARACTER_SET].length - 1;
+  }
+  return 0;
 }

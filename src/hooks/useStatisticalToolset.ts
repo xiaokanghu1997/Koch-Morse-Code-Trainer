@@ -31,13 +31,29 @@ export interface UseStatisticalToolsetReturn {
   /** 获取时间范围统计结果 */
   getTimeStats: (timeStatType: TimeStatTypes, filter?: DataFilter) => TimeStatsResult;
   /** 获取某年各天的练习次数 */
-  getDailyRecordCounts: (year: number, filter?: DataFilter) => Record<string, number>;
-  /** 获取某年内各数据集的统计信息 */
-  getDatasetStatsByYear: (year: number) => Array<{ 
-    datasetName: string; totalDuration: number; recordCount: number; averageAccuracy: number 
+  getDailyRecordCounts: (year: number, filter?: DataFilter) => Array<[string, number]>;
+  /** 获取各数据集的统计信息 */
+  getAllDatasetStats: () => Array<{
+    datasetName: string;
+    lessonProgress: string;
+    totalRecordCount: string;
+    totalDuration: string;
+    averageAccuracy: string;
   }>;
+  /** 获取某年内的概览统计 */
+  getYearOverviewStats: (year: number, filter?: DataFilter) => {
+    totalRecordCount: number;
+    totalDuration: number;
+    averageAccuracy: number;
+  };
   /** 获取包含所有练习的年份 */
   getAllYears: (filter?: DataFilter) => number[];
+
+  // 格式化工具
+  /** 格式化时长（秒）为字符串 */
+  formatDuration: (duration: number) => string;
+  /** 格式化准确率为字符串 */
+  formatAccuracy: (accuracy: number) => string;
 }
 
 /**
@@ -122,23 +138,41 @@ export const useStatisticalToolset = (): UseStatisticalToolsetReturn => {
   
   /** 获取某年各天的练习次数 */
   const getDailyRecordCounts = useCallback(
-    (year: number, filter?: DataFilter): Record<string, number> => {
+    (year: number, filter?: DataFilter): Array<[string, number]> => {
       const records = getFilteredRecords(filter);
       return statisticalToolset.getDailyRecordCounts(records, year);
     },
     [getFilteredRecords]
   );
 
-  /** 获取某年内各数据集的统计信息 */
-  const getDatasetStatsByYear = useCallback((year: number) => {
-    return statisticalToolset.getDatasetStatsByYear(globalRecords, year);
+  /** 获取各数据集的统计信息 */
+  const getAllDatasetStats = useCallback(() => {
+    return statisticalToolset.getAllDatasetStats(globalRecords);
   }, [globalRecords]);
+
+  /** 获取某年内的概览统计 */
+  const getYearOverviewStats = useCallback((year: number, filter?: DataFilter) => {
+    const records = getFilteredRecords(filter);
+    return statisticalToolset.getYearOverviewStats(records, year);
+  }, [getFilteredRecords]);
 
   /** 获取包含所有练习的年份 */
   const getAllYears = useCallback((filter?: DataFilter): number[] => {
     const records = getFilteredRecords(filter);
     return statisticalToolset.getAllYears(records);
   }, [getFilteredRecords]);
+
+  // 格式化工具
+
+  /** 格式化时长（秒）为字符串 */
+  const formatDuration = useCallback((duration: number): string => {
+    return statisticalToolset.formatDuration(duration);
+  }, []);
+
+  /** 格式化准确率为字符串 */
+  const formatAccuracy = useCallback((accuracy: number): string => {
+    return statisticalToolset.formatAccuracy(accuracy);
+  }, []);
 
   // 返回接口
 
@@ -148,7 +182,10 @@ export const useStatisticalToolset = (): UseStatisticalToolsetReturn => {
     getGlobalStats,
     getTimeStats,
     getDailyRecordCounts,
-    getDatasetStatsByYear, 
-    getAllYears
+    getAllDatasetStats,
+    getYearOverviewStats,
+    getAllYears,
+    formatDuration,
+    formatAccuracy,
   };
 };

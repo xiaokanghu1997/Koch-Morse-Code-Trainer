@@ -18,7 +18,7 @@ import {
   CheckmarkCircle20Regular,
   ChevronCircleRight20Regular,
 } from "@fluentui/react-icons";
-import { useState, useEffect, useRef, useLayoutEffect } from "react";
+import { useState, useEffect, useRef, useMemo, useLayoutEffect } from "react";
 import { AccuracyResult } from "../lib/types";
 import { useTiming } from "../hooks/useTiming";
 import { useLessonManager } from "../hooks/useLessonManager";
@@ -49,8 +49,6 @@ const useStyles = makeStyles({
     fontSize: tokens.fontSizeBase300,
   },
   lessonNumber: {
-    fontSize: "15px",
-    fontFamily: tokens.fontFamilyMonospace,
     fontWeight: tokens.fontWeightSemibold,
   },
   lessonSelector: {
@@ -292,6 +290,14 @@ const useStyles = makeStyles({
   },
 });
 
+// 结果评价文本
+const resultMessage = {
+  "excellent": "Excellent performance with outstanding accuracy!",
+  "good": "Good performance meeting basic requirements!",
+  "close": "Close to passing but needs more practice!",
+  "again": "Needs much more practice to improve!",
+};
+
 export const TrainingPage = () => {
   // 使用样式
   const styles = useStyles();
@@ -305,6 +311,7 @@ export const TrainingPage = () => {
     currentLessonNumber,
     setLessonNumber,
     submitRecord,
+    syncFromGeneratorConfig,
   } = useTrainingStore();
   const { 
     lessons, 
@@ -343,10 +350,6 @@ export const TrainingPage = () => {
   // 当前点击播放的字符
   const [currentPlayingChar, setCurrentPlayingChar] = useState<string>("");
 
-  // 课程显示
-  const currentLessonDisplay = lessons.find(
-    l => l.lessonNumber === currentLessonNumber)?.displayText || "";
-
   // 练习文本输入与光标位置
   const [inputText, setInputText] = useState<string>("");
   const cursorPositionRef = useRef<{ start: number; end: number } | null>(null);
@@ -357,13 +360,38 @@ export const TrainingPage = () => {
   // 练习开始时间戳（毫秒）
   const [practiceStartTime, setPracticeStartTime] = useState<number | null>(null);
 
-  // 结果评价文本
-  const resultMessage = {
-    "excellent": "Excellent performance with outstanding accuracy!",
-    "good": "Good performance meeting basic requirements!",
-    "close": "Close to passing but needs more practice!",
-    "again": "Needs much more practice to improve!",
-  };
+  // 课程显示
+  const currentLessonDisplay = useMemo(
+    () => lessons.find(l => l.lessonNumber === currentLessonNumber)?.displayText || "",
+    [lessons, currentLessonNumber]
+  );
+
+  // 课程进度文本格式化
+  const formattedProgress = useMemo(() => ({
+    current: currentLessonNumber.toString().padStart(2, "0"),
+    total: totalLessonNumber.toString().padStart(2, "0"),
+  }), [currentLessonNumber, totalLessonNumber]);
+
+  // 结果评价
+  const resultIntent = useMemo(() => {
+    if (!checkedResult) return undefined;
+    if (checkedResult.accuracy >= 90) return "success";
+    if (checkedResult.accuracy >= 80) return "warning";
+    return "error";
+  }, [checkedResult]);
+  
+  const resultMessageText = useMemo(() => {
+    if (!checkedResult) return "";
+    if (checkedResult.accuracy >= 95) return resultMessage.excellent;
+    if (checkedResult.accuracy >= 90) return resultMessage.good;
+    if (checkedResult.accuracy >= 80) return resultMessage.close;
+    return resultMessage.again;
+  }, [checkedResult]);
+
+  // 同步生成器配置到训练存储
+  useEffect(() => {
+    syncFromGeneratorConfig(savedConfig.datasetName);
+  }, [savedConfig.datasetName]);
   
   // 字符音频文本生成
   useEffect(() => {
@@ -738,10 +766,10 @@ export const TrainingPage = () => {
         <Text className={styles.progressText}>
           You are currently on lesson{" "}
           <span className={styles.lessonNumber}>
-            {currentLessonNumber.toString().padStart(2, "0")}
+            {formattedProgress.current}
           </span> of{" "}
           <span className={styles.lessonNumber}>
-            {totalLessonNumber.toString().padStart(2, "0")}
+            {formattedProgress.total}
           </span> total lessons.
         </Text>
         <div className={styles.lessonSelector}>
@@ -931,22 +959,14 @@ export const TrainingPage = () => {
           {checkedResult !== null && (
             <MessageBar
               className={styles.messageBar}
-              intent={
-                checkedResult.accuracy >= 90 ? "success" :
-                checkedResult.accuracy >= 80 ? "warning" :
-                "error"
-              }
+              intent={resultIntent}
             >
               <MessageBarBody>
                 <span className={styles.messageBarBody}>
                   <span>
                     Accuracy: <strong>{checkedResult.accuracy.toFixed(2)}%</strong>
                   </span>
-
-                  {checkedResult.accuracy >= 95 && resultMessage.excellent}
-                  {checkedResult.accuracy >= 90 && checkedResult.accuracy < 95 && resultMessage.good}
-                  {checkedResult.accuracy >= 80 && checkedResult.accuracy < 90 && resultMessage.close}
-                  {checkedResult.accuracy < 80 && resultMessage.again}
+                  {resultMessageText}
                 </span>
               </MessageBarBody>
             </MessageBar>

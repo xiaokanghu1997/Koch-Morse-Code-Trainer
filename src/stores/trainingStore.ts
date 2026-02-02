@@ -45,7 +45,10 @@ interface TrainingState {
 
   /** 获取课程统计信息 */
   getLessonStats: (datasetName: string, lessonNumber: number) => LessonRecords | undefined;
-  
+
+  /** 从生成器配置中同步训练集 */
+  syncFromGeneratorConfig: (generatorDatasetName: string) => void;
+
   /** 导出训练数据 */
   exportData: () => void;
 
@@ -200,6 +203,42 @@ export const useTrainingStore = create<TrainingState>()(
       /** 获取课程统计信息 */
       getLessonStats: (datasetName, lessonNumber) => {
         return get().globalRecords.datasets[datasetName]?.lessons[lessonNumber];
+      },
+
+      /** 从生成器配置中同步训练集 */
+      syncFromGeneratorConfig: (generatorDatasetName) => {
+        const state = get();
+
+        // 验证数据集是否存在
+        if (!(generatorDatasetName in CHARACTER_SET)) {
+          log.error(`Unknown generator dataset: ${generatorDatasetName}`, "TrainingStore");
+          return;
+        }
+
+        // 如果训练集名称相同，不需要修改（保持当前课程编号）
+        if (state.currentDatasetName === generatorDatasetName) {
+          log.info("Dataset already synced", "TrainingStore", {
+            datasetName: generatorDatasetName,
+            lessonNumber: state.currentLessonNumber,
+          });
+          return;
+        }
+
+        // 训练集名称不同，更新训练集名称和课程编号
+        const dataset = state.globalRecords.datasets[generatorDatasetName];
+        let newLessonNumber = 1;  // 默认课程编号为1
+        // 如果数据集中有记录，设置为最新课程编号
+        if (dataset && Object.keys(dataset.lessons).length > 0) {
+          newLessonNumber = Math.max(...Object.keys(dataset.lessons).map(Number));
+        }
+        set({
+          currentDatasetName: generatorDatasetName,
+          currentLessonNumber: newLessonNumber,
+        });
+        log.info("Synced with generator config", "TrainingStore", {
+          datasetName: generatorDatasetName,
+          lessonNumber: newLessonNumber,
+        });
       },
 
       /** 导出训练数据 */
