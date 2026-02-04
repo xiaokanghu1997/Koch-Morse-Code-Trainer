@@ -176,12 +176,13 @@ export const SettingsPage = () => {
       <Card className={styles.card}>
         <Color24Regular className={styles.icon} />
         <div className={styles.content}>
-          <Text className={styles.header}>Application theme</Text>
+          <Text className={styles.header}>Application Theme</Text>
           <Text className={styles.description}>
             Select which application theme to display
           </Text>
         </div>
         <Dropdown 
+          id="theme-dropdown"
           className={styles.dropdown}
           listbox={{ className: styles.dropdownListbox }}
           positioning="below-start"
@@ -214,13 +215,14 @@ export const SettingsPage = () => {
       <Card className={styles.card}>
         <TransparencySquare24Regular className={styles.icon} />
         <div className={styles.content}>
-          <Text className={styles.header}>Window opacity</Text>
+          <Text className={styles.header}>Window Opacity</Text>
           <Text className={styles.description}>
             Adjust the transparency of the application window
           </Text>
         </div>
         <div className={styles.controlContainer}>
           <Slider
+            id="opacity-slider"
             className={styles.slider}
             min={10}
             max={100}
@@ -235,13 +237,14 @@ export const SettingsPage = () => {
       <Card className={styles.card}>
         <Speaker224Regular className={styles.icon} />
         <div className={styles.content}>
-          <Text className={styles.header}>Audio volume</Text>
+          <Text className={styles.header}>Audio Volume</Text>
           <Text className={styles.description}>
             Adjust the audio output volume
           </Text>
         </div>
         <div className={styles.controlContainer}>
           <Slider
+            id="volume-slider"
             className={styles.slider}
             min={0}
             max={100}
@@ -256,7 +259,7 @@ export const SettingsPage = () => {
       <Card className={styles.card}>
         <PulseSquare24Regular className={styles.icon} />
         <div className={styles.content}>
-          <Text className={styles.header}>Waveform display</Text>
+          <Text className={styles.header}>Waveform Display</Text>
           <Text className={styles.description}>
             Show the audio waveform during playback
           </Text>

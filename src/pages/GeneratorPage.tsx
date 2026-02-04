@@ -472,52 +472,6 @@ export const GeneratorPage = () => {
     return isDragging && tempToneValue !== null ? tempToneValue : currentConfig.tone;
   }, [isDragging, tempToneValue, currentConfig.tone]);
 
-  /** 导入/导出/清空数据功能 
-  const { exportData, importData, clearAllData } = useTrainingStore();
-
-  // 导出数据
-  const handleExport = async () => {
-    if ('showSaveFilePicker' in window) {
-      // 使用现代 API
-      const handle = await (window as any).showSaveFilePicker({
-        suggestedName: `morse-training-backup-${Date.now()}.json`,
-        types: [{
-          description: 'JSON Files',
-          accept: { 'application/json': ['.json'] },
-        }],
-      });
-      
-      const jsonData = exportData();
-      const writable = await handle.createWritable();
-      await writable.write(jsonData);
-      await writable.close();
-    }
-  };
-
-  // 导入数据
-  const handleImport = async () => {
-    if ('showOpenFilePicker' in window) {
-      // 使用现代 API
-      const [fileHandle] = await (window as any).showOpenFilePicker({
-        types: [{
-          description: 'JSON Files',
-          accept: { 'application/json': ['.json'] },
-        }],
-        multiple: false,
-      });
-      
-      const file = await fileHandle.getFile();
-      const content = await file.text();
-      importData(content);
-    }
-  };
-
-  // 清空数据
-  const handleClear = () => {
-    clearAllData();
-  };
-  */
-
   // 渲染
   return (
     <div className={styles.container}>
@@ -539,6 +493,7 @@ export const GeneratorPage = () => {
               </Tooltip>
             </div>
             <Dropdown 
+              id="dataset-dropdown"
               className={styles.dropdown}
               listbox={{ className: styles.dropdownListbox }}
               value={currentConfig.datasetName}
@@ -577,6 +532,7 @@ export const GeneratorPage = () => {
               </Tooltip>
             </div>
             <Dropdown 
+              id="practice-mode-dropdown"
               className={styles.dropdown}
               listbox={{ className: styles.dropdownListbox }}
               value={currentConfig.practiceMode}
@@ -622,6 +578,7 @@ export const GeneratorPage = () => {
               }}
             >
               <SpinButton
+                id="group-length-spin"
                 className={styles.spinbutton}
                 min={1}
                 max={10}
@@ -631,6 +588,7 @@ export const GeneratorPage = () => {
               <Text>fixed</Text>
             </div>
             <Checkbox
+              id="random-group-length-checkbox"
               className={styles.checkbox}
               label="2-7 random"
               checked={currentConfig.randomGroupLength}
@@ -655,6 +613,7 @@ export const GeneratorPage = () => {
               </Tooltip>
             </div>
             <SpinButton
+              id="group-space-spin"
               className={styles.spinbutton}
               min={1}
               max={10}
@@ -679,6 +638,7 @@ export const GeneratorPage = () => {
               </Tooltip>
             </div>
             <SpinButton
+              id="group-count-spin"
               className={styles.spinbutton}
               min={1}
               max={30}
@@ -706,6 +666,7 @@ export const GeneratorPage = () => {
             </div>
             <div className={styles.controlContainer}>
               <Slider
+                id="char-speed-slider"
                 className={styles.slider}
                 min={5}
                 max={50}
@@ -732,6 +693,7 @@ export const GeneratorPage = () => {
             </div>
             <div className={styles.controlContainer}>
               <Slider
+                id="eff-speed-slider"
                 className={styles.slider}
                 min={0}
                 max={50}
@@ -758,6 +720,7 @@ export const GeneratorPage = () => {
             </div>
             <div className={styles.controlContainer}>
               <Slider
+                id="tone-slider"
                 className={styles.slider}
                 min={300}
                 max={1500}
@@ -789,6 +752,7 @@ export const GeneratorPage = () => {
               </Tooltip>
             </div>
             <SpinButton
+              id="start-delay-spin"
               className={styles.spinbutton}
               min={0}
               max={30}
@@ -814,6 +778,7 @@ export const GeneratorPage = () => {
             </div>
             <div className={styles.controlContainer}>
               <Checkbox 
+                id="prefix-suffix-checkbox"
                 className={styles.checkbox}
                 label="VVV = / AR"
                 checked={currentConfig.usePrefixSuffix}
@@ -823,34 +788,6 @@ export const GeneratorPage = () => {
               />
             </div>
           </div>
-
-          {/* 导入导出重置记录 
-          <div className={styles.settingItem}>
-            <div className={styles.textContent}>
-            </div>
-            <div className={styles.controlContainer}>
-              <Button
-                className={styles.button}
-                onClick={handleImport}
-              >
-                Import data
-              </Button>
-              <Button
-                className={styles.button}
-                onClick={handleExport}
-              >
-                Export data
-              </Button>
-              <Button
-                className={styles.button}
-                onClick={handleClear}
-              >
-                Clear data
-              </Button>
-            </div>
-          </div>
-          */}
-
         </div>
       </div>
 

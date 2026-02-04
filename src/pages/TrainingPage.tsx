@@ -57,8 +57,8 @@ const useStyles = makeStyles({
     gap: "8px",
   },
   dropdown: {
-    minWidth: "110px",
-    maxWidth: "110px",
+    minWidth: "105px",
+    maxWidth: "105px",
     height: "32px",
     paddingBottom: "1.5px",
     transform: "translateY(1.5px)",
@@ -76,8 +76,8 @@ const useStyles = makeStyles({
     },
   },
   dropdownListbox: {
-    minWidth: "110px",
-    maxWidth: "110px",
+    minWidth: "105px",
+    maxWidth: "105px",
     height: "166px",
     overflowY: "auto",
     backgroundColor: tokens.colorNeutralBackground4,
@@ -723,7 +723,7 @@ export const TrainingPage = () => {
       const endTime = Date.now();
       const duration = (endTime - practiceStartTime) / 1000; // 秒
       submitRecord(currentDatasetName, currentLessonNumber, {
-        timestamp: new Date(practiceStartTime).toISOString(),
+        timestamp: practiceStartTime,
         duration: duration,
         accuracy: result.accuracy,
       });
@@ -775,6 +775,7 @@ export const TrainingPage = () => {
         <div className={styles.lessonSelector}>
           <Text>Change to lesson: </Text>
           <Dropdown
+            id="train-lesson-dropdown"
             className={styles.dropdown}
             listbox={{ className: styles.dropdownListbox }}
             value={currentLessonDisplay}
@@ -825,6 +826,7 @@ export const TrainingPage = () => {
         </div>
         <div className={styles.audioControls}>
           <Slider
+            id="char-audio-slider"
             className={styles.slider}
             min={0}
             max={charTextGen.duration || 1000}
@@ -877,6 +879,7 @@ export const TrainingPage = () => {
         <Text>Practice text: </Text>
         <div className={styles.audioControls}>
           <Slider
+            id="text-audio-slider"
             className={styles.slider}
             min={0}
             max={textTextGen.duration || 1000}
@@ -986,7 +989,7 @@ export const TrainingPage = () => {
           }}
         >
           <Text className={styles.buttonText}>
-            {checkedResult ? "Next training" : "Check result"}
+            {checkedResult ? "Next Training" : "Check Result"}
           </Text>
         </Button>
       </div>

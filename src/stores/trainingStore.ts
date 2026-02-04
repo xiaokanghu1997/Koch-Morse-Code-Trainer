@@ -50,7 +50,7 @@ interface TrainingState {
   syncFromGeneratorConfig: (generatorDatasetName: string) => void;
 
   /** 导出训练数据 */
-  exportData: () => void;
+  exportData: () => string;
 
   /** 导入训练数据 */
   importData: (jsonData: string) => void;
@@ -284,14 +284,6 @@ export const useTrainingStore = create<TrainingState>()(
             Object.keys(dataset.lessons).forEach((lessonNumber) => {
               const lesson = dataset.lessons[lessonNumber];
               lesson.records = lesson.records.map((record: any) => {
-                // 如果 timestamp 是数字，转换为 ISO 字符串
-                if (typeof record.timestamp === "number") {
-                  return {
-                    ...record,
-                    timestamp: new Date(record.timestamp).toISOString(),
-                  };
-                }
-                // 如果已经是字符串，保持不变
                 return record;
               });
             });

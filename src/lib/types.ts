@@ -203,7 +203,7 @@ export interface Lesson {
  */
 export interface TrainingRecord {
   /** 练习时间戳 */
-  timestamp: string;
+  timestamp: number;
 
   /** 练习时长（秒） */
   duration: number;
@@ -326,6 +326,9 @@ export interface TimeStatsResult {
   /** 时间标签列表 */
   timeLabels: string[];
 
+  /** 时间坐标标签列表 */
+  timeTickLabels: string[];
+
   /** 练习时长列表 */
   totalDurations: number[];
 
@@ -334,6 +337,9 @@ export interface TimeStatsResult {
 
   /** 平均准确率列表 */
   averageAccuracies: number[];
+
+  /** 该时段所有平均准确率的平均值 */
+  overallAverageAccuracy: number;
 
   /** 详细数据 */
   details: TimeStats[];

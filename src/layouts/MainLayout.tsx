@@ -46,6 +46,7 @@ const useStyles = makeStyles({
     padding: "10px",
     overflow: "auto",
     borderTopLeftRadius: "8px",
+    border: `1.5px solid ${tokens.colorNeutralStrokeSubtle}`,
     backgroundColor: tokens.colorNeutralBackground2,
   },
   emptyHeader: {

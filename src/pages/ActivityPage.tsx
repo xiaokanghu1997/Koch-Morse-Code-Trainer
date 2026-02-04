@@ -5,10 +5,28 @@ import {
   makeStyles,
   tokens
 } from "@fluentui/react-components";
-import { useState, useMemo } from "react";
-import ReactEcharts from "echarts-for-react";
+import * as echarts from "echarts/core";
+import { HeatmapChart } from "echarts/charts";
+import { 
+  TitleComponent, 
+  TooltipComponent, 
+  CalendarComponent,
+  VisualMapComponent,  
+} from "echarts/components";
+import { SVGRenderer } from "echarts/renderers";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useStatisticalToolset } from "../hooks/useStatisticalToolset";
 import { useSettingsStore } from "../stores/settingsStore";
+
+// 注册 ECharts 模块
+echarts.use([
+  HeatmapChart,
+  TitleComponent,
+  TooltipComponent,
+  CalendarComponent,
+  VisualMapComponent,
+  SVGRenderer
+]);
 
 // 样式定义
 const useStyles = makeStyles({
@@ -123,6 +141,10 @@ export const ActivityPage = () => {
   // 使用样式
   const styles = useStyles();
 
+  // 引用图表容器 DOM 元素并存储 ECharts实例
+  const chartRef = useRef<HTMLDivElement>(null);
+  const chartInstanceRef = useRef<echarts.ECharts | null>(null);
+
   // 获取统计工具集
   const statisticalToolset = useStatisticalToolset();
 
@@ -161,6 +183,7 @@ export const ActivityPage = () => {
     return statisticalToolset.getAllDatasetStats();
   }, [statisticalToolset, selectedYear]);
 
+  // 图表配置
   const chartOptions = useMemo(() => ({
     backgroundColor: "transparent",
     title: {
@@ -177,22 +200,23 @@ export const ActivityPage = () => {
         const date = new Date(timestamp);
         const dateStr = date.toISOString().split("T")[0];
         let result = "";
-        result += "<div>" + params.marker + ' <span style="font-weight:500">' + dateStr + "</span></div>";
-        result += '<div>Practice Count: <span style="font-weight:500">' + params.data[1] + "</span></div>";
+        result += "<div>" + params.marker + ' <span style="font-weight:600">' + dateStr + "</span></div>";
+        result += '<div>Training Count: <span style="font-weight:600">' + params.data[1] + "</span></div>";
         return result;
       },
       padding: 6,
       textStyle: {
         color: tokens.colorNeutralForeground1,
-        fontFamily: "Segoe UI",
-        fontSize: 13.5,
+        fontFamily: tokens.fontFamilyBase,
+        fontWeight: tokens.fontWeightRegular,
+        fontSize: 14,
         lineHeight: 18
       }
     },
     visualMap: {
       type: "piecewise",
       orient: "horizontal",
-      left: "16px",
+      left: "20px",
       bottom: "-8px",
       pieces: [
         {gt: 20, color: tokens.colorPaletteGreenBackground1},
@@ -202,7 +226,7 @@ export const ActivityPage = () => {
         {gt: 0, lte: 2, color: tokens.colorPaletteGreenForeground2},
         {value: 0, color: tokens.colorNeutralBackground2Selected}
       ],
-      text: ["High", "Less"],
+      text: ["  High", "Less  "],
       showLabel: false,
       itemGap: 3,
       itemWidth: 11,
@@ -210,8 +234,8 @@ export const ActivityPage = () => {
       itemSymbol: "rect",
       textStyle: {
         color: tokens.colorNeutralForeground1,
-        fontFamily: "Segoe UI",
-        fontSize: 13.5,
+        fontFamily: tokens.fontFamilyBase,
+        fontSize: 14,
       }
     },
     calendar: {
@@ -236,16 +260,16 @@ export const ActivityPage = () => {
         firstDay: 1,
         nameMap: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
         color: tokens.colorNeutralForeground1,
-        fontFamily: "Segoe UI",
-        fontSize: 13.5,
+        fontFamily: tokens.fontFamilyBase,
+        fontSize: 14,
         margin: 5
       },
       monthLabel: {
         nameMap: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
         color: tokens.colorNeutralForeground1,
-        fontFamily: "Segoe UI",
-        fontSize: 13.5,
-        margin: 5
+        fontFamily: tokens.fontFamilyBase,
+        fontSize: 14,
+        margin: 7
       },
       yearLabel: {show: false}
     },
@@ -261,6 +285,35 @@ export const ActivityPage = () => {
     }
   }), [calendarData, selectedYear]);
 
+  // 初始化和更新 ECharts 实例
+  useEffect(() => {
+    // 如果容器不存在，直接返回
+    if (!chartRef.current) return;
+
+    // 如果实例不存在，创建一个新的实例
+    if (!chartInstanceRef.current) {
+      chartInstanceRef.current = echarts.init(
+        chartRef.current, 
+        theme.toLowerCase(),
+        {
+          renderer: "svg",
+          useDirtyRect: false,
+        }
+      );
+    }
+
+    // 设置图表配置
+    chartInstanceRef.current.setOption(chartOptions);
+
+    // 在组件卸载时销毁 ECharts 实例
+    return () => {
+      if (chartInstanceRef.current) {
+        chartInstanceRef.current.dispose();
+        chartInstanceRef.current = null;
+      }
+    };
+  }, [chartOptions, theme]);
+
   // 渲染
   return (
     <div className={styles.container}>
@@ -270,15 +323,16 @@ export const ActivityPage = () => {
           A total of{" "}
           <span className={styles.infoText}>
             {yearStats.totalRecordCount}
-          </span>{" "}practice were completed over{" "}
+          </span>{" "}trainings were completed, lasting{" "}
           <span className={styles.infoText}>
             {yearStats.totalDuration}
-          </span>, achieving an average accuracy of{" "}
+          </span>{" "}in total, with an average accuracy of{" "}
           <span className={styles.infoText}>
             {yearStats.averageAccuracy}
           </span>, in
         </Text>
         <Dropdown
+          id="year-dropdown"
           className={styles.dropdown}
           listbox={{ className: styles.dropdownListbox }}
           value={selectedYear}
@@ -304,17 +358,15 @@ export const ActivityPage = () => {
 
       {/* 第二行：图表区域 */}
       <div className={styles.chartContainer}>
-        <ReactEcharts
-          style={{ 
-            width: "100%", 
-            height: "100%", 
-            margin: 0, 
-            padding: 0, 
-            cursor: "default" 
+        <div
+          ref={chartRef}
+          style={{
+            width: "100%",
+            height: "100%",
+            margin: 0,
+            padding: 0,
+            cursor: "default",
           }}
-          option={chartOptions}
-          opts={{ renderer: "svg" }}
-          theme={theme.toLowerCase()}
         />
       </div>
       {/* 第三行：底部文本 */}
@@ -341,7 +393,7 @@ export const ActivityPage = () => {
 
         {/* 第三行 */}
         <div className={styles.statsHeaderCell}>
-          <Text>Total records count:</Text>
+          <Text>Total training count:</Text>
         </div>
         {statsData.map((dataset, index) => (
           <div key={`count-${index}`} className={styles.statsCell}>

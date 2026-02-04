@@ -167,3 +167,68 @@ textarea {
 .fui-Dropdown__listbox::-webkit-scrollbar-thumb:active {
   background: var(--fluent-scrollbar-thumb-active);
 }
+
+/* ========== 强制移除所有 outline ========== */
+*,
+*:focus,
+*:focus-visible,
+*:active,
+*::before,
+*::after,
+button:focus,
+button:focus-visible,
+a:focus,
+a:focus-visible,
+input:focus,
+input:focus-visible,
+select:focus,
+select:focus-visible,
+textarea:focus,
+textarea:focus-visible,
+[tabindex]:focus,
+[tabindex]:focus-visible {
+  outline: none !important;
+}
+
+/* 针对 Fluent UI 组件 */
+[class*="fui-"]:focus,
+[class*="fui-"]:focus-visible,
+[class*="fui-"] *:focus,
+[class*="fui-"] *:focus-visible {
+  outline: none !important;
+}
+
+/* 特别针对 PopoverTrigger 和其他触发器 */
+.fui-PopoverTrigger:focus,
+.fui-PopoverTrigger:focus-visible,
+.fui-Button:focus,
+.fui-Button:focus-visible,
+[role="button"]:focus,
+[role="button"]:focus-visible {
+  outline: none !important;
+}
+
+.fui-Listbox [role="option"],
+.fui-Listbox [role="option"]:focus,
+.fui-Listbox [role="option"]:focus-visible,
+.fui-Listbox [role="option"]:focus-within,
+.fui-Dropdown__listbox [role="option"],
+.fui-Dropdown__listbox [role="option"]:focus,
+.fui-Dropdown__listbox [role="option"]:focus-visible,
+.fui-Dropdown__listbox [role="option"]:focus-within,
+.fui-Option,
+.fui-Option:focus,
+.fui-Option:focus-visible,
+.fui-Option:focus-within,
+[role="option"][data-fui-focus-visible],
+[role="option"][data-focus-visible] {
+  outline: none !important;
+  box-shadow: none !important;
+  /* 不要添加 border: none，以免影响其他样式 */
+}
+
+/* 移除 Fluent UI 默认的 ::after 焦点指示器（如果有的话） */
+.fui-Option::after,
+[role="option"]::after {
+  display: none !important;
+}

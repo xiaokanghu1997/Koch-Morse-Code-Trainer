@@ -25,11 +25,20 @@ export interface UseStatisticalToolsetReturn {
   getDatasetStats: (datasetName: string) => DatasetRecords | undefined;
   /** 获取全局统计 */
   getGlobalStats: () => {totalDuration: number; recordCount: number; averageAccuracy: number};
+  /** 获取指定数据集的所有课程统计信息 */
+  getLessonStatsForDataset: (datasetName: string) => {
+    lessons: Array<{
+      lessonNumber: number;
+      recordCount: number;
+      averageAccuracy: number;
+    }>;
+    datasetAverageAccuracy: number;
+  };
 
   // 时间范围统计
 
   /** 获取时间范围统计结果 */
-  getTimeStats: (timeStatType: TimeStatTypes, filter?: DataFilter) => TimeStatsResult;
+  getTimeStats: (timeStatType: string, filter?: DataFilter) => TimeStatsResult;
   /** 获取某年各天的练习次数 */
   getDailyRecordCounts: (year: number, filter?: DataFilter) => Array<[string, number]>;
   /** 获取各数据集的统计信息 */
@@ -125,13 +134,18 @@ export const useStatisticalToolset = (): UseStatisticalToolsetReturn => {
     };
   }, [globalRecords])
 
+  /** 获取指定数据集的所有课程统计信息 */
+  const getLessonStatsForDataset = useCallback((datasetName: string) => {
+    return statisticalToolset.getLessonStatsForDataset(globalRecords, datasetName);
+  }, [globalRecords]);
+
   // 时间范围统计
   
   /** 获取时间范围统计结果 */
   const getTimeStats = useCallback(
-    (timeStatType: TimeStatTypes, filter?: DataFilter): TimeStatsResult => {
+    (timeStatType: string, filter?: DataFilter): TimeStatsResult => {
       const records = getFilteredRecords(filter);
-      return statisticalToolset.getTimeStats(records, timeStatType);
+      return statisticalToolset.getTimeStats(records, timeStatType as TimeStatTypes);
     }, 
     [getFilteredRecords]
   );
@@ -180,6 +194,7 @@ export const useStatisticalToolset = (): UseStatisticalToolsetReturn => {
     getLessonStats,
     getDatasetStats,
     getGlobalStats,
+    getLessonStatsForDataset,
     getTimeStats,
     getDailyRecordCounts,
     getAllDatasetStats,
