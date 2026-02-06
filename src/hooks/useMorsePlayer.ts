@@ -27,6 +27,8 @@ export interface UseMorsePlayerReturn {
   replay: () => Promise<void>;
   /** 跳转 */
   seek: (time: number) => void;
+  /** 获取波形数据 */
+  getWaveformData: () => [number, number][];
 }
 
 /**
@@ -148,6 +150,16 @@ export const useMorsePlayer = (): UseMorsePlayerReturn => {
     playerRef.current?.seek(time);
   }, []);
 
+  /** 获取波形数据 */
+  const getWaveformData = useCallback((): [number, number][] => {
+    if (!playerRef.current) {
+      log.warn("PlayerController not initialized", "useMorsePlayer");
+      return [];
+    }
+    return playerRef.current.getWaveformData();
+  }, []);
+
+
   // 返回接口
 
   return {
@@ -162,5 +174,6 @@ export const useMorsePlayer = (): UseMorsePlayerReturn => {
     stop,
     replay,
     seek,
+    getWaveformData,
   };
 };

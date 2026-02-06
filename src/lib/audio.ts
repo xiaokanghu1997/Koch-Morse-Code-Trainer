@@ -21,9 +21,6 @@ export class AudioGenerator {
   
   /** 主音量控制节点（控制整体音量） */
   private mainGainNode: GainNode | null = null;
-
-  /** 分析节点（用于波形可视化） */
-  private analyserNode: AnalyserNode | null = null;
   
   // ==================== 状态管理 ====================
   
@@ -42,7 +39,7 @@ export class AudioGenerator {
    * 初始化Web Audio API
    * 
    * 创建并连接所有AudioNode: 
-   * Oscillator → GainNode → MainGainNode → AnalyserNode → Destination
+   * Oscillator → GainNode → MainGainNode → Destination
    */
   initialize(): void {
     if (this.initialized) return;
@@ -64,15 +61,10 @@ export class AudioGenerator {
       this.mainGainNode = this.audioContext.createGain();
       this.mainGainNode.gain.setValueAtTime(0.8, this.audioContext.currentTime);
       
-      // 创建分析节点（可选，用于波形可视化）
-      this.analyserNode = this.audioContext.createAnalyser();
-      this.analyserNode.fftSize = 2048;  // FFT大小
-      
       // 连接节点
       this.oscillator.connect(this.gainNode);
       this.gainNode.connect(this.mainGainNode);
-      this.mainGainNode.connect(this.analyserNode);
-      this.analyserNode.connect(this.audioContext.destination);
+      this.mainGainNode.connect(this.audioContext.destination);
       
       // 启动振荡器
       this.oscillator.start();
@@ -415,53 +407,6 @@ export class AudioGenerator {
     );
   }
 
-  // ==================== 波形数据方法 ====================
-
-  /**
-   * 获取时域波形数据
-   * 
-   * 用于波形可视化
-   * 
-   * @returns Uint8Array数据（0-255）
-   */
-  getTimeDomainData(): Uint8Array {
-    if (!this.analyserNode) {
-      return new Uint8Array(0);
-    }
-
-    const bufferLength = this.analyserNode.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
-    this.analyserNode.getByteTimeDomainData(dataArray);
-    
-    return dataArray;
-  }
-
-  /**
-   * 获取频域数据
-   * 
-   * 用于频谱可视化
-   * 
-   * @returns Uint8Array数据（0-255）
-   */
-  getFrequencyData(): Uint8Array {
-    if (!this.analyserNode) {
-      return new Uint8Array(0);
-    }
-
-    const bufferLength = this.analyserNode.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
-    this.analyserNode.getByteFrequencyData(dataArray);
-    
-    return dataArray;
-  }
-
-  /**
-   * 获取AnalyserNode（供外部使用）
-   */
-  getAnalyserNode(): AnalyserNode | null {
-    return this.analyserNode;
-  }
-
   // ==================== 资源管理 ====================
 
   /**
@@ -489,11 +434,6 @@ export class AudioGenerator {
       if (this.mainGainNode) {
         this.mainGainNode.disconnect();
         this.mainGainNode = null;
-      }
-
-      if (this.analyserNode) {
-        this.analyserNode.disconnect();
-        this.analyserNode = null;
       }
 
       // 关闭AudioContext

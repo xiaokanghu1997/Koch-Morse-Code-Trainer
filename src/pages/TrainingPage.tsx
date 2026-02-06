@@ -8,6 +8,7 @@ import {
   MessageBar,
   MessageBarBody,
   makeStyles,
+  mergeClasses,
   tokens
 } from "@fluentui/react-components";
 import { 
@@ -20,14 +21,16 @@ import {
 } from "@fluentui/react-icons";
 import { useState, useEffect, useRef, useMemo, useLayoutEffect } from "react";
 import { AccuracyResult } from "../lib/types";
+import { AudioWaveform } from "../components/AudioWaveform";
+import { HighlightedText } from "../components/HighlightedText";
 import { useTiming } from "../hooks/useTiming";
 import { useLessonManager } from "../hooks/useLessonManager";
 import { useTextGenerator } from "../hooks/useTextGenerator";
 import { useMorsePlayer } from "../hooks/useMorsePlayer";
-import { HighlightedText } from "../components/HighlightedText";
 import { calculateAccuracy } from "../services/statisticalToolset";
 import { useTrainingStore } from "../stores/trainingStore";
 import { useGeneratorStore } from "../stores/generatorStore";
+import { useSettingsStore } from "../stores/settingsStore";
 
 // 样式定义
 const useStyles = makeStyles({
@@ -36,7 +39,12 @@ const useStyles = makeStyles({
     flexDirection: "column",
     height: "100%",
     padding: "5px 10px",
+  },
+  containerGapCloseWave: {
     gap: "10px",
+  },
+  containerGapOpenWave: {
+    gap: "5px",
   },
   // 第一行：课程进度和选择
   headerRow: {
@@ -78,9 +86,11 @@ const useStyles = makeStyles({
   dropdownListbox: {
     minWidth: "105px",
     maxWidth: "105px",
-    height: "166px",
     overflowY: "auto",
     backgroundColor: tokens.colorNeutralBackground4,
+  },
+  dropdownListboxWithHeight: {
+    height: "166px",
   },
   dropdownOption: {
     height: "32px",
@@ -204,9 +214,9 @@ const useStyles = makeStyles({
     flex: 1,
     display: "flex",
     flexDirection: "column",
-    gap: "10px",
     paddingTop: "1px",
     position: "relative",
+    gap: "5px",
   },
   textArea: {
     flex: 1,
@@ -305,6 +315,9 @@ export const TrainingPage = () => {
   // 获取配置
   const { savedConfig } = useGeneratorStore();
 
+  // 获取波形图显示和主题
+  const showWaveform = useSettingsStore(state => state.showWaveform);
+
   // 获取当前训练进度
   const { 
     currentDatasetName, 
@@ -339,14 +352,6 @@ export const TrainingPage = () => {
   const [textSliderValue, setTextSliderValue] = useState<number | null>(null);
   const [textWasPlaying, setTextWasPlaying] = useState(false);
 
-  // 追踪播放状态（控制 Restart 按钮）
-  const [charHasPlayed, setCharHasPlayed] = useState(false);
-  const [textHasPlayed, setTextHasPlayed] = useState(false);
-
-  // 追踪之前的 currentTime
-  const charPrevTimeRef = useRef<number>(0);
-  const textPrevTimeRef = useRef<number>(0);
-
   // 当前点击播放的字符
   const [currentPlayingChar, setCurrentPlayingChar] = useState<string>("");
 
@@ -359,6 +364,9 @@ export const TrainingPage = () => {
 
   // 练习开始时间戳（毫秒）
   const [practiceStartTime, setPracticeStartTime] = useState<number | null>(null);
+
+  // 追踪最后活跃的播放器
+  const [lastActivePlayer, setLastActivePlayer] = useState<"char" | "text">("text");
 
   // 课程显示
   const currentLessonDisplay = useMemo(
@@ -453,52 +461,20 @@ export const TrainingPage = () => {
       textTiming.stop();
     }
   }, [textPlayer.playbackState]);
-
-  // 监听字符音频 currentTime，检测播放完成
-  useEffect(() => {
-    const currentTime = charPlayer.playbackState.currentTime;
-    const prevTime = charPrevTimeRef.current;
-    if (
-      prevTime > 0 &&
-      currentTime === 0 &&
-      charPlayer.playbackState.status === "idle" &&
-      charHasPlayed
-    ) {
-      setCharHasPlayed(false);
-    }
-    charPrevTimeRef.current = currentTime;
-  }, [charPlayer.playbackState.currentTime, charPlayer.playbackState.status, charHasPlayed]);
-
-  // 监听练习文本 currentTime，检测播放完成
-  useEffect(() => {
-    const currentTime = textPlayer.playbackState.currentTime;
-    const prevTime = textPrevTimeRef.current;
-    if (
-      prevTime > 0 &&
-      currentTime === 0 &&
-      textPlayer.playbackState.status === "idle" &&
-      textHasPlayed
-    ) {
-      setTextHasPlayed(false);
-    }
-    textPrevTimeRef.current = currentTime;
-  }, [textPlayer.playbackState.currentTime, textPlayer.playbackState.status, textHasPlayed]);
-
   // 课程切换时停止所有播放
   useEffect(() => {
     if (charPlayer.isPlaying || charPlayer.isPaused) {
       charPlayer.stop();
       charTiming.stop();
-      setCharHasPlayed(false);
     }
     if (textPlayer.isPlaying || textPlayer.isPaused) {
       textPlayer.stop();
       textTiming.stop();
-      setTextHasPlayed(false);
     }
     setInputText("");
     setCheckedResult(null);
     setPracticeStartTime(null);
+    setLastActivePlayer("text");
   }, [currentLessonNumber]);
 
   // 在 DOM 更新后恢复光标位置
@@ -524,7 +500,6 @@ export const TrainingPage = () => {
     if (charPlayer.isPlaying || charPlayer.isPaused) {
       charPlayer.stop();
       charTiming.stop();
-      setCharHasPlayed(false);
     }
     setCurrentPlayingChar(char);
     charTextGen.generateSingleChar(char, 15, savedConfig);
@@ -532,6 +507,7 @@ export const TrainingPage = () => {
 
   // 字符音频播放控制
   const handleCharPlay = () => {
+    setLastActivePlayer("char");
     if (textPlayer.isPlaying) {
       textPlayer.pause();
       textTiming.pause();
@@ -543,11 +519,9 @@ export const TrainingPage = () => {
     } else if (charPlayer.isPaused) {
       charPlayer.resume();
       charTiming.resume();
-      setCharHasPlayed(true);
     } else {
       charPlayer.play(charTextGen.text, savedConfig);
       charTiming.startPlaying(charTextGen.duration);
-      setCharHasPlayed(true);
     }
   };
 
@@ -557,11 +531,12 @@ export const TrainingPage = () => {
       charPlayer.stop();
     }
     charTiming.updateCurrentTime(0);
-    // 重置为未播放状态
-    setCharHasPlayed(false);
   };
 
   const handleCharSliderStart = () => {
+    if (!textPlayer.isPlaying) {
+      setLastActivePlayer("char");
+    }
     setIsCharSliderDragging(true);
     setCharSliderValue(charPlayer.playbackState.currentTime);
     // 记录播放状态并暂停
@@ -599,6 +574,7 @@ export const TrainingPage = () => {
 
   // 练习文本音频播放控制
   const handleTextPlay = () => {
+    setLastActivePlayer("text");
     if (charPlayer.isPlaying) {
       charPlayer.pause();
       charTiming.pause();
@@ -615,7 +591,6 @@ export const TrainingPage = () => {
     } else if (textPlayer.isPaused) {
       textPlayer.resume();
       textTiming.resume();
-      setTextHasPlayed(true);
     } else {
       if (savedConfig.startDelay > 0) {
         textTiming.startDelay(savedConfig.startDelay, async () => {
@@ -625,7 +600,6 @@ export const TrainingPage = () => {
           }
           await textPlayer.play(textTextGen.text, savedConfig);
           textTiming.startPlaying(textTextGen.duration);
-          setTextHasPlayed(true);
         });
       } else {
         if (practiceStartTime === null) {
@@ -633,7 +607,6 @@ export const TrainingPage = () => {
         }
         textPlayer.play(textTextGen.text, savedConfig);
         textTiming.startPlaying(textTextGen.duration);
-        setTextHasPlayed(true);
       }
     }
   };
@@ -644,16 +617,21 @@ export const TrainingPage = () => {
       textPlayer.stop();
     }
     textTiming.updateCurrentTime(0);
-    // 重置为未播放状态
-    setTextHasPlayed(false);
     // 清空输入和结果
     setInputText("");
     setCheckedResult(null);
   };
 
   const handleTextSliderStart = () => {
+    if (!charPlayer.isPlaying) {
+      setLastActivePlayer("text");
+    }
     setIsTextSliderDragging(true);
     setTextSliderValue(textPlayer.playbackState.currentTime);
+    // 如果正在倒计时，停止倒计时
+    if (textTiming.phase === "delay") {
+      textTiming.stop();
+    }
     // 记录播放状态并暂停
     if (textPlayer.isPlaying) {
       setTextWasPlaying(true);
@@ -740,12 +718,10 @@ export const TrainingPage = () => {
     if (charPlayer.isPlaying || charPlayer.isPaused) {
       charPlayer.stop();
       charTiming.stop();
-      setCharHasPlayed(false);
     }
     if (textPlayer.isPlaying || textPlayer.isPaused) {
       textPlayer.stop();
       textTiming.stop();
-      setTextHasPlayed(false);
     }
 
     // 重新生成练习文本
@@ -758,9 +734,66 @@ export const TrainingPage = () => {
     setPracticeStartTime(null);
   };
 
+  // 获取字符波形数据
+  const charWaveformData = useMemo(() => {
+    return charPlayer.getWaveformData() || [];
+  }, [charPlayer.playbackState.totalDuration]);
+
+  // 获取练习文本波形数据
+  const textWaveformData = useMemo(() => {
+    return textPlayer.getWaveformData() || [];
+  }, [textPlayer.playbackState.totalDuration]);
+
+  // 动态选择当前活跃的波形数据和播放状态
+  const { activeWaveformData, activePlaybackState } = useMemo(() => {
+    if (charPlayer.isPlaying) {
+      return {
+        activeWaveformData: charWaveformData,
+        activePlaybackState: charPlayer.playbackState,
+      }
+    } 
+    if (textPlayer.isPlaying) {
+      return {
+        activeWaveformData: textWaveformData,
+        activePlaybackState: textPlayer.playbackState,
+      }
+    }
+
+    if (lastActivePlayer === 'char' && charPlayer.isPaused) {
+      return {
+        activeWaveformData: charWaveformData,
+        activePlaybackState: charPlayer.playbackState,
+      };
+    }
+    if (lastActivePlayer === 'text' && textPlayer.isPaused) {
+      return {
+        activeWaveformData: textWaveformData,
+        activePlaybackState: textPlayer.playbackState,
+      };
+    }
+
+    return {
+      activeWaveformData: textWaveformData,
+      activePlaybackState: textPlayer.playbackState,
+    };
+  }, [
+    charPlayer.isPlaying,
+    charPlayer.isPaused,
+    textPlayer.isPlaying,
+    textPlayer.isPaused,
+    lastActivePlayer,
+    charWaveformData,
+    textWaveformData,
+    charPlayer.playbackState,
+    textPlayer.playbackState,
+  ]);
+
   // 渲染
   return (
-    <div className={styles.container}>
+    <div className={mergeClasses(
+      styles.container,
+      showWaveform ? styles.containerGapOpenWave : styles.containerGapCloseWave
+    )}>
       {/* 第一行：课程进度和选择 */}
       <div className={styles.headerRow}>
         <Text className={styles.progressText}>
@@ -777,7 +810,12 @@ export const TrainingPage = () => {
           <Dropdown
             id="train-lesson-dropdown"
             className={styles.dropdown}
-            listbox={{ className: styles.dropdownListbox }}
+            listbox={{ 
+              className: mergeClasses(
+                styles.dropdownListbox,
+                lessons.length >= 5 && styles.dropdownListboxWithHeight
+              )
+            }}
             value={currentLessonDisplay}
             selectedOptions={[currentLessonNumber.toString()]}
             onOptionSelect={(_, data) => {
@@ -829,13 +867,13 @@ export const TrainingPage = () => {
             id="char-audio-slider"
             className={styles.slider}
             min={0}
-            max={charTextGen.duration || 1000}
+            max={(charPlayer.playbackState.totalDuration || 1) * 1000}
             value={
               isCharSliderDragging && charSliderValue !== null
-              ? charSliderValue 
-              : charPlayer.playbackState.currentTime
+              ? charSliderValue * 1000
+              : charPlayer.playbackState.currentTime * 1000
             }
-            onChange={(_, data) => handleCharSliderChange(data.value as number)}
+            onChange={(_, data) => handleCharSliderChange((data.value as number) / 1000)}
             onPointerDown={handleCharSliderStart}
             onPointerUp={handleCharSliderEnd}
           />
@@ -856,6 +894,10 @@ export const TrainingPage = () => {
               : <PlayCircle20Regular />
             }
             onClick={handleCharPlay}
+            disabled={
+              charPlayer.playbackState.totalDuration > 0 &&
+              charPlayer.playbackState.currentTime >= charPlayer.playbackState.totalDuration - 0.01
+            }
           >
             <Text className={styles.buttonText}>
               {charPlayer.isPlaying ? "Pause" : "Play"}
@@ -865,7 +907,10 @@ export const TrainingPage = () => {
             className={styles.button}
             icon={<ArrowClockwise20Regular />}
             onClick={handleCharRestart}
-            disabled={!charHasPlayed}
+            disabled={
+              charPlayer.playbackState.currentTime <= 0 ||
+              charPlayer.playbackState.totalDuration === 0
+            }
           >
             <Text className={styles.buttonText}>
               Restart
@@ -882,13 +927,13 @@ export const TrainingPage = () => {
             id="text-audio-slider"
             className={styles.slider}
             min={0}
-            max={textTextGen.duration || 1000}
+            max={(textPlayer.playbackState.totalDuration || 1) * 1000}
             value={
               isTextSliderDragging && textSliderValue !== null 
-              ? textSliderValue 
-              : textPlayer.playbackState.currentTime
+              ? textSliderValue * 1000
+              : textPlayer.playbackState.currentTime * 1000
             }
-            onChange={(_, data) => handleTextSliderChange(data.value as number)}
+            onChange={(_, data) => handleTextSliderChange((data.value as number) / 1000)}
             onPointerDown={handleTextSliderStart}
             onPointerUp={handleTextSliderEnd}
           />
@@ -913,6 +958,11 @@ export const TrainingPage = () => {
                   : <PlayCircle20Regular />
             }
             onClick={handleTextPlay}
+            disabled={
+              textPlayer.playbackState.totalDuration > 0 &&
+              textPlayer.playbackState.currentTime >= textPlayer.playbackState.totalDuration - 0.01 &&
+              textTiming.phase !== "delay"
+            }
           >
             <Text className={styles.buttonText}>
               {textTiming.phase === "delay" 
@@ -926,7 +976,10 @@ export const TrainingPage = () => {
             className={styles.button}
             icon={<ArrowClockwise20Regular />}
             onClick={handleTextRestart}
-            disabled={!textHasPlayed}
+            disabled={
+              textPlayer.playbackState.currentTime <= 0 ||
+              textPlayer.playbackState.totalDuration === 0
+            }
           >
             <Text className={styles.buttonText}>
               Restart
@@ -935,8 +988,19 @@ export const TrainingPage = () => {
         </div>
       </div>
 
-      {/* 第五行：练习文本输入框 */}
+      {/* 第五行：波形图 + 练习文本输入框 */}
       <div className={styles.textAreaContainer}>
+        {/* 波形图显示 */}
+        {showWaveform && (
+          <AudioWaveform
+            waveformData={activeWaveformData}
+            playbackState={activePlaybackState}
+            height={60}
+            windowDuration={5.5}
+            playheadPosition={1}
+          />
+        )}
+        {/* 练习文本输入框 */}
         <Textarea
           id="practice-textarea"
           className={styles.textArea}

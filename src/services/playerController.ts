@@ -36,7 +36,7 @@ export class PlayerController {
   private progressInterval: number | null = null;
 
   /** 进度更新间隔 */
-  private readonly PROGRESS_UPDATE_INTERVAL = 100; // ms
+  private readonly PROGRESS_UPDATE_INTERVAL = 16; // ms
   
   // ==================== 回调 ====================
 
@@ -308,6 +308,21 @@ export class PlayerController {
     return this.playbackState.totalDuration;
   }
 
+  /**
+   * 获取波形数据
+   */
+  getWaveformData(): [number, number][] {
+    const result: [number, number][] = [];
+    
+    for (const event of this.currentEvents) {
+      if (event.type === "gain") {
+        result.push([event.time, event.value]);
+      }
+    }
+    
+    return result;
+  }
+
   // ==================== 参数设置 ====================
 
   /**
@@ -397,26 +412,21 @@ export class PlayerController {
    * 处理播放完成
    */
   private handlePlaybackComplete(): void {
-    this.stop();
+    // 停止进度追踪
+    this.stopProgressTracking();
+
+    // 暂停音频
+    this.audioGenerator.suspend();
+
+    // 设置状态为暂停
+    this.playbackState.status = "paused";
+    this.playbackState.pausedAt = this.playbackState.totalDuration;
+    this.playbackState.currentTime = this.playbackState.totalDuration;
+
+    // 触发状态回调
+    this.emitStateChange();
+    
     log.info("Playback completed", "PlayerController");
-  }
-
-  // ==================== 波形数据 ====================
-
-  /**
-   * 获取AnalyserNode
-   * 
-   * 用于波形可视化
-   */
-  getAnalyserNode(): AnalyserNode | null {
-    return this.audioGenerator.getAnalyserNode();
-  }
-
-  /**
-   * 获取时域波形数据
-   */
-  getTimeDomainData(): Uint8Array {
-    return this.audioGenerator.getTimeDomainData();
   }
 
   // ==================== 资源清理 ====================

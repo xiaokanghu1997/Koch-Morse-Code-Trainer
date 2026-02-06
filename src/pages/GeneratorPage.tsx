@@ -12,6 +12,7 @@ import {
   MessageBarTitle,
   MessageBarActions,
   makeStyles,
+  mergeClasses,
   tokens
 } from "@fluentui/react-components";
 import { 
@@ -89,7 +90,11 @@ const useStyles = makeStyles({
   dropdownListbox: {
     minWidth: "125px",
     maxWidth: "125px",
+    overflowY: "auto",
     backgroundColor: tokens.colorNeutralBackground4,
+  },
+  dropdownListboxWithHeight: {
+    height: "166px",
   },
   dropdownOption: {
     height: "32px",
@@ -255,6 +260,10 @@ const tips = {
   startDelay: "Waiting time before playback starts",
   prefixSuffix: "Add standard practice markers before and after each practice",
 };
+
+// 下拉框选项
+const datasetOptions = ["Koch-LCWO", "Letters", "Numbers", "Punctuation"] as const;
+const practiceModeOptions = ["Uniform", "New focus", "Gradual", "Weighted"] as const;
 
 // 生成器页面组件
 export const GeneratorPage = () => {
@@ -495,25 +504,28 @@ export const GeneratorPage = () => {
             <Dropdown 
               id="dataset-dropdown"
               className={styles.dropdown}
-              listbox={{ className: styles.dropdownListbox }}
+              listbox={{ 
+                className: mergeClasses(
+                  styles.dropdownListbox,
+                  datasetOptions.length >= 5 && styles.dropdownListboxWithHeight
+                )
+              }}
               value={currentConfig.datasetName}
               selectedOptions={[currentConfig.datasetName]}
               onOptionSelect={(_, data) => 
                 updateConfig({ datasetName: data.optionValue as GeneratorConfig["datasetName"] })
               }
             >
-              <Option value="Koch-LCWO" className={styles.dropdownOption} checkIcon={null}>
-                Koch-LCWO
-              </Option>
-              <Option value="Letters" className={styles.dropdownOption} checkIcon={null}>
-                Letters
-              </Option>
-              <Option value="Numbers" className={styles.dropdownOption} checkIcon={null}>
-                Numbers
-              </Option>
-              <Option value="Punctuation" className={styles.dropdownOption} checkIcon={null}>
-                Punctuation
-              </Option>
+              {datasetOptions.map((dataset) => (
+                <Option 
+                  key={dataset}
+                  value={dataset} 
+                  className={styles.dropdownOption} 
+                  checkIcon={null}
+                >
+                  {dataset}
+                </Option>
+              ))}
             </Dropdown>
           </div>
 
@@ -534,25 +546,28 @@ export const GeneratorPage = () => {
             <Dropdown 
               id="practice-mode-dropdown"
               className={styles.dropdown}
-              listbox={{ className: styles.dropdownListbox }}
+              listbox={{ 
+                className: mergeClasses(
+                  styles.dropdownListbox,
+                  practiceModeOptions.length >= 5 && styles.dropdownListboxWithHeight
+                )
+              }}
               value={currentConfig.practiceMode}
               selectedOptions={[currentConfig.practiceMode]}
               onOptionSelect={(_, data) => 
                 updateConfig({ practiceMode: data.optionValue as GeneratorConfig["practiceMode"] })
               }
             >
-              <Option value="Uniform" className={styles.dropdownOption} checkIcon={null}>
-                Uniform
-              </Option>
-              <Option value="New focus" className={styles.dropdownOption} checkIcon={null}>
-                New focus
-              </Option>
-              <Option value="Gradual" className={styles.dropdownOption} checkIcon={null}>
-                Gradual
-              </Option>
-              <Option value="Weighted" className={styles.dropdownOption} checkIcon={null}>
-                Weighted
-              </Option>
+              {practiceModeOptions.map((mode) => (
+                <Option 
+                  key={mode}
+                  value={mode}
+                  className={styles.dropdownOption} 
+                  checkIcon={null}
+                >
+                  {mode}
+                </Option>
+              ))}
             </Dropdown>
           </div>
 
