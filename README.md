@@ -11,7 +11,7 @@
 
 **基于 Koch 方法的摩尔斯电码学习工具**
 
-![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)
+![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Status](https://img.shields.io/badge/status-开发中-yellow.svg)
 

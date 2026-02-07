@@ -118,7 +118,7 @@ export const AboutPage = () => {
   
   // 软件信息
   const appTitle = "Koch - Morse Code Trainer";
-  const version = "Version 0.1.0";
+  const version = "Version 0.2.0";
 
   // Popover 状态
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
