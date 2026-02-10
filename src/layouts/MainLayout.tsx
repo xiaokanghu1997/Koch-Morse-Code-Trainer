@@ -7,8 +7,9 @@ import {
   NavDrawerFooter,
   NavItem,
   Tooltip,
+  makeStyles, 
+  tokens
 } from "@fluentui/react-components";
-import { makeStyles, tokens } from "@fluentui/react-components";
 import {
   Voicemail20Filled,
   Voicemail20Regular,
@@ -59,7 +60,7 @@ const useStyles = makeStyles({
   navItem: {
     padding: "8px 4px",
     "& svg": {
-        pointerEvents: "none",
+      pointerEvents: "none",
     },
     backgroundColor: tokens.colorNeutralBackground1,
     transitionProperty: "none",

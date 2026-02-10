@@ -1,7 +1,7 @@
 {
   "name": "koch-morse-code-trainer",
   "private": true,
-  "version": "0.2.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -22,6 +22,7 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.12.0",
+    "tone": "^15.1.22",
     "zustand": "^5.0.10"
   },
   "devDependencies": {

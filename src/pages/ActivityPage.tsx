@@ -6,6 +6,7 @@ import {
   mergeClasses,
   tokens
 } from "@fluentui/react-components";
+import { ChevronDown16Regular } from "@fluentui/react-icons";
 import { CalendarHeatmap } from "../components/CalendarHeatmap";
 import { useState, useMemo } from "react";
 import { useStatisticalToolset } from "../hooks/useStatisticalToolset";
@@ -51,6 +52,13 @@ const useStyles = makeStyles({
     },
     ":active": {
       backgroundColor: tokens.colorNeutralBackground3Pressed,
+    },
+    "& .fui-Dropdown__expandIcon": {
+      transition: "transform 200ms ease",
+      transformOrigin: "center",
+    },
+    "& .fui-Dropdown__button[aria-expanded='true'] .fui-Dropdown__expandIcon": {
+      transform: "perspective(1px) scaleY(-1)",
     },
   },
   dropdownListbox: {
@@ -172,6 +180,7 @@ export const ActivityPage = () => {
         <Dropdown
           id="year-dropdown"
           className={styles.dropdown}
+          expandIcon={<ChevronDown16Regular />}
           listbox={{ 
             className: mergeClasses(
               styles.dropdownListbox,

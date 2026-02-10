@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { PlayerController } from "../services/playerController";
-import { useSettingsStore } from "../stores/settingsStore";
+import { AudioPlayer } from "../services/audioPlayer";
 import type { GeneratorConfig, PlaybackState } from "../lib/types";
 import { log } from "../utils/logger";
 
@@ -16,28 +15,26 @@ export interface UseMorsePlayerReturn {
   /** 预加载 */
   preload: (text: string, config: GeneratorConfig) => void;
   /** 播放 */
-  play: (text: string, config: GeneratorConfig) => Promise<void>;
+  play: () => Promise<void>;
   /** 暂停 */
   pause: () => void;
   /** 恢复 */
   resume: () => void;
   /** 停止 */
   stop: () => void;
-  /** 重播 */
-  replay: () => Promise<void>;
   /** 跳转 */
   seek: (time: number) => void;
-  /** 获取波形数据 */
-  getWaveformData: () => [number, number][];
+  /** 波形数据 */
+  waveformData: [number, number][];
 }
 
 /**
  * 摩尔斯播放器 Hook
  * 
  * 功能：
- * - 播放/暂停/停止/重播
- * - 进度控制（seek）
- * - 自动同步音量
+ * - 封装 AudioPlayer
+ * - 提供 React 组件可用的接口
+ * - 管理播放器生命周期
  */
 export const useMorsePlayer = (): UseMorsePlayerReturn => {
   const [playbackState, setPlaybackState] = useState<PlaybackState>({
@@ -47,70 +44,65 @@ export const useMorsePlayer = (): UseMorsePlayerReturn => {
     pausedAt: 0,
   });
 
-  const playerRef = useRef<PlayerController | null>(null);
-  const { volume } = useSettingsStore();
+  // 波形数据
+  const [waveformData, setWaveformData] = useState<[number, number][]>([]);
+
+  const playerRef = useRef<AudioPlayer | null>(null);
 
   // 初始化播放器
-
   useEffect(() => {
-    const player = new PlayerController();
+    const player = new AudioPlayer();
+    player.initialize();
     
     // 监听状态变化
     player.onStateChange((state) => {
       setPlaybackState(state);
     });
-
-    // 设置音量
-    player.setVolume(volume / 100);
     
     playerRef.current = player;
     
+    log.info("Morse player initialized", "useMorsePlayer");
+    
+    // 清理
     return () => {
       player.dispose();
+      log.info("Morse player disposed", "useMorsePlayer");
     };
   }, []);
 
-  // 音量同步
-
-  useEffect(() => {
-    if (playerRef.current) {
-      playerRef.current.setVolume(volume / 100);
-    }
-  }, [volume]);
-
   // 播放控制方法
 
-  /** 预加载 */ 
+  /** 预加载 */
   const preload = useCallback((text: string, config: GeneratorConfig) => {
     if (!playerRef.current) {
-      log.warn("PlayerController not initialized", "useMorsePlayer");
+      log.warn("Player not initialized", "useMorsePlayer");
       return;
     }
 
-    playerRef.current.preload(text, {
+    // 提取音频配置
+    const audioConfig = {
       charSpeed: config.charSpeed,
       effSpeed: config.effSpeed,
       tone: config.tone,
-    });
+    };
+
+    playerRef.current.preload(text, audioConfig);
+
+    const newWaveformData = playerRef.current.getWaveformData();
+    setWaveformData(newWaveformData);
   }, []);
 
   /** 播放 */
-  const play = useCallback(async (text: string, config: GeneratorConfig) => {
+  const play = useCallback(async () => {
     if (!playerRef.current) {
-      log.warn("PlayerController not initialized", "useMorsePlayer");
+      log.warn("Player not initialized", "useMorsePlayer");
       return;
     }
 
     try {
-      await playerRef.current.play(text, {
-        charSpeed: config.charSpeed,
-        effSpeed: config.effSpeed,
-        tone: config.tone,
-      });
-      log.info("Playback started", "useMorsePlayer");
+      await playerRef.current.play();
     } catch (error) {
-      log.error("Failed to start playback", "useMorsePlayer", error);
-      return;
+      log.error("Failed to play", "useMorsePlayer", error);
     }
   }, []);
 
@@ -129,39 +121,12 @@ export const useMorsePlayer = (): UseMorsePlayerReturn => {
     playerRef.current?.stop();
   }, []);
 
-  /** 重播 */
-  const replay = useCallback(async () => {
-    if (!playerRef.current) {
-      log.warn("PlayerController not initialized", "useMorsePlayer");
-      return;
-    }
-
-    try {
-      await playerRef.current.replay();
-      log.info("Replay started", "useMorsePlayer");
-    } catch (error) {
-      log.error("Failed to replay", "useMorsePlayer", error);
-      return;
-    }
-  }, []);
-
   /** 跳转到指定位置 */
   const seek = useCallback((time: number) => {
     playerRef.current?.seek(time);
   }, []);
 
-  /** 获取波形数据 */
-  const getWaveformData = useCallback((): [number, number][] => {
-    if (!playerRef.current) {
-      log.warn("PlayerController not initialized", "useMorsePlayer");
-      return [];
-    }
-    return playerRef.current.getWaveformData();
-  }, []);
-
-
   // 返回接口
-
   return {
     playbackState,
     isPlaying: playbackState.status === "playing",
@@ -172,8 +137,7 @@ export const useMorsePlayer = (): UseMorsePlayerReturn => {
     pause,
     resume,
     stop,
-    replay,
     seek,
-    getWaveformData,
+    waveformData,
   };
 };

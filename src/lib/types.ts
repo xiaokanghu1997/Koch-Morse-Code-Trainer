@@ -135,29 +135,6 @@ export interface TimingConfig {
   wordSpace: number;
 }
 
-// ==================== 音频事件接口 ====================
-
-/**
- * 音频事件接口（内部使用）
- * 定义播放过程中触发的各种事件
- */
-export interface AudioEvent {
-  /** 事件发生时间（秒） */
-  time: number;
-
-  /** 事件类型 */
-  type: "gain" | "frequency";
-
-  /** 事件值 */
-  value: number;
-
-  /** 关联字符 */
-  char?: string;
-  
-  /** 字符索引 */
-  charIndex?: number;
-}
-
 // ==================== 播放状态接口 ====================
 
 /**

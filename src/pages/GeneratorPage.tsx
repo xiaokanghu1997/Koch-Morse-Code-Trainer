@@ -16,6 +16,7 @@ import {
   tokens
 } from "@fluentui/react-components";
 import { 
+  ChevronDown16Regular,
   Timer20Regular,
   PlayCircle20Regular, 
   PauseCircle20Regular, 
@@ -69,8 +70,8 @@ const useStyles = makeStyles({
     gap: "2px",
   },
   dropdown: {
-    minWidth: "125px",
-    maxWidth: "125px",
+    minWidth: "120px",
+    maxWidth: "120px",
     height: "32px",
     paddingBottom: "1.5px",
     transform: "translateY(1.5px)",
@@ -86,10 +87,17 @@ const useStyles = makeStyles({
     ":active": {
       backgroundColor: tokens.colorNeutralBackground3Pressed,
     },
+    "& .fui-Dropdown__expandIcon": {
+      transition: "transform 200ms ease",
+      transformOrigin: "center",
+    },
+    "& .fui-Dropdown__button[aria-expanded='true'] .fui-Dropdown__expandIcon": {
+      transform: "perspective(1px) scaleY(-1)",
+    },
   },
   dropdownListbox: {
-    minWidth: "125px",
-    maxWidth: "125px",
+    minWidth: "120px",
+    maxWidth: "120px",
     overflowY: "auto",
     backgroundColor: tokens.colorNeutralBackground4,
   },
@@ -304,10 +312,14 @@ export const GeneratorPage = () => {
     textGen.generate(currentConfig);
   }, [currentConfig]);
 
-  // 文本时长变化时更新总时长
+  // 文本变化时更新播放器和时长
   useEffect(() => {
-    timing.setTotalDuration(textGen.duration);
-  }, [textGen.duration]);
+    if (textGen.text && textGen.duration > 0) {
+      // 文本生成后预加载到播放器
+      player.preload(textGen.text, currentConfig);
+      timing.setTotalDuration(textGen.duration);
+    }
+  }, [textGen.text]);
 
   // 监听播放状态
   useEffect(() => {
@@ -328,7 +340,7 @@ export const GeneratorPage = () => {
   };
 
   // 预览按钮点击
-  const handlePreview = () => {
+  const handlePreview = async () => {
     if (timing.phase === "delay") {
       // 如果在延迟阶段，取消倒计时
       timing.stop();
@@ -348,12 +360,12 @@ export const GeneratorPage = () => {
       if (currentConfig.startDelay > 0) {
         // 有启动延迟，先等待
         timing.startDelay(currentConfig.startDelay, async () => {
-          await player.play(textGen.text, currentConfig);
+          await player.play();
           timing.startPlaying(textGen.duration);
         });
       } else {
         // 无启动延迟，直接播放
-        player.play(textGen.text, currentConfig);
+        await player.play();
         timing.startPlaying(textGen.duration);
       }
     }
@@ -504,6 +516,7 @@ export const GeneratorPage = () => {
             <Dropdown 
               id="dataset-dropdown"
               className={styles.dropdown}
+              expandIcon={<ChevronDown16Regular />}
               listbox={{ 
                 className: mergeClasses(
                   styles.dropdownListbox,
@@ -546,6 +559,7 @@ export const GeneratorPage = () => {
             <Dropdown 
               id="practice-mode-dropdown"
               className={styles.dropdown}
+              expandIcon={<ChevronDown16Regular />}
               listbox={{ 
                 className: mergeClasses(
                   styles.dropdownListbox,

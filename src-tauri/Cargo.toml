@@ -1,6 +1,6 @@
 [package]
 name = "Koch"
-version = "0.2.0"
+version = "1.0.0"
 description = "A Morse Code Trainer based on the Koch Method"
 authors = ["Xiaokang HU"]
 edition = "2021"

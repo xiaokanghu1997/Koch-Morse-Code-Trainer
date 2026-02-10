@@ -155,12 +155,6 @@ export const TIMING_CONSTANTS = {
    * 间隔单位分布: 字符间4次×3 + 单词间1次×7 = 19
    */
   FARNSWORTH_SPACE_UNITS: 19,
-  
-  /**
-   * 淡入淡出时长（秒）
-   * 用于防止音频爆音
-   */
-  FADE_DURATION: 0.005,  // 5毫秒
 } as const;
 
 // ==================== 前后缀配置 ====================

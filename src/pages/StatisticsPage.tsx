@@ -6,6 +6,7 @@ import {
   mergeClasses,
   tokens
 } from "@fluentui/react-components";
+import { ChevronDown16Regular } from "@fluentui/react-icons";
 import { StatisticsChart } from "../components/StatisticsChart";
 import { useState, useEffect, useMemo } from "react";
 import { useLessonManager } from "../hooks/useLessonManager";
@@ -53,14 +54,21 @@ const useStyles = makeStyles({
     ":active": {
       backgroundColor: tokens.colorNeutralBackground3Pressed,
     },
+    "& .fui-Dropdown__expandIcon": {
+      transition: "transform 200ms ease",
+      transformOrigin: "center",
+    },
+    "& .fui-Dropdown__button[aria-expanded='true'] .fui-Dropdown__expandIcon": {
+      transform: "perspective(1px) scaleY(-1)",
+    },
   },
   dropdownDataset: {
-    minWidth: "125px",
-    maxWidth: "125px",
+    minWidth: "120px",
+    maxWidth: "120px",
   },
   dropdownLesson: {
-    minWidth: "105px",
-    maxWidth: "105px",
+    minWidth: "100px",
+    maxWidth: "100px",
   },
   dropdownStatType: {
     minWidth: "90px",
@@ -74,12 +82,12 @@ const useStyles = makeStyles({
     height: "166px",
   },
   dropdownListboxDataset: {
-    minWidth: "125px",
-    maxWidth: "125px",
+    minWidth: "120px",
+    maxWidth: "120px",
   },
   dropdownListboxLesson: {
-    minWidth: "110px",
-    maxWidth: "110px",
+    minWidth: "100px",
+    maxWidth: "100px",
   },
   dropdownListboxStatType: {
     minWidth: "90px",
@@ -294,6 +302,7 @@ export const StatisticsPage = () => {
           <Dropdown
             id="dataset-dropdown"
             className={mergeClasses(styles.dropdownBase, styles.dropdownDataset)}
+            expandIcon={<ChevronDown16Regular />}
             listbox={{ 
               className: mergeClasses(
                 styles.dropdownListboxBase, 
@@ -329,6 +338,7 @@ export const StatisticsPage = () => {
           <Dropdown
             id="lesson-dropdown"
             className={mergeClasses(styles.dropdownBase, styles.dropdownLesson)}
+            expandIcon={<ChevronDown16Regular />}
             listbox={{ 
               className: mergeClasses(
                 styles.dropdownListboxBase, 
@@ -364,6 +374,7 @@ export const StatisticsPage = () => {
             <Dropdown
               id="stattype-dropdown"
               className={mergeClasses(styles.dropdownBase, styles.dropdownStatType)}
+              expandIcon={<ChevronDown16Regular />}
               listbox={{ 
                 className: mergeClasses(
                   styles.dropdownListboxBase, 

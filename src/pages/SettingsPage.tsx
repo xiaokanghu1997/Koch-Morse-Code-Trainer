@@ -9,6 +9,7 @@ import {
   tokens
 } from "@fluentui/react-components";
 import {
+  ChevronDown16Regular,
   Color24Regular,
   TransparencySquare24Regular,
   Speaker224Regular,
@@ -55,8 +56,8 @@ const useStyles = makeStyles({
     flexShrink: 0,
   },
   dropdown: {
-    minWidth: "120px",
-    maxWidth: "120px",
+    minWidth: "100px",
+    maxWidth: "100px",
     height: "32px",
     paddingBottom: "1.5px",
     transform: "translateY(1.5px)",
@@ -72,10 +73,17 @@ const useStyles = makeStyles({
     ":active": {
       backgroundColor: tokens.colorNeutralBackground4Pressed,
     },
+    "& .fui-Dropdown__expandIcon": {
+      transition: "transform 200ms ease",
+      transformOrigin: "center",
+    },
+    "& .fui-Dropdown__button[aria-expanded='true'] .fui-Dropdown__expandIcon": {
+      transform: "perspective(1px) scaleY(-1)",
+    },
   },
   dropdownListbox: {
-    minWidth: "120px",
-    maxWidth: "120px",
+    minWidth: "100px",
+    maxWidth: "100px",
     backgroundColor: tokens.colorNeutralBackground5,
   },
   dropdownOption: {
@@ -184,6 +192,7 @@ export const SettingsPage = () => {
         <Dropdown 
           id="theme-dropdown"
           className={styles.dropdown}
+          expandIcon={<ChevronDown16Regular />}
           listbox={{ className: styles.dropdownListbox }}
           positioning="below-start"
           value={theme}

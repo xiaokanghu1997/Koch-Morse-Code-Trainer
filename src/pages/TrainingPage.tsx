@@ -12,6 +12,7 @@ import {
   tokens
 } from "@fluentui/react-components";
 import { 
+  ChevronDown16Regular,
   PlayCircle20Regular, 
   PauseCircle20Regular, 
   ArrowUndo16Regular,
@@ -65,8 +66,8 @@ const useStyles = makeStyles({
     gap: "8px",
   },
   dropdown: {
-    minWidth: "105px",
-    maxWidth: "105px",
+    minWidth: "100px",
+    maxWidth: "100px",
     height: "32px",
     paddingBottom: "1.5px",
     transform: "translateY(1.5px)",
@@ -82,10 +83,17 @@ const useStyles = makeStyles({
     ":active": {
       backgroundColor: tokens.colorNeutralBackground3Pressed,
     },
+    "& .fui-Dropdown__expandIcon": {
+      transition: "transform 200ms ease",
+      transformOrigin: "center",
+    },
+    "& .fui-Dropdown__button[aria-expanded='true'] .fui-Dropdown__expandIcon": {
+      transform: "perspective(1px) scaleY(-1)",
+    },
   },
   dropdownListbox: {
-    minWidth: "105px",
-    maxWidth: "105px",
+    minWidth: "100px",
+    maxWidth: "100px",
     overflowY: "auto",
     backgroundColor: tokens.colorNeutralBackground4,
   },
@@ -461,6 +469,7 @@ export const TrainingPage = () => {
       textTiming.stop();
     }
   }, [textPlayer.playbackState]);
+
   // 课程切换时停止所有播放
   useEffect(() => {
     if (charPlayer.isPlaying || charPlayer.isPaused) {
@@ -493,10 +502,6 @@ export const TrainingPage = () => {
 
   // 点击字符播放
   const handleCharClick = (char: string) => {
-    if (textPlayer.isPlaying) {
-      textPlayer.pause();
-      textTiming.pause();
-    }
     if (charPlayer.isPlaying || charPlayer.isPaused) {
       charPlayer.stop();
       charTiming.stop();
@@ -506,13 +511,8 @@ export const TrainingPage = () => {
   }
 
   // 字符音频播放控制
-  const handleCharPlay = () => {
+  const handleCharPlay = async () => {
     setLastActivePlayer("char");
-    if (textPlayer.isPlaying) {
-      textPlayer.pause();
-      textTiming.pause();
-    }
-
     if (charPlayer.isPlaying) {
       charPlayer.pause();
       charTiming.pause();
@@ -520,7 +520,7 @@ export const TrainingPage = () => {
       charPlayer.resume();
       charTiming.resume();
     } else {
-      charPlayer.play(charTextGen.text, savedConfig);
+      await charPlayer.play();
       charTiming.startPlaying(charTextGen.duration);
     }
   };
@@ -552,34 +552,25 @@ export const TrainingPage = () => {
   const handleCharSliderChange = (value: number) => {
     if (isCharSliderDragging) {
       setCharSliderValue(value);
-      // 实时更新播放进度
+      charPlayer.seek(value);
       charTiming.updateCurrentTime(value);
     }
   };
 
   const handleCharSliderEnd = () => {
     setIsCharSliderDragging(false);
-    if (charSliderValue !== null) {
-      // 跳转到指定位置
-      charPlayer.seek(charSliderValue);
-      // 如果之前是播放状态，继续播放
-      if (charWasPlaying) {
-        charPlayer.resume();
-        charTiming.resume();
-      }
+    // 如果之前是播放状态，继续播放
+    if (charWasPlaying) {
+      charPlayer.resume();
+      charTiming.resume();
     }
     setCharSliderValue(null);
     setCharWasPlaying(false);
   };
 
   // 练习文本音频播放控制
-  const handleTextPlay = () => {
+  const handleTextPlay = async () => {
     setLastActivePlayer("text");
-    if (charPlayer.isPlaying) {
-      charPlayer.pause();
-      charTiming.pause();
-    }
-
     if (textTiming.phase === "delay") {
       textTiming.stop();
       return;
@@ -592,20 +583,20 @@ export const TrainingPage = () => {
       textPlayer.resume();
       textTiming.resume();
     } else {
-      if (savedConfig.startDelay > 0) {
+      if (savedConfig.startDelay > 0 && textPlayer.playbackState.currentTime === 0) {
         textTiming.startDelay(savedConfig.startDelay, async () => {
           // 首次播放且倒计时完成，记录开始时间
           if (practiceStartTime === null) {
             setPracticeStartTime(Date.now());
           }
-          await textPlayer.play(textTextGen.text, savedConfig);
+          await textPlayer.play();
           textTiming.startPlaying(textTextGen.duration);
         });
       } else {
         if (practiceStartTime === null) {
           setPracticeStartTime(Date.now());
         }
-        textPlayer.play(textTextGen.text, savedConfig);
+        await textPlayer.play();
         textTiming.startPlaying(textTextGen.duration);
       }
     }
@@ -645,21 +636,17 @@ export const TrainingPage = () => {
   const handleTextSliderChange = (value: number) => {
     if (isTextSliderDragging) {
       setTextSliderValue(value);
-      // 实时更新播放进度
+      textPlayer.seek(value);
       textTiming.updateCurrentTime(value);
     }
   };
 
   const handleTextSliderEnd = () => {
     setIsTextSliderDragging(false);
-    if (textSliderValue !== null) {
-      // 跳转到指定位置
-      textPlayer.seek(textSliderValue);
-      // 如果之前是播放状态，继续播放
-      if (textWasPlaying) {
-        textPlayer.resume();
-        textTiming.resume();
-      }
+    // 如果之前是播放状态，继续播放
+    if (textWasPlaying) {
+      textPlayer.resume();
+      textTiming.resume();
     }
     setTextSliderValue(null);
     setTextWasPlaying(false);
@@ -734,46 +721,36 @@ export const TrainingPage = () => {
     setPracticeStartTime(null);
   };
 
-  // 获取字符波形数据
-  const charWaveformData = useMemo(() => {
-    return charPlayer.getWaveformData() || [];
-  }, [charPlayer.playbackState.totalDuration]);
-
-  // 获取练习文本波形数据
-  const textWaveformData = useMemo(() => {
-    return textPlayer.getWaveformData() || [];
-  }, [textPlayer.playbackState.totalDuration]);
-
   // 动态选择当前活跃的波形数据和播放状态
   const { activeWaveformData, activePlaybackState } = useMemo(() => {
     if (charPlayer.isPlaying) {
       return {
-        activeWaveformData: charWaveformData,
+        activeWaveformData: charPlayer.waveformData,
         activePlaybackState: charPlayer.playbackState,
       }
     } 
     if (textPlayer.isPlaying) {
       return {
-        activeWaveformData: textWaveformData,
+        activeWaveformData: textPlayer.waveformData,
         activePlaybackState: textPlayer.playbackState,
       }
     }
 
-    if (lastActivePlayer === 'char' && charPlayer.isPaused) {
+    if (lastActivePlayer === "char" && !textPlayer.isPlaying) {
       return {
-        activeWaveformData: charWaveformData,
+        activeWaveformData: charPlayer.waveformData,
         activePlaybackState: charPlayer.playbackState,
       };
     }
-    if (lastActivePlayer === 'text' && textPlayer.isPaused) {
+    if (lastActivePlayer === "text" && !charPlayer.isPlaying) {
       return {
-        activeWaveformData: textWaveformData,
+        activeWaveformData: textPlayer.waveformData,
         activePlaybackState: textPlayer.playbackState,
       };
     }
 
     return {
-      activeWaveformData: textWaveformData,
+      activeWaveformData: textPlayer.waveformData,
       activePlaybackState: textPlayer.playbackState,
     };
   }, [
@@ -782,8 +759,8 @@ export const TrainingPage = () => {
     textPlayer.isPlaying,
     textPlayer.isPaused,
     lastActivePlayer,
-    charWaveformData,
-    textWaveformData,
+    charPlayer.waveformData,
+    textPlayer.waveformData,
     charPlayer.playbackState,
     textPlayer.playbackState,
   ]);
@@ -810,6 +787,7 @@ export const TrainingPage = () => {
           <Dropdown
             id="train-lesson-dropdown"
             className={styles.dropdown}
+            expandIcon={<ChevronDown16Regular />}
             listbox={{ 
               className: mergeClasses(
                 styles.dropdownListbox,
