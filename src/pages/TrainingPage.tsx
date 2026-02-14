@@ -608,9 +608,6 @@ export const TrainingPage = () => {
       textPlayer.stop();
     }
     textTiming.updateCurrentTime(0);
-    // 清空输入和结果
-    setInputText("");
-    setCheckedResult(null);
   };
 
   const handleTextSliderStart = () => {
