@@ -231,7 +231,7 @@ export const StatisticsChart = React.memo(({
     ],
     grid: {
       top: "30px",
-      bottom: chartData.xLabel === "" ? "0px" : "16px",
+      bottom: chartData.xLabel === "" ? "0px" : "18px",
       left: "18px",
       right: "22px",
       outerBoundsMode: "same",

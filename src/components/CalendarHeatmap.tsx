@@ -92,7 +92,7 @@ export const CalendarHeatmap = React.memo(({
     visualMap: {
       type: "piecewise",
       orient: "horizontal",
-      left: "20px",
+      left: "18px",
       bottom: "-8px",
       pieces: [
         {gt: 20, color: tokens.colorPaletteGreenBackground1},

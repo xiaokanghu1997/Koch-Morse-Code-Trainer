@@ -36,8 +36,8 @@ const useStyles = makeStyles({
     fontWeight: tokens.fontWeightSemibold,
   },
   dropdown: {
-    minWidth: "80px",
-    maxWidth: "80px",
+    minWidth: "85px",
+    maxWidth: "85px",
     height: "32px",
     paddingBottom: "1.5px",
     transform: "translateY(1.5px)",
@@ -62,8 +62,8 @@ const useStyles = makeStyles({
     },
   },
   dropdownListbox: {
-    minWidth: "80px",
-    maxWidth: "80px",
+    minWidth: "85px",
+    maxWidth: "85px",
     overflowY: "auto",
     backgroundColor: tokens.colorNeutralBackground4,
   },
@@ -105,6 +105,7 @@ const useStyles = makeStyles({
     gridTemplateColumns: "220px repeat(4, 1fr)",
     gap: "2px",
     overflow: "hidden",
+    marginTop: "-2px",
   },
   statsHeaderCell: {
     justifyContent: "flex-start",
@@ -169,13 +170,13 @@ export const ActivityPage = () => {
           A total of{" "}
           <span className={styles.infoText}>
             {yearStats.totalRecordCount}
-          </span>{" "}trainings were completed, lasting{" "}
+          </span>{" "}training sessions were completed in{" "}
           <span className={styles.infoText}>
             {yearStats.totalDuration}
-          </span>{" "}in total, with an average accuracy of{" "}
+          </span>{" "}with{" "}
           <span className={styles.infoText}>
             {yearStats.averageAccuracy}
-          </span>, in
+          </span>{" "}average accuracy in
         </Text>
         <Dropdown
           id="year-dropdown"

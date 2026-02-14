@@ -11,6 +11,7 @@ import { StatisticsChart } from "../components/StatisticsChart";
 import { useState, useEffect, useMemo } from "react";
 import { useLessonManager } from "../hooks/useLessonManager";
 import { useStatisticalToolset } from "../hooks/useStatisticalToolset";
+import { useGeneratorStore } from "../stores/generatorStore";
 import { useTrainingStore } from "../stores/trainingStore";
 import { useSettingsStore } from "../stores/settingsStore";
 
@@ -136,6 +137,9 @@ export const StatisticsPage = () => {
   // 获取主题设置
   const theme = useSettingsStore((state) => state.theme);
 
+  // 获取当前数据集
+  const currentDatasetName = useGeneratorStore((state) => state.savedConfig.datasetName);
+
   // 获取全局训练记录
   const globalRecords = useTrainingStore((state) => state.globalRecords);
 
@@ -147,9 +151,7 @@ export const StatisticsPage = () => {
   }, [globalRecords]);
 
   // 初始化 selectedDataset 时使用第一个有记录的数据集
-  const [selectedDataset, setSelectedDataset] = useState<string>(
-    availableDatasets.length > 0 ? availableDatasets[0] : "Koch-LCWO"
-  );
+  const [selectedDataset, setSelectedDataset] = useState<string>(currentDatasetName);
 
   // 初始化 selectedLesson
   const [selectedLesson, setSelectedLesson] = useState<number>(0);
