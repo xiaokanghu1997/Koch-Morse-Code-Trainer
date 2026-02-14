@@ -29,7 +29,7 @@ function App() {
 
   useEffect(() => {
     getCurrentWindow().show();
-    /*
+
     // 禁用全局右键菜单
     const handleContextMenu = (e: MouseEvent) => {
       e.preventDefault();
@@ -40,7 +40,7 @@ function App() {
     return () => {
       window.removeEventListener("contextmenu", handleContextMenu);
     };
-    */
+
   }, []);
 
   return (

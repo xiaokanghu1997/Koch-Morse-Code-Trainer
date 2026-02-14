@@ -307,7 +307,9 @@ export class AudioPlayer {
     const startMargin = 0.1;
     let currentTime = startMargin;
     
-    for (const char of text) {
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      
       if (char === " ") {
         currentTime += timing.wordSpace;
         continue;
@@ -317,8 +319,8 @@ export class AudioPlayer {
       if (!morse) continue;
       
       const elements = morse.split("");
-      for (let i = 0; i < elements.length; i++) {
-        const element = elements[i];
+      for (let j = 0; j < elements.length; j++) {
+        const element = elements[j];
         
         let duration = 0;
         if (element === ".") {
@@ -336,12 +338,15 @@ export class AudioPlayer {
         
         currentTime += duration;
         
-        if (i < elements.length - 1) {
+        if (j < elements.length - 1) {
           currentTime += timing.elementSpace;
         }
       }
-      
-      currentTime += timing.charSpace;
+
+      const nextChar = text[i + 1];
+      if (nextChar && nextChar !== " ") {
+        currentTime += timing.charSpace;
+      }
     }
     
     return events;
@@ -396,7 +401,9 @@ export class AudioPlayer {
     
     points.push([0, 0]);
     
-    for (const char of text) {
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      
       if (char === " ") {
         currentTime += timing.wordSpace;
         continue;
@@ -406,8 +413,8 @@ export class AudioPlayer {
       if (!morse) continue;
       
       const elements = morse.split("");
-      for (let i = 0; i < elements.length; i++) {
-        const element = elements[i];
+      for (let j = 0; j < elements.length; j++) {
+        const element = elements[j];
         
         let duration = 0;
         if (element === ".") {
@@ -423,12 +430,15 @@ export class AudioPlayer {
         
         currentTime += duration;
         
-        if (i < elements.length - 1) {
+        if (j < elements.length - 1) {
           currentTime += timing.elementSpace;
         }
       }
-      
-      currentTime += timing.charSpace;
+
+      const nextChar = text[i + 1];
+      if (nextChar && nextChar !== " ") {
+        currentTime += timing.charSpace;
+      }
     }
     
     const endMargin = 0.1;
