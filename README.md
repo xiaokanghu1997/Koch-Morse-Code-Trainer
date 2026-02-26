@@ -3,15 +3,15 @@
 基于Koch方法的摩尔斯电码学习工具
 
 ## 版本信息
-- **当前版本**：1.3.0
+- **当前版本**：1.3.1
 - **作者**：Xiaokang HU
-- **更新日期**：2026-02-14
+- **更新日期**：2026-02-26
 
 # Koch - 摩尔斯电码训练器
 
 **基于 Koch 方法的摩尔斯电码学习工具**
 
-![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)
+![Version](https://img.shields.io/badge/version-1.3.1-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Status](https://img.shields.io/badge/status-开发中-yellow.svg)
 
@@ -96,8 +96,11 @@ Koch 方法由德国心理学家 Ludwig Koch 提出，是目前最科学、最�
 - [x] 修改活动页面首行文字长度
 - [x] 优化部分页面布局
 
-### v1.3.0（当前版本）✅
+### v1.3.0
 - [x] 修复文本音频重播时清空输入框问题
+
+### v1.3.1（当前版本）✅
+- [x] 美化控件样式并增加相关动画
   
 ### v1.4.0（计划中）
 - [ ] 进一步优化代码，修复 BUG

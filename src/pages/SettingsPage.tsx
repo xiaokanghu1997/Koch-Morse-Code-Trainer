@@ -124,8 +124,21 @@ const useStyles = makeStyles({
   slider: {
     width: "150px",
     "& .fui-Slider__thumb": {
-      border: `4px solid ${tokens.colorNeutralBackground4Selected}`,
+      backgroundColor: tokens.colorNeutralBackground4Selected,
       boxShadow: tokens.shadow2,
+    },
+    "& .fui-Slider__thumb::before": {
+      inset: "4px", 
+      borderRadius: "50%",
+      backgroundColor: tokens.colorBrandForeground1,
+      transition: "transform 200ms cubic-bezier(0.16, 1, 0.3, 1)",
+      transformOrigin: "center center",
+    },
+    "&:hover .fui-Slider__thumb::before": {
+      transform: "scale(1.2)",
+    },
+    "&:active .fui-Slider__thumb::before": {
+      transform: "scale(0.8)",
     },
     flexShrink: 0,
   },
@@ -140,6 +153,25 @@ const useStyles = makeStyles({
   },
   switch: {
     flexShrink: 0,
+    "& .fui-Switch__indicator svg path": {
+      scale: "0.85",
+      transformOrigin: "center center",
+      transition: "scale 200ms ease, transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1)",
+      willChange: "transform, scale",
+      backfaceVisibility: "hidden",
+      WebkitBackfaceVisibility: "hidden",
+    },
+    "&:hover .fui-Switch__indicator svg path": {
+      scale: "1",
+    },
+    "& input:not(:checked):active ~ .fui-Switch__indicator svg path": {
+      transform: "scaleX(1.1) scaleY(1)",
+      transformOrigin: "left center",
+    },
+    "& input:checked:active ~ .fui-Switch__indicator svg path": {
+      transform: "scaleX(1.1) scaleY(1)",
+      transformOrigin: "right center",
+    },
   },
   switchValueText: {
     fontSize: tokens.fontSizeBase300,
