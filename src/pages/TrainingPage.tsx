@@ -146,11 +146,12 @@ const useStyles = makeStyles({
     fontSize: tokens.fontSizeBase400,
     textDecoration: "underline",
     textAlign: "center",
-    cursor: "pointer",
+    cursor: "default",
     transition: "all 0.15s ease",
     userSelect: "none",  // 防止文本被选中
     ":hover": {
       color: tokens.colorBrandForeground1,
+      transform: "scale(1.12)",
     },
   },
   // 第三、四行：音频播放控制
@@ -679,6 +680,19 @@ export const TrainingPage = () => {
 
   // 结果检查
   const handleCheckResult = () => {
+    // 暂停/停止所有音频
+    if (charPlayer.isPlaying || charPlayer.isPaused) {
+      charPlayer.stop();
+      charTiming.stop();
+    }
+    if (textPlayer.isPlaying || textPlayer.isPaused) {
+      textPlayer.stop();
+      textTiming.stop();
+    }
+    if (textTiming.phase === "delay") {
+      textTiming.stop();
+    }
+    
     // 获取生成的文本和用户输入
     const correctText = textTextGen.text;
     const userInput = inputText;

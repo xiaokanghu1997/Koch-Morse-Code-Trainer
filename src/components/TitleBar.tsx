@@ -83,7 +83,7 @@ export const TitleBar = () => {
   const styles = useStyles();
 
   const appTitle = "Koch - Morse Code Trainer";
-  const version = "v1.3.1";
+  const version = "v1.4.0";
 
   // 异步调用窗口方法
   const handleMinimize = async () => {
