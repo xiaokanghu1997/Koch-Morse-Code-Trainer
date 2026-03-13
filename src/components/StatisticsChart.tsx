@@ -35,6 +35,7 @@ interface ChartData {
   averageAccuracy: string;
   legendLoc2: string;
   legendLoc3: string;
+  lessonDisplayTexts?: string[];
 }
 
 interface StatisticsChartProps {
@@ -63,8 +64,8 @@ const createTooltipFormatter = (chartData: ChartData) => {
     const xIndex = params[0].dataIndex;
     let temp = "";
     
-    if (chartData.xLabel === "Lesson ID") {
-      temp = "Lesson " + chartData.xValues[xIndex].toString().padStart(2, "0");
+    if (chartData.xLabel === "Lesson ID" && chartData.lessonDisplayTexts && chartData.lessonDisplayTexts[xIndex]) {
+      temp = "Lesson " + chartData.lessonDisplayTexts[xIndex];
     } else {
       temp = chartData.xValues[xIndex];
     }

@@ -454,24 +454,35 @@ export class AudioPlayer {
     if (keyPoints.length === 0) return [];
     
     const result: [number, number][] = [];
-    const totalDuration = keyPoints[keyPoints.length - 1][0];
-    
-    let keyIndex = 0;
-    
-    for (let time = 0; time <= totalDuration; time += interval) {
-      while (keyIndex < keyPoints.length - 1 && keyPoints[keyIndex + 1][0] <= time) {
-        keyIndex++;
-      }
+
+    // 添加所有关键点（确保点划边界精确）
+    for (const point of keyPoints) {
+      result.push([point[0], point[1]]);
+    }
+
+    // 在关键点之间插值
+    for (let i = 0; i < keyPoints.length - 1; i++) {
+      const startTime = keyPoints[i][0];
+      const endTime = keyPoints[i + 1][0];
+      const value = keyPoints[i][1];
       
-      const value = keyPoints[keyIndex][1];
-      result.push([time, value]);
+      for (let time = startTime + interval; time < endTime; time += interval) {
+        result.push([time, value]);
+      }
     }
-    
-    if (result.length === 0 || result[result.length - 1][0] < totalDuration) {
-      result.push([totalDuration, keyPoints[keyPoints.length - 1][1]]);
+
+    // 按时间排序
+    result.sort((a, b) => a[0] - b[0]);
+
+    // 去重（相同时间点只保留第一个）
+    const uniqueResult: [number, number][] = [];
+    for (let i = 0; i < result.length; i++) {
+      if (i === 0 || Math.abs(result[i][0] - result[i - 1][0]) > 1e-4) {
+        uniqueResult.push(result[i]);
+      }
     }
-    
-    return result;
+
+    return uniqueResult;
   }
   
   // ==================== 资源管理 ====================

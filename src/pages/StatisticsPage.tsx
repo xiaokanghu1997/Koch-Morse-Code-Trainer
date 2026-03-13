@@ -196,6 +196,12 @@ export const StatisticsPage = () => {
     if (selectedLesson === 0) {
       const result = statisticalToolset.getLessonStatsForDataset(selectedDataset);
       const allLessonNumbers = Array.from({ length: totalLessonNumber }, (_, i) => i + 1);
+
+      const lessonDisplayTexts = allLessonNumbers.map(lessonNumber => {
+        const lesson = lessons.find(l => l.lessonNumber === lessonNumber);
+        return lesson?.displayText || lessonNumber.toString().padStart(2, "0");
+      });
+
       let yrightmax = Math.max(...result.lessons.map(l => l.recordCount));
       if (yrightmax < 20) {
         yrightmax = 20;
@@ -227,6 +233,7 @@ export const StatisticsPage = () => {
         averageAccuracy: avgaccuracy.toFixed(2),
         legendLoc2: legendloc2,
         legendLoc3: legendloc3,
+        lessonDisplayTexts: lessonDisplayTexts,
       };
     }
 
