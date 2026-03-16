@@ -267,7 +267,7 @@ export class AudioPlayer {
     if (this.playbackState.status !== "playing" || !this.transport) return;
     
     const currentTime = this.transport.seconds;
-    this.playbackState.currentTime = currentTime;
+    this.playbackState.currentTime = Math.min(currentTime, this.totalDuration);
     
     if (currentTime >= this.totalDuration - 0.02) {
       this.handlePlaybackComplete();

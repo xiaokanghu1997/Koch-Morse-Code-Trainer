@@ -57,6 +57,14 @@ interface TrainingState {
 
   /** 清空所有训练数据 */
   clearAllData: () => void;
+
+  /** 修改训练记录 */
+  modifyRecord: (
+    datasetName: string, 
+    lessonNumber: number, 
+    recordIndex: number, 
+    updatedRecord: { timestamp: number; accuracy: number; duration: number }
+  ) => boolean;
 }
 
 /**
@@ -318,6 +326,91 @@ export const useTrainingStore = create<TrainingState>()(
           },
         });
         log.info("All training data cleared", "TrainingStore");
+      },
+
+      /** 修改训练记录 */
+      modifyRecord: (datasetName, lessonNumber, recordIndex, updatedRecord) => {
+        const state = get();
+        
+        // 验证数据集存在
+        if (!state.globalRecords.datasets[datasetName]) {
+          log.error(`Dataset not found: ${datasetName}`, "TrainingStore");
+          return false;
+        }
+
+        // 验证课程存在
+        if (!state.globalRecords.datasets[datasetName].lessons[lessonNumber]) {
+          log.error(`Lesson not found: ${lessonNumber}`, "TrainingStore");
+          return false;
+        }
+
+        // 验证记录索引有效
+        const lesson = state.globalRecords.datasets[datasetName].lessons[lessonNumber];
+        if (recordIndex < 0 || recordIndex >= lesson.records.length) {
+          log.error(`Invalid record index: ${recordIndex}`, "TrainingStore");
+          return false;
+        }
+
+        set((state) => {
+          // 深拷贝避免直接修改状态
+          const newRecords: GlobalRecords = {
+            ...state.globalRecords,
+            datasets: { ...state.globalRecords.datasets },
+          };
+
+          // 深拷贝数据集
+          const dataset: DatasetRecords = {
+            ...newRecords.datasets[datasetName],
+            lessons: { ...newRecords.datasets[datasetName].lessons },
+          };
+
+          // 深拷贝课程
+          const lesson: LessonRecords = {
+            ...dataset.lessons[lessonNumber],
+            records: [...dataset.lessons[lessonNumber].records],
+          };
+
+          // 修改记录
+          lesson.records[recordIndex] = {
+            timestamp: updatedRecord.timestamp,
+            accuracy: updatedRecord.accuracy,
+            duration: updatedRecord.duration,
+          };
+
+          // 重新进行课程统计
+          const lessonStats = calculateLessonStats(lesson.records);
+          lesson.totalDuration = lessonStats.totalDuration;
+          lesson.recordCount = lessonStats.recordCount;
+          lesson.averageAccuracy = lessonStats.averageAccuracy;
+
+          // 更新课程
+          dataset.lessons[lessonNumber] = lesson;
+
+          // 重新进行数据集统计
+          const datasetStats = calculateDatasetStats(dataset.lessons);
+          dataset.totalDuration = datasetStats.totalDuration;
+          dataset.recordCount = datasetStats.recordCount;
+          dataset.averageAccuracy = datasetStats.averageAccuracy;
+
+          // 更新数据集
+          newRecords.datasets[datasetName] = dataset;
+
+          // 重新进行全局统计
+          const globalStats = calculateGlobalStats(newRecords.datasets);
+          newRecords.totalDuration = globalStats.totalDuration;
+          newRecords.recordCount = globalStats.recordCount;
+          newRecords.averageAccuracy = globalStats.averageAccuracy;
+
+          log.info("Training record modified", "TrainingStore", {
+            dataset: datasetName,
+            lesson: lessonNumber,
+            recordIndex: recordIndex,
+          });
+
+          return { globalRecords: newRecords };
+        });
+
+        return true;
       },
     }),
     {
