@@ -205,8 +205,12 @@ export const StatisticsPage = () => {
       let yrightmax = Math.max(...result.lessons.map(l => l.recordCount));
       if (yrightmax < 20) {
         yrightmax = 20;
-      } else {
+      } else if (yrightmax >= 20 && yrightmax < 40) {
         yrightmax = 40;
+      } else if (yrightmax >= 40 && yrightmax < 60) {
+        yrightmax = 60;
+      } else {
+        yrightmax = 80;
       }
       let legendloc2 = "0px";
       let legendloc3 = "0px";
@@ -259,8 +263,12 @@ export const StatisticsPage = () => {
       
       if (yrightmax < 20) {
         yrightmax = 20;
-      } else {
+      } else if (yrightmax >= 20 && yrightmax < 40) {
         yrightmax = 40;
+      } else if (yrightmax >= 40 && yrightmax < 60) {
+        yrightmax = 60;
+      } else {
+        yrightmax = 80;
       }
     }
 

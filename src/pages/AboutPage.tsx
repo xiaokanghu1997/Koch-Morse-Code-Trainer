@@ -284,7 +284,7 @@ export const AboutPage = () => {
   
   // 软件信息
   const appTitle = "Koch - Morse Code Trainer";
-  const version = "Version 1.6.0";
+  const version = "Version 1.7.0";
 
   // 获取当前数据集
   const currentDatasetName = useGeneratorStore((state) => state.savedConfig.datasetName);

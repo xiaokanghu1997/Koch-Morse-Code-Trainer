@@ -457,15 +457,33 @@ export const TrainingPage = () => {
     }
   }, [textTextGen.text]);
 
+  // 字符音频总时长（优先级回退）
+  const charDisplayTotalDuration = useMemo(() => {
+    // 优先使用播放器的总时长（更准确），其次使用生成器的时长
+    if (charPlayer.playbackState.totalDuration > 0) {
+      return charPlayer.playbackState.totalDuration;
+    }
+    return charTextGen.duration;
+  }, [charPlayer.playbackState.totalDuration, charTextGen.duration]);
+
+  // 练习文本音频总时长（优先级回退）
+  const textDisplayTotalDuration = useMemo(() => {
+    // 优先使用播放器的总时长（更准确），其次使用生成器的时长
+    if (textPlayer.playbackState.totalDuration > 0) {
+      return textPlayer.playbackState.totalDuration;
+    }
+    return textTextGen.duration;
+  }, [textPlayer.playbackState.totalDuration, textTextGen.duration]);
+
   // 字符音频时长同步
   useEffect(() => {
-    charTiming.setTotalDuration(charTextGen.duration);
-  }, [charTextGen.duration]);
+    charTiming.setTotalDuration(charDisplayTotalDuration);
+  }, [charDisplayTotalDuration]);
 
   // 练习文本音频时长同步
   useEffect(() => {
-    textTiming.setTotalDuration(textTextGen.duration);
-  }, [textTextGen.duration]);
+    textTiming.setTotalDuration(textDisplayTotalDuration);
+  }, [textDisplayTotalDuration]);
 
   // 字符音频播放状态同步
   useEffect(() => {
@@ -528,6 +546,13 @@ export const TrainingPage = () => {
   // 字符音频播放控制
   const handleCharPlay = async () => {
     setLastActivePlayer("char");
+    if (textPlayer.isPlaying || textPlayer.isPaused) {
+      textPlayer.pause();
+      textTiming.pause();
+    }
+    if (textTiming.phase === "delay") {
+      textTiming.stop();
+    }
     if (charPlayer.isPlaying) {
       charPlayer.pause();
       charTiming.pause();
@@ -536,7 +561,7 @@ export const TrainingPage = () => {
       charTiming.resume();
     } else {
       await charPlayer.play();
-      charTiming.startPlaying(charTextGen.duration);
+      charTiming.startPlaying(charDisplayTotalDuration);
     }
   };
 
@@ -586,11 +611,14 @@ export const TrainingPage = () => {
   // 练习文本音频播放控制
   const handleTextPlay = async () => {
     setLastActivePlayer("text");
+    if (charPlayer.isPlaying || charPlayer.isPaused) {
+      charPlayer.pause();
+      charTiming.pause();
+    }
     if (textTiming.phase === "delay") {
       textTiming.stop();
       return;
     }
-
     if (textPlayer.isPlaying) {
       textPlayer.pause();
       textTiming.pause();
@@ -605,14 +633,14 @@ export const TrainingPage = () => {
             setPracticeStartTime(Date.now());
           }
           await textPlayer.play();
-          textTiming.startPlaying(textTextGen.duration);
+          textTiming.startPlaying(textDisplayTotalDuration);
         });
       } else {
         if (practiceStartTime === null) {
           setPracticeStartTime(Date.now());
         }
         await textPlayer.play();
-        textTiming.startPlaying(textTextGen.duration);
+        textTiming.startPlaying(textDisplayTotalDuration);
       }
     }
   };
