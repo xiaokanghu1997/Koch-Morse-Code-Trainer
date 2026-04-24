@@ -219,7 +219,7 @@ export const kochLightTheme: Theme = {
     "colorNeutralStroke2": "#e0e0e0",
     "colorNeutralStroke3": "#f0f0f0",
     "colorNeutralStrokeSubtle": "#e0e0e0",
-    "colorNeutralStrokeOnBrand": "#ffffff",
+    "colorNeutralStrokeOnBrand": "#eaeaea",
     "colorNeutralStrokeOnBrand2": "#ffffff",
     "colorNeutralStrokeOnBrand2Hover": "#ffffff",
     "colorNeutralStrokeOnBrand2Pressed": "#ffffff",

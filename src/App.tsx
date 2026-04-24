@@ -8,6 +8,7 @@ import { TrainingPage } from "./pages/TrainingPage";
 import { ActivityPage } from "./pages/ActivityPage";
 import { StatisticsPage } from "./pages/StatisticsPage";
 import { GeneratorPage } from "./pages/GeneratorPage";
+import { AdvancedPage} from "./pages/AdvancedPage";
 import { AboutPage } from "./pages/AboutPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { useEffect } from "react";
@@ -29,7 +30,7 @@ function App() {
 
   useEffect(() => {
     getCurrentWindow().show();
-
+/*
     // 禁用全局右键菜单
     const handleContextMenu = (e: MouseEvent) => {
       e.preventDefault();
@@ -40,7 +41,7 @@ function App() {
     return () => {
       window.removeEventListener("contextmenu", handleContextMenu);
     };
-
+*/
   }, []);
 
   return (
@@ -56,6 +57,7 @@ function App() {
             <Route path="activity" element={<ActivityPage />} />
             <Route path="statistics" element={<StatisticsPage />} />
             <Route path="generator" element={<GeneratorPage />} />
+            <Route path="advanced" element={<AdvancedPage />} />
             <Route path="about" element={<AboutPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/training" replace />} />

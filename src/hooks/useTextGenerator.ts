@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from "react";
 import { TextGenerator } from "../services/textGenerator";
 import { TimingCalculator } from "../lib/timing";
 import { CHARACTER_SET } from "../lib/constants";
-import type { GeneratorConfig } from "../lib/types";
+import type { AudioConfig, GeneratorConfig } from "../lib/types";
 import { log } from "../utils/logger";
 
 export interface UseTextGeneratorReturn {
@@ -14,6 +14,8 @@ export interface UseTextGeneratorReturn {
   generate: (config: GeneratorConfig, currentCharSet?: string) => void;
   /** 生成单字符文本 */
   generateSingleChar: (char: string, count: number, config: GeneratorConfig) => void;
+  /** 生成指定文本 */
+  generateCustomText: (customText: string, config: AudioConfig) => void;
 }
 
 /**
@@ -31,8 +33,11 @@ export const useTextGenerator = (): UseTextGeneratorReturn => {
   const textGenRef = useRef(new TextGenerator());
 
   /** 生成普通文本 */
-  const generate = useCallback((config: GeneratorConfig, currentCharSet?: string) => {
-    
+  const generate = useCallback((
+    config: GeneratorConfig, 
+    currentCharSet?: string
+  ) => {
+
     try {
       // 生成文本
       const generatedText = textGenRef.current.generate({
@@ -100,7 +105,36 @@ export const useTextGenerator = (): UseTextGeneratorReturn => {
       log.error("Failed to generate single char text", "useTextGenerator", error);
       setText("");
       setDuration(0);
-    } finally {
+    }
+  }, []);
+
+  /** 生成指定文本 */
+  const generateCustomText = useCallback((
+    customText: string,
+    config: AudioConfig
+  ) => {
+
+    try {
+      // 计算时长
+      const timingCalc = new TimingCalculator({
+        charSpeed: config.charSpeed,
+        effSpeed: config.effSpeed,
+        tone: config.tone,
+      });
+      const calculatedDuration = timingCalc.calculateTextDuration(customText);
+
+      // 更新状态
+      setText(customText);
+      setDuration(calculatedDuration);
+
+      log.debug("Custom text generated", "useTextGenerator", {
+        textLength: customText.length,
+        duration: calculatedDuration.toFixed(2),
+      });
+    } catch (error) {
+      log.error("Failed to generate custom text", "useTextGenerator", error);
+      setText("");
+      setDuration(0);
     }
   }, []);
 
@@ -110,5 +144,6 @@ export const useTextGenerator = (): UseTextGeneratorReturn => {
     duration,
     generate,
     generateSingleChar,
+    generateCustomText,
   };
 };

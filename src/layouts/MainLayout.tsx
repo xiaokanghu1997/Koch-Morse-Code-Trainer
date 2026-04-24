@@ -19,6 +19,8 @@ import {
   DataHistogram20Regular,
   ContentSettings20Filled,
   ContentSettings20Regular,
+  Certificate20Filled,
+  Certificate20Regular,
   Info20Filled,
   Info20Regular,
   Settings20Filled,
@@ -81,6 +83,7 @@ const Training = bundleIcon(Voicemail20Filled, Voicemail20Regular);
 const Activity = bundleIcon(CalendarLtr20Filled, CalendarLtr20Regular);
 const Statistics = bundleIcon(DataHistogram20Filled, DataHistogram20Regular);
 const Generator = bundleIcon(ContentSettings20Filled, ContentSettings20Regular);
+const Advanced = bundleIcon(Certificate20Filled, Certificate20Regular);
 const About = bundleIcon(Info20Filled, Info20Regular);
 const Settings = bundleIcon(Settings20Filled, Settings20Regular);
 
@@ -149,6 +152,16 @@ export const MainLayout = () => {
               >
                 <NavItem className={styles.navItem} icon={<Generator />} value="/generator" />
               </Tooltip>
+              <Tooltip
+                content={{
+                  children: "Advanced",
+                  className: styles.tooltip,
+                }}
+                relationship="label"
+                positioning="after"
+              >
+                <NavItem className={styles.navItem} icon={<Advanced />} value="/advanced" />
+              </Tooltip>              
             </NavDrawerBody>
 
             <NavDrawerFooter className={styles.navBody}>

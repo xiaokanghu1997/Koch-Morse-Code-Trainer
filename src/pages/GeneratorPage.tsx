@@ -33,7 +33,6 @@ import { useMorsePlayer } from "../hooks/useMorsePlayer";
 import { useGeneratorStore } from "../stores/generatorStore";
 import type { GeneratorConfig } from "../lib/types";
 import { log } from "../utils/logger";
-// import { useTrainingStore } from "../stores/trainingStore";
 
 // 样式定义
 const useStyles = makeStyles({
@@ -45,8 +44,8 @@ const useStyles = makeStyles({
   },
   content: {
     display: "grid",
-    gridTemplateColumns: "0.85fr 1fr",
-    gap: "35px",
+    gridTemplateColumns: "0.95fr 1fr",
+    gap: "45px",
     margin: "0",
     flex: 1,
   },
@@ -150,8 +149,15 @@ const useStyles = makeStyles({
     ":active": {
       backgroundColor: tokens.colorNeutralBackground3Pressed,
     },
+    "& input::selection": {
+      backgroundColor: tokens.colorCompoundBrandBackground,
+    },
   },
   checkbox: {
+    height: "32px",
+    "& .fui-Checkbox__indicator": {
+      marginTop: "9px",
+    },
     "& .fui-Checkbox__label": {
       marginLeft: "-6px",
     },
@@ -170,7 +176,9 @@ const useStyles = makeStyles({
     flexShrink: 0,
   },
   slider: {
-    width: "150px",
+    width: "160px",
+    minWidth: "160px",
+    maxWidth: "160px",
     transform: "translateY(1px)",
     "& .fui-Slider__thumb": {
       backgroundColor: tokens.colorNeutralBackground3Selected,
@@ -190,11 +198,14 @@ const useStyles = makeStyles({
       transform: "scale(0.8)",
     },
     flexShrink: 0,
+    flexGrow: 0,
   },
   sliderValueText: {
     fontSize: tokens.fontSizeBase300,
     color: tokens.colorNeutralForeground1,
-    minWidth: "50px",
+    width: "55px",
+    minWidth: "55px",
+    maxWidth: "55px",
     textAlign: "right",
     flexShrink: 0,
   },
@@ -253,7 +264,7 @@ const useStyles = makeStyles({
     },
   },
   buttonText: {
-    paddingBottom: "1.2px",
+    paddingBottom: "1.4px",
   },
 });
 
@@ -703,7 +714,7 @@ export const GeneratorPage = () => {
                 relationship="label"
                 positioning="below-start"
               >
-                <Text>Character speed (WPM):</Text>
+                <Text>Character speed:</Text>
               </Tooltip>
             </div>
             <div className={styles.controlContainer}>
@@ -730,7 +741,7 @@ export const GeneratorPage = () => {
                 relationship="label"
                 positioning="below-start"
               >
-                <Text>Effective speed (WPM):</Text>
+                <Text>Effective speed:</Text>
               </Tooltip>
             </div>
             <div className={styles.controlContainer}>
@@ -757,7 +768,7 @@ export const GeneratorPage = () => {
                 relationship="label"
                 positioning="below-start"
               >
-                <Text>Tone (Hz):</Text>
+                <Text>Tone:</Text>
               </Tooltip>
             </div>
             <div className={styles.controlContainer}>
@@ -790,7 +801,7 @@ export const GeneratorPage = () => {
                 relationship="label"
                 positioning="below-start"
               >
-                <Text>Start delay (seconds):</Text>
+                <Text>Start delay:</Text>
               </Tooltip>
             </div>
             <SpinButton

@@ -373,8 +373,9 @@ export function calculateAccuracy(
     const inputGroup = g < inputGroups.length ? inputGroups[g] : "";
     const correctGroup = g < correctGroups.length ? correctGroups[g] : "";
 
+    // 处理组内字符比对
     if (correctGroup === "" && inputGroup !== "") {
-      // 正确答案没有这个组，用户多输入了（全部是 extra）
+      // 用户多输入了整个组（全部是 extra）
       for (let i = 0; i < inputGroup.length; i++) {
         comparisons.push({
           char: inputGroup[i],
@@ -400,32 +401,32 @@ export function calculateAccuracy(
       currentIndex += correctGroup.length;
     }
 
-    // 添加组间空格（除了最后一组）
-    if (g < correctGroups.length - 1) {
-      if (g < inputGroups.length - 1 && g < correctGroups.length - 1) {
-        // 两边都有空格 - 正确
-        comparisons.push({
-          char: " ",
-          type: "correct",
-          index: currentIndex,
-        });
-      } else if (g < correctGroups.length - 1) {
-        // 正确答案有空格，用户输入没有 - 缺失
-        comparisons.push({
-          char: " ",
-          type: "missing",
-          index: currentIndex,
-        });
-      }
-      currentIndex++;
-    }
+    // 处理组间空格
+    const hasNextCorrectGroup = g < correctGroups.length - 1;
+    const hasNextInputGroup = g < inputGroups.length - 1;
 
-    // 处理用户输入多余的组间空格
-    if (g >= correctGroups.length - 1 && g < inputGroups.length - 1) {
+    if (hasNextCorrectGroup && hasNextInputGroup) {
+      // 两者都有下一组（空格 correct）
+      comparisons.push({
+        char: " ",
+        type: "correct",
+        index: currentIndex,
+      });
+      currentIndex++;
+    } else if (hasNextCorrectGroup && !hasNextInputGroup) {
+      // 正确答案还有下一组，用户没有（空格 missing）
+      comparisons.push({
+        char: " ",
+        type: "missing",
+        index: currentIndex,
+      });
+      currentIndex++;
+    } else if (!hasNextCorrectGroup && hasNextInputGroup) {
+      // 用户还有下一组，正确答案没有（空格 extra）
       comparisons.push({
         char: " ",
         type: "extra",
-        index: currentIndex - 1,
+        index: currentIndex,
       });
     }
   }
@@ -440,7 +441,7 @@ export function calculateAccuracy(
     accuracy,
     comparisons,
     correctText: correct,
-  }
+  };
 }
 
 // ==================== 时间范围统计 ====================

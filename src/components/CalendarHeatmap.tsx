@@ -1,4 +1,4 @@
-import { makeStyles, tokens } from "@fluentui/react-components";
+import { Text, makeStyles, tokens } from "@fluentui/react-components";
 import * as echarts from "echarts/core";
 import { HeatmapChart } from "echarts/charts";
 import { 
@@ -25,6 +25,7 @@ interface CalendarHeatmapProps {
   calendarData: Array<[string, number]>;
   selectedYear: string;
   theme?: string;
+  todayCount?: number;
 }
 
 // 定义样式
@@ -37,9 +38,30 @@ const useStyles = makeStyles({
     backgroundColor: "transparent",
     margin: "0px",
     overflow: "hidden",
+    position: "relative",
     "& *": {
       cursor: "default !important",
     },
+  },
+  todayCountContainer: {
+    position: "absolute",
+    right: "0px",
+    bottom: "0px",
+    padding: "3px 0px",
+    backgroundColor: "transparent",
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+    zIndex: 10,
+  },
+  todayCountLabel: {
+    fontSize: tokens.fontSizeBase300,
+    color: tokens.colorNeutralForeground1,
+  },
+  todayCountValue: {
+    fontSize: tokens.fontSizeBase300,
+    fontWeight: tokens.fontWeightSemibold,
+    color: tokens.colorNeutralForeground1,
   },
 });
 
@@ -60,6 +82,7 @@ export const CalendarHeatmap = React.memo(({
   calendarData,
   selectedYear,
   theme = "light",
+  todayCount = 0,
 }: CalendarHeatmapProps) => {
   const styles = useStyles();
 
@@ -207,6 +230,10 @@ export const CalendarHeatmap = React.memo(({
           cursor: "default",
         }}
       />
+      <div className={styles.todayCountContainer}>
+        <Text className={styles.todayCountLabel}>Today's training count:</Text>
+        <Text className={styles.todayCountValue}>{todayCount}</Text>
+      </div>
     </div>
   );
 });

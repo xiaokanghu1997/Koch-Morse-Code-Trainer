@@ -156,6 +156,13 @@ export const ActivityPage = () => {
     return data as Array<[string, number]>;
   }, [statisticalToolset, selectedYear]);
 
+  // 今日训练次数
+  const todayCount = useMemo(() => {
+    const today = new Date().toISOString().split("T")[0];
+    const todayData = calendarData.find((date) => date[0] === today);
+    return todayData ? todayData[1] : 0;
+  }, [calendarData]);
+
   // 底部统计数据
   const statsData = useMemo(() => {
     return statisticalToolset.getAllDatasetStats();
@@ -214,6 +221,7 @@ export const ActivityPage = () => {
         calendarData={calendarData}
         selectedYear={selectedYear}
         theme={theme}
+        todayCount={todayCount}
       />
       {/* 第三行：底部文本 */}
       <div className={styles.statsContainer}>

@@ -127,6 +127,30 @@ const useStyles = makeStyles({
 
 const statTypeOptions = ["Default", "Hour", "Day", "Month", "Year"];
 
+// 工具函数：计算图例位置
+const calculateLegendPosition = (avgAccuracy: number) => {
+  if (avgAccuracy === 100) {
+    return { legendLoc2: "348px", legendLoc3: "512px" };
+  } else if (avgAccuracy >= 10 && avgAccuracy < 100) {
+    return { legendLoc2: "340.5px", legendLoc3: "504.5px" };
+  } else {
+    return { legendLoc2: "333px", legendLoc3: "497px" };
+  }
+};
+
+// 工具函数：计算右侧Y轴最大值
+const calculateYRightMax = (maxValue: number): number => {
+  if (maxValue < 20) {
+    return 20;
+  } else if (maxValue >= 20 && maxValue < 40) {
+    return 40;
+  } else if (maxValue >= 40 && maxValue < 60) {
+    return 60;
+  } else {
+    return 80;
+  }
+};
+
 export const StatisticsPage = () => {
   // 使用样式
   const styles = useStyles();
@@ -155,6 +179,9 @@ export const StatisticsPage = () => {
 
   // 初始化 selectedLesson
   const [selectedLesson, setSelectedLesson] = useState<number>(0);
+  
+  // 定义统计类型选项
+  const [selectedStatType, setSelectedStatType] = useState<string>("Default");
 
   // 获取课程列表
   const { lessons, totalLessonNumber } = useLessonManager(selectedDataset, selectedLesson);
@@ -182,9 +209,6 @@ export const StatisticsPage = () => {
     return lesson?.displayText || "All";
   }, [availableLessons, selectedLesson]);
 
-  // 定义统计类型选项
-  const [selectedStatType, setSelectedStatType] = useState<string>("Default");
-
   // 课程切换时统计类型恢复为默认
   useEffect(() => {
     setSelectedStatType("Default");
@@ -202,41 +226,23 @@ export const StatisticsPage = () => {
         return lesson?.displayText || lessonNumber.toString().padStart(2, "0");
       });
 
-      let yrightmax = Math.max(...result.lessons.map(l => l.recordCount));
-      if (yrightmax < 20) {
-        yrightmax = 20;
-      } else if (yrightmax >= 20 && yrightmax < 40) {
-        yrightmax = 40;
-      } else if (yrightmax >= 40 && yrightmax < 60) {
-        yrightmax = 60;
-      } else {
-        yrightmax = 80;
-      }
-      let legendloc2 = "0px";
-      let legendloc3 = "0px";
-      let avgaccuracy = result.datasetAverageAccuracy;
-      if (avgaccuracy === 100) {
-        legendloc2 = "348px";
-        legendloc3 = "512px";
-      } else if (avgaccuracy >= 10 && avgaccuracy < 100) {
-        legendloc2 = "340.5px";
-        legendloc3 = "504.5px";
-      } else {
-        legendloc2 = "333px";
-        legendloc3 = "497px";
-      }
+      const maxRecordCount = Math.max(...result.lessons.map(l => l.recordCount));
+      const yRightMax = calculateYRightMax(maxRecordCount);
+      const { legendLoc2, legendLoc3 } = calculateLegendPosition(result.datasetAverageAccuracy);
+
       return {
+        chartType: true,
         xLabel: "Lesson ID",
         xTickValues: allLessonNumbers.map(n => n.toString().padStart(2, "0")),
         xValues: result.lessons.map(l => l.lessonNumber.toString()),
         yLeftValues: result.lessons.map(l => l.averageAccuracy.toFixed(2)),
         yRightLabel: "Training Count",
         yRightUnit: "",
-        yRightMax: yrightmax,
+        yRightMax: yRightMax,
         yRightValues: result.lessons.map(l => l.recordCount.toString()),
-        averageAccuracy: avgaccuracy.toFixed(2),
-        legendLoc2: legendloc2,
-        legendLoc3: legendloc3,
+        averageAccuracy: result.datasetAverageAccuracy.toFixed(2),
+        legendLoc2: legendLoc2,
+        legendLoc3: legendLoc3,
         lessonDisplayTexts: lessonDisplayTexts,
       };
     }
@@ -247,57 +253,39 @@ export const StatisticsPage = () => {
       lessonNumber: selectedLesson,
     });
 
-    let yrightlabel = "";
-    let yrightunit = "";
-    let yrightmax = Math.max(...timeStatsResult.recordCounts);
-    let yrightvalues = [];
+    let yRightLabel = "";
+    let yRightUnit = "";
+    let yRightMax = 10;
+    let yRightValues = [];
 
     if (selectedStatType === "Default") {
-      yrightlabel = "Training Duration";
-      yrightunit = " (m)";
-      yrightvalues = timeStatsResult.totalDurations.map(d => d.toFixed(2));
-      yrightmax = 10;
+      yRightLabel = "Training Duration";
+      yRightUnit = " (m)";
+      yRightValues = timeStatsResult.totalDurations.map(d => d.toFixed(2));
+      yRightMax = 10;
     } else {
-      yrightlabel = "Training Count";
-      yrightvalues = timeStatsResult.recordCounts.map(c => c.toString());
-      
-      if (yrightmax < 20) {
-        yrightmax = 20;
-      } else if (yrightmax >= 20 && yrightmax < 40) {
-        yrightmax = 40;
-      } else if (yrightmax >= 40 && yrightmax < 60) {
-        yrightmax = 60;
-      } else {
-        yrightmax = 80;
-      }
+      yRightLabel = "Training Count";
+      yRightUnit = "";
+      yRightValues = timeStatsResult.recordCounts.map(c => c.toString());
+      const maxRecordCount = Math.max(...timeStatsResult.recordCounts);
+      yRightMax = calculateYRightMax(maxRecordCount);
     }
 
-    let legendloc2 = "0px";
-    let legendloc3 = "0px";
-    let avgaccuracy = timeStatsResult.overallAverageAccuracy;
-    if (avgaccuracy === 100) {
-      legendloc2 = "348px";
-      legendloc3 = "512px";
-    } else if (avgaccuracy >= 10 && avgaccuracy < 100) {
-      legendloc2 = "340.5px";
-      legendloc3 = "504.5px";
-    } else {
-      legendloc2 = "333px";
-      legendloc3 = "497px";
-    }
+    const { legendLoc2, legendLoc3 } = calculateLegendPosition(timeStatsResult.overallAverageAccuracy);
 
     return {
+      chartType: false,
       xLabel: "",
       xTickValues: timeStatsResult.timeLabels,
       xValues: timeStatsResult.timeTickLabels,
       yLeftValues: timeStatsResult.averageAccuracies.map(a => a.toFixed(2)),
-      yRightLabel: yrightlabel,
-      yRightUnit: yrightunit,
-      yRightMax: yrightmax,
-      yRightValues: yrightvalues,
-      averageAccuracy: avgaccuracy.toFixed(2),
-      legendLoc2: legendloc2,
-      legendLoc3: legendloc3,
+      yRightLabel: yRightLabel,
+      yRightUnit: yRightUnit,
+      yRightMax: yRightMax,
+      yRightValues: yRightValues,
+      averageAccuracy: timeStatsResult.overallAverageAccuracy.toFixed(2),
+      legendLoc2: legendLoc2,
+      legendLoc3: legendLoc3,
     };
   }, [
     statisticalToolset,

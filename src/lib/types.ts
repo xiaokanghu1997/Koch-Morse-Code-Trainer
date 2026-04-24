@@ -321,3 +321,98 @@ export interface TimeStatsResult {
   /** 详细数据 */
   details: TimeStats[];
 }
+
+// =================== 进阶训练接口 ====================
+
+/**
+ * 单词训练配置接口
+ * 包含字符速率、最小字符速率、是否固定字符速率、音调、是否随机音调、数据集、是否跳过
+ */
+export interface WordTrainingConfig {
+  /** 字符速率（WPM） */
+  charSpeed: number;
+
+  /** 最小字符速率（WPM） */
+  minCharSpeed: number;
+
+  /** 是否固定字符速率 */
+  fixedCharSpeed: boolean;
+
+  /** 音调频率（赫兹） */
+  tone: number;
+
+  /** 是否随机音调 */
+  randomTone: boolean;
+
+  /** 训练数据集 */
+  dataset: string[];
+
+  /** 是否跳过 */
+  skip: boolean;
+}
+
+/**
+ * 呼号训练配置接口
+ * 包含字符速率、最小字符速率、是否固定字符速率、音调、是否随机音调、过滤器、是否盲测
+ */
+export interface CallsignTrainingConfig {
+  /** 字符速率（WPM） */
+  charSpeed: number;
+
+  /** 最小字符速率（WPM） */
+  minCharSpeed: number;
+
+  /** 是否固定字符速率 */
+  fixedCharSpeed: boolean;
+
+  /** 音调频率（赫兹） */
+  tone: number;
+
+  /** 是否随机音调 */
+  randomTone: boolean;
+
+  /** 呼号过滤器 */
+  filter: string;
+
+  /** 是否盲测 */
+  blindMode: boolean;
+}
+
+/**
+ * QTC训练配置接口
+ * 包含字符速率、缩略数字、是否按时间顺序、是否缩略时间
+ */
+export interface QTCTrainingConfig {
+  /** 字符速率（WPM） */
+  charSpeed: number;
+
+  /** 缩略数字 */
+  abbrevNumbers: number;
+
+  /** 是否按时间顺序 */
+  chronological: boolean;
+
+  /** 是否缩略时间 */
+  abbrevTimes: boolean;
+}
+
+/**
+ * 单词和呼号训练结果接口
+ * 包括练习文本、用户输入、字符速率、比对结果、分数
+ */
+export interface TrainingResult {
+  /** 练习文本 */
+  sent: string;
+
+  /** 用户输入 */
+  received: string;
+
+  /** 字符速率（WPM） */
+  wpm: number;
+
+  /** 比对结果 */
+  comparison: AccuracyResult;
+
+  /** 练习分数 */
+  score: number;
+}

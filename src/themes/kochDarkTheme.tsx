@@ -219,7 +219,7 @@ export const kochDarkTheme: Theme = {
     "colorNeutralStroke2": "#525252",
     "colorNeutralStroke3": "#3d3d3d",
     "colorNeutralStrokeSubtle": "#1d1d1d",
-    "colorNeutralStrokeOnBrand": "#292929",
+    "colorNeutralStrokeOnBrand": "#202020",
     "colorNeutralStrokeOnBrand2": "#ffffff",
     "colorNeutralStrokeOnBrand2Hover": "#ffffff",
     "colorNeutralStrokeOnBrand2Pressed": "#ffffff",

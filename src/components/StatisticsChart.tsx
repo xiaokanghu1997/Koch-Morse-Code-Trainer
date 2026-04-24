@@ -24,6 +24,7 @@ echarts.use([
 ]);
 
 interface ChartData {
+  chartType: boolean;
   xLabel: string;
   xTickValues: string[];
   xValues: string[];
@@ -57,6 +58,25 @@ const useStyles = makeStyles({
     },
   },
 });
+
+// 计算X轴标签显示间隔
+const calculateLabelInterval = (flag: boolean, dataLength: number): number | "auto" => {
+  if (flag) {
+    return 0; // 显示全部
+  } else {
+    if (dataLength <= 10) {
+      return 0; // 显示全部
+    } else if (dataLength <= 20) {
+      return 1; // 显示一半
+    } else if (dataLength <= 30) {
+      return 2; // 显示三分之一
+    } else if (dataLength <= 40) {
+      return 4; // 显示五分之一
+    } else {
+      return "auto"; // 自动计算
+    }
+  }
+};
 
 // Tooltip formatter 函数
 const createTooltipFormatter = (chartData: ChartData) => {
@@ -265,7 +285,7 @@ export const StatisticsChart = React.memo(({
           fontFamily: tokens.fontFamilyBase,
           fontSize: 13.5,
           margin: 2,
-          interval: 0,
+          interval: calculateLabelInterval(chartData.chartType,chartData.xTickValues.length),
           lineHeight: 14,
         },
       }

@@ -319,7 +319,7 @@ const useStyles = makeStyles({
     },
   },
   buttonText: {
-    paddingBottom: "1.2px",
+    paddingBottom: "1.4px",
   },
 });
 
@@ -349,6 +349,7 @@ export const TrainingPage = () => {
     submitRecord,
     syncFromGeneratorConfig,
   } = useTrainingStore();
+  
   const { 
     lessons, 
     currentLesson, 
@@ -533,7 +534,7 @@ export const TrainingPage = () => {
     }
   }, [inputText]);
 
-  // 点击字符播放
+  // 点击字符切换
   const handleCharClick = (char: string) => {
     if (charPlayer.isPlaying || charPlayer.isPaused) {
       charPlayer.stop();
