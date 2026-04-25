@@ -108,7 +108,6 @@ export function calculateGlobalStats(
 
 /**
  * 获取指定数据集的所有课程统计信息
- * 
  * @param globalRecords - 全局训练记录
  * @param datasetName - 数据集名称
  * @returns 包含课程统计信息和数据集平均准确率
@@ -152,7 +151,6 @@ export function getLessonStatsForDataset(
 
 /**
  * 预处理文本
- * 
  * @param text - 输入文本
  * @returns 预处理后的文本
  */
@@ -185,14 +183,10 @@ function preprocessText(text: string): string {
 
 /**
  * 对单个组进行比对
- * 
  * @param inputGroup - 用户输入组
  * @param correctGroup - 正确答案组
  * @param startIndex - 该组在整体文本中的起始索引
  * @returns 比对结果及正确字符数
- */
-/**
- * 对单个组进行比对，识别四种类型
  */
 function compareGroup(
   inputGroup: string,
@@ -343,9 +337,7 @@ function compareGroup(
 
 /**
  * 计算准确率
- * 
  * 比较用户输入和正确文本，计算字符匹配率
- * 
  * @param userInput - 用户输入文本
  * @param correctText - 正确文本
  * @returns 准确率（0-100）
@@ -448,9 +440,7 @@ export function calculateAccuracy(
 
 /**
  * 获取各时间段统计课程练习数据
- * 
  * 将训练记录按指定时间粒度分组，计算每个时间段的总练习时长、练习次数及平均准确率
- * 
  * @param records - 训练记录
  * @param timeStatType - 时间粒度
  * @returns 时间段统计结果
@@ -598,7 +588,6 @@ export function getTimeStats(
 
 /**
  * 获取某年各天的练习次数
- * 
  * @param records - 训练记录
  * @param year - 指定年份
  * @returns 包含各天练习次数的数组
@@ -627,7 +616,6 @@ export function getDailyRecordCounts(
 
 /**
  * 获取各数据集的统计信息
- * 
  * @param globalRecords - 全局训练记录统计信息
  * @returns 包含各数据集统计信息的数组
  */
@@ -682,7 +670,6 @@ export function getAllDatasetStats(
 
 /**
  * 获取某年的概览统计
- * 
  * @param records - 训练记录
  * @param year - 年份
  * @returns 概览统计数据
@@ -743,6 +730,8 @@ export function getAllYears(records: TrainingRecord[]): number[] {
  * - 小于60秒: "45s"
  * - 小于1小时: "3m 14s"
  * - 大于1小时: "1h 23m"
+ * @param seconds - 时长（秒）
+ * @returns 格式化后的时长字符串
  */
 export function formatDuration(seconds: number): string {
   if (seconds < 60) {
@@ -761,6 +750,8 @@ export function formatDuration(seconds: number): string {
 
 /**
  * 格式化精确度
+ * @param accuracy - 精确度（百分比）
+ * @returns 格式化后的精确度字符串
  */
 export function formatAccuracy(accuracy: number): string {
   return `${accuracy.toFixed(2)}%`;
