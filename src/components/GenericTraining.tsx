@@ -17,12 +17,16 @@ import {
   ArrowClockwise20Regular,
   ChevronCircleLeft20Regular,
 } from "@fluentui/react-icons";
+import { 
+  generateRandomTone, 
+  calculateAccuracy, 
+  calculateScore 
+} from "../services/statisticalToolset";
 import { useState, useEffect, useMemo, useRef, useLayoutEffect } from "react";
 import type { AudioConfig, AccuracyResult, TrainingResult } from "../lib/types";
 import { useTiming } from "../hooks/useTiming";
 import { useTextGenerator } from "../hooks/useTextGenerator";
 import { useMorsePlayer } from "../hooks/useMorsePlayer";
-import { calculateAccuracy } from "../services/statisticalToolset";
 
 // 样式定义
 const useStyles = makeStyles({
@@ -86,7 +90,7 @@ const useStyles = makeStyles({
     transform: "translateY(1.2px)",
     "& input": {
       fontFamily: tokens.fontFamilyMonospace,
-      fontSize: "15px",
+      fontSize: "14px",
     },
     ":hover": {
       backgroundColor: tokens.colorNeutralBackground4Hover,
@@ -285,6 +289,7 @@ interface GenericTrainingProps {
   dataLoader: (count: number, datasetOrFilter: any) => Promise<string[]>;
   inputPlaceholder: string;
   inputWidth: string;
+  inputMaxLength: number;
   idPrefix: string;
   tooltips: {
     start: string;
@@ -296,35 +301,12 @@ interface GenericTrainingProps {
   onBack: () => void;
 }
 
-// 辅助函数：生成随机音调（500-900Hz，步长10Hz）
-const generateRandomTone = (min = 500, max = 900, step = 10): number => {
-  const range = (max - min) / step + 1;
-  const randomSteps = Math.floor(Math.random() * range);
-  return min + randomSteps * step;
-}
-
-// 辅助函数：计算得分
-// 根据字符长度、字符速度、重听次数计算得分，公式如下：
-// l = sqrt(length)，s = power(speed / 20, 1.1)，r = exp(-0.1 * replay)
-// score = round(l * s * r, 1) * 100
-const calculateScore = (
-  length: number, 
-  charSpeed: number,
-  replayCount: number
-): number => {
-  const l = Math.sqrt(length);
-  const s = Math.pow(charSpeed / 20, 1.1);
-  // 重听次数最大为10次，超过10次按10次计算
-  const r = Math.exp(-0.1 * Math.min(replayCount, 10));
-  const score = Math.round(l * s * r * 10) / 10 * 100;
-  return score;
-};
-
 export const GenericTraining = ({ 
   config,
   dataLoader,
   inputPlaceholder,
   inputWidth,
+  inputMaxLength,
   idPrefix,
   tooltips,
   blindMode = false,
@@ -553,14 +535,18 @@ export const GenericTraining = ({
     // 清洗输入并计算结果
     const cleanedInput = inputText.replace(/\s+/g, '');
     const comparison = calculateAccuracy(cleanedInput, items[currentIndex]);
-    const score = calculateScore(items[currentIndex].length, audioConfig.charSpeed, currentReplayCount);
+    const score = config.fixedCharSpeed
+      ? 0
+      : (comparison.accuracy === 100
+          ? calculateScore(items[currentIndex].length, audioConfig.charSpeed, currentReplayCount)
+          : 0);
     // 记录结果
     const newResult: TrainingResult = {
       sent: items[currentIndex],
       received: cleanedInput,
       wpm: audioConfig.charSpeed,
       comparison: comparison,
-      score: comparison.accuracy === 100 ? score : 0,
+      score: score,
     };
     setResults(prev => [...prev, newResult]);
     // 清空输入
@@ -830,7 +816,9 @@ export const GenericTraining = ({
         <Text className={styles.scoreText}>
           Training score:{" "}
           <span className={styles.valueText}>
-            {shouldShowResults ? Math.round(totalScore) : "--"}
+            {shouldShowResults 
+              ? (config.fixedCharSpeed ? "--" : Math.round(totalScore))
+              : "--"}
           </span>
         </Text>
       </div>
@@ -849,6 +837,7 @@ export const GenericTraining = ({
             value={inputText}
             onChange={handleInputChange}
             autoComplete="off"
+            maxLength={inputMaxLength}
           />
           <Tooltip
             content={{

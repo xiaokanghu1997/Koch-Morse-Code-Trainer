@@ -12,7 +12,10 @@ export async function getRandomWords(
   datasets: string[]
 ): Promise<string[]> {
   try {
-    return await invoke("get_random_words", { count, datasets });
+    return await invoke("get_random_words", { 
+      count: count, 
+      datasets: datasets 
+    });
   } catch (error) {
     log.error("Failed to get random words", "DataLoader", error);
     return [];
@@ -30,9 +33,44 @@ export async function getRandomCallsigns(
   filter: string
 ): Promise<string[]> {
   try {
-    return await invoke("get_random_callsigns", { count, filter });
+    return await invoke("get_random_callsigns", { 
+      count: count,
+      filter: filter
+    });
   } catch (error) {
     log.error("Failed to get random callsigns", "DataLoader", error);
     return [];
+  }
+}
+
+/**
+ * 随机获取 QTC 组（10条）
+ * @param abbrevNumbers - 数字缩写
+ * @param chronological - 是否按时间顺序
+ * @param abbrevTimes - 时间缩写
+ * @returns 
+ * {
+ *   grnum: string,  // 组号/10
+ *   qtcs: Array<{
+ *     time: string,    // 4位时间
+ *     callsign: string,  // 呼号
+ *     serial: string   // 流水号
+ *   }>
+ * }
+ */
+export async function getRandomQTC(
+  abbrevNumbers: number,
+  chronological: boolean,
+  abbrevTimes: boolean,
+): Promise<any> {
+  try {
+    return await invoke("get_random_qtc", {
+      abbrenumbers: abbrevNumbers,
+      chronologic: chronological,
+      abbretimes: abbrevTimes
+    });
+  } catch (error) {
+    log.error("Failed to get random QTC", "DataLoader", error);
+    return null;
   }
 }

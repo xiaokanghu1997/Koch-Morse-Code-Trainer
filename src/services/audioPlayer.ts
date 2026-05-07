@@ -11,6 +11,7 @@ import { log } from "../utils/logger";
 interface PlaybackEvent {
   time: number;
   duration: number;
+  frequency?: number;
 }
 
 /**
@@ -84,7 +85,7 @@ export class AudioPlayer {
   
   // ==================== 内容加载方法 ====================
   
-  preload(text: string, config: AudioConfig): void {
+  preload(text: string, config: AudioConfig, toneMap?: Map<number, number>): void {
     if (!this.initialized || !this.synth) {
       log.error("AudioPlayer not initialized", "AudioPlayer");
       return;
@@ -93,9 +94,11 @@ export class AudioPlayer {
     try {
       this.stop();
       
+      // 设置默认音调（当事件没有指定音调时使用）
       this.synth.frequency.value = config.tone;
       
-      const playbackEvents = this.generatePlaybackEvents(text, config);
+      // 传入 toneMap 以支持每个字符不同的音调
+      const playbackEvents = this.generatePlaybackEvents(text, config, toneMap);
       this.scheduleEvents(playbackEvents);
       
       this.totalDuration = this.calculateDuration(text, config);
@@ -107,6 +110,7 @@ export class AudioPlayer {
       log.info("Content preloaded", "AudioPlayer", {
         textLength: text.length,
         duration: this.totalDuration.toFixed(2),
+        hasToneMap: !!toneMap,
       });
       
     } catch (error) {
@@ -299,7 +303,11 @@ export class AudioPlayer {
   
   // ==================== 事件生成方法 ====================
   
-  private generatePlaybackEvents(text: string, config: AudioConfig): PlaybackEvent[] {
+  private generatePlaybackEvents(
+    text: string, 
+    config: AudioConfig,
+    toneMap?: Map<number, number>
+  ): PlaybackEvent[] {
     const events: PlaybackEvent[] = [];
     const timingCalc = new TimingCalculator(config);
     const timing = timingCalc.getTiming();
@@ -317,6 +325,8 @@ export class AudioPlayer {
       
       const morse = MorseEncoder.encode(char);
       if (!morse) continue;
+
+      const frequency = toneMap?.get(i);
       
       const elements = morse.split("");
       for (let j = 0; j < elements.length; j++) {
@@ -334,6 +344,7 @@ export class AudioPlayer {
         events.push({
           time: currentTime,
           duration: duration,
+          frequency: frequency,
         });
         
         currentTime += duration;
@@ -364,14 +375,19 @@ export class AudioPlayer {
     this.part = new Tone.Part({
       callback: (time, value) => {
         if (this.synth) {
+          const frequency = value.frequency || this.synth.frequency.value;
           this.synth.triggerAttackRelease(
-            this.synth.frequency.value,
+            frequency,
             value.duration,
             time
           );
         }
       },
-      events: events.map(e => ({ time: e.time, duration: e.duration })),
+      events: events.map(e => ({ 
+        time: e.time, 
+        duration: e.duration,
+        frequency: e.frequency
+      })),
       context: this.context,
     });
     

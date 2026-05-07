@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Koch",
-  "version": "2.0.0-alpha.2",
+  "version": "2.0.0-alpha.3",
   "identifier": "com.xiaokang.koch",
   "build": {
     "beforeDevCommand": "npm run dev",

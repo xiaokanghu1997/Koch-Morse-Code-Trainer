@@ -77,7 +77,7 @@ fn random_sample(words: &[String], count: usize) -> Vec<String> {
     return Vec::new();
   }
 
-  let mut rng: ThreadRng = rand::rng();
+  let mut rng = rand::rng();
   let actual_count = count.min(words.len());
 
   // 复制并洗牌
@@ -231,6 +231,136 @@ fn get_random_callsigns(count: usize, filter: String) -> Vec<String> {
   random_sample(&pool, count)
 }
 
+use serde_json::{json, Value};
+
+// 生成随机时间（HHMM格式）
+fn generate_random_time() -> String {
+  let mut rng = rand::rng();
+  let hour = rng.random_range(0..24);
+  let minute = rng.random_range(0..60);
+  format!("{:02}{:02}", hour, minute)
+}
+
+// 生成顺序时间
+fn generate_chronologic_times(count: usize) -> Vec<String> {
+  // 随机选择一个起始时间
+  let mut rng = rand::rng();
+  let start_hour = rng.random_range(0..24);
+  let start_minute = rng.random_range(0..60);
+  let mut start_time = start_hour * 60 + start_minute; // 转换为HHMM格式的整数
+
+  let mut times = Vec::new();
+  for _ in 0..count {
+    let hour = (start_time / 60) % 24;
+    let minute = start_time % 60;
+    times.push(format!("{:02}{:02}", hour, minute));
+    // 增加随机的时间间隔（1-5分钟）
+    start_time += rng.random_range(1..6);
+  }
+  times
+}
+
+// 生成顺序时间（同一个小时内）
+fn generate_abbreviated_times(count: usize) -> Vec<String> {
+  // 随机选择一个小时
+  let mut rng = rand::rng();
+  let hour = rng.random_range(0..24);
+  // 确保有足够的分钟数来生成所需的时间数量
+  let max_start_minute = if count < 60 { 60 - count } else { 0 };
+  let mut minute = if max_start_minute > 0 {
+    rng.random_range(0..max_start_minute)
+  } else {
+    0
+  };
+
+  let mut times = Vec::new();
+  for _ in 0..count {
+    times.push(format!("{:02}{:02}", hour, minute));
+    // 递增 1-5 分钟，但不超过 59 分钟
+    minute = (minute + rng.random_range(1..6)).min(59);
+  }
+  times
+}
+
+// 数字缩写函数
+fn abbreviate_number(input: &str, mode: u8) -> String {
+  if mode == 0 {
+    return input.to_string();
+  }
+  // 定义缩写规则
+  let (from_chars, to_chars): (Vec<char>, Vec<char>) = match mode {
+    1 => {
+      // 只缩写 0, 1, 9
+      (vec!['1', '9', '0'], vec!['A', 'N', 'T'])
+    }
+    2 => {
+      // 全部数字缩写
+      (
+        vec!['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'], 
+        vec!['A', 'U', 'V', '4', 'E', '6', 'B', 'D', 'N', 'T']
+      )
+    }
+    _ => return input.to_string(),
+  };
+  // 逐字符替换
+  input.chars().map(|c| {
+    from_chars.iter()
+      .position(|&fc| fc == c)
+      .map(|i| to_chars[i])
+      .unwrap_or(c)
+  }).collect()
+}
+
+// 获取随机 QTC 组
+#[tauri::command]
+fn get_random_qtc(
+  abbrenumbers: u8,
+  chronologic: bool,
+  abbretimes: bool
+) -> Value {
+  let mut rng = rand::rng();
+  // 组号 1-999
+  let group = rng.random_range(1..1000);
+  // 呼号池
+  let callsign_pool: Vec<String> = CALLSIGN_NO_FILTER
+    .lines()
+    .map(|s| s.trim().to_string())
+    .filter(|s| !s.is_empty())
+    .collect();
+  // 生成时间
+  let times = if chronologic {
+    if abbretimes {
+      generate_abbreviated_times(10)
+    } else {
+      generate_chronologic_times(10)
+    }
+  } else {
+    (0..10).map(|_| generate_random_time()).collect()
+  };
+  // 生成 10 条 QTC 记录
+  let mut qtcs = Vec::new();
+  for time in times {
+    let serial = rng.random_range(10..1000).to_string();
+    let callsign = random_sample(&callsign_pool, 1)
+      .first()
+      .unwrap_or(&"NOCALL".to_string())
+      .clone();
+    // 应用数字缩写
+    let time_abbrev = abbreviate_number(&time, abbrenumbers);
+    let serial_abbrev = abbreviate_number(&serial, abbrenumbers);
+
+    qtcs.push(json!({
+      "time": time_abbrev,
+      "callsign": callsign,
+      "serial": serial_abbrev
+    }));
+  }
+  json!({
+    "grnum": format!("{}/10", group),
+    "qtcs": qtcs
+  })
+}
+
 fn main() {
   tauri::Builder::default()
     .plugin(tauri_plugin_dialog::init())
@@ -245,8 +375,9 @@ fn main() {
     )
     .invoke_handler(tauri::generate_handler![
       set_window_opacity,
+      get_random_words,
       get_random_callsigns,
-      get_random_words
+      get_random_qtc
     ])
     .setup(|app| {
       // 获取主窗口

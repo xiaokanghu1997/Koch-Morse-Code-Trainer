@@ -139,7 +139,7 @@ export const CalendarHeatmap = React.memo(({
     },
     calendar: {
       top: "22px",
-      left: "32px",
+      left: "33px",
       right: "2px",
       cellSize: 13.3,
       range: parseInt(selectedYear),

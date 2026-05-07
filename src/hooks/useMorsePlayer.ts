@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { AudioPlayer } from "../services/audioPlayer";
-import type { AudioConfig, GeneratorConfig, PlaybackState } from "../lib/types";
+import type { ToneMap, AudioConfig, GeneratorConfig, PlaybackState } from "../lib/types";
 import { log } from "../utils/logger";
 
 export interface UseMorsePlayerReturn {
@@ -13,7 +13,11 @@ export interface UseMorsePlayerReturn {
   /** 是否空闲 */
   isIdle: boolean;
   /** 预加载 */
-  preload: (text: string, config: AudioConfig | GeneratorConfig) => void;
+  preload: (
+    text: string, 
+    config: AudioConfig | GeneratorConfig,
+    toneMap?: ToneMap
+  ) => void;
   /** 播放 */
   play: () => Promise<void>;
   /** 暂停 */
@@ -75,7 +79,8 @@ export const useMorsePlayer = (): UseMorsePlayerReturn => {
   /** 预加载 */
   const preload = useCallback((
     text: string, 
-    config: AudioConfig | GeneratorConfig
+    config: AudioConfig | GeneratorConfig,
+    toneMap?: ToneMap
   ) => {
     if (!playerRef.current) {
       log.warn("Player not initialized", "useMorsePlayer");
@@ -89,7 +94,7 @@ export const useMorsePlayer = (): UseMorsePlayerReturn => {
       tone: config.tone,
     };
 
-    playerRef.current.preload(text, audioConfig);
+    playerRef.current.preload(text, audioConfig, toneMap);
 
     const newWaveformData = playerRef.current.getWaveformData();
     setWaveformData(newWaveformData);

@@ -4,6 +4,7 @@ import {
   Option,
   Checkbox,
   Button,
+  Tooltip,
   makeStyles,
   mergeClasses,
   tokens,
@@ -12,7 +13,8 @@ import {
   ChevronDown16Regular,
   Fire20Regular,
 } from "@fluentui/react-icons";
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useMemo } from "react";
+import { generateRange } from "../services/statisticalToolset";
 
 const useStyles = makeStyles({
   container: {
@@ -175,6 +177,12 @@ const useStyles = makeStyles({
   buttonText: {
     paddingBottom: "1.4px",
   },
+  tooltip: {
+    backgroundColor: tokens.colorNeutralBackground2Hover,
+    boxShadow: tokens.shadow2,
+    maxWidth: "280px",
+    whiteSpace: "normal",
+  },
 });
 
 interface GenericWelcomeProps {
@@ -206,15 +214,6 @@ interface GenericWelcomeProps {
   onStart: () => void;
 }
 
-// 辅助函数：生成数字范围
-const generateRange = (start: number, end: number, step: number): number[] => {
-  const result: number[] = [];
-  for (let i = start; i <= end; i += step) {
-    result.push(i);
-  }
-  return result;
-}
-
 export const GenericWelcome = ({
   title,
   subtitle,
@@ -234,7 +233,32 @@ export const GenericWelcome = ({
   rightColumnWidth = 0.9,
   onStart,
 }: GenericWelcomeProps) => {
+  // 使用样式
   const styles = useStyles();
+
+  // 生成选项列表
+  const charSpeedOptions = useMemo(() => generateRange(5, 100, 1), []);
+  const toneOptions = useMemo(() => generateRange(400, 1000, 10), []);
+  const minCharSpeedOptions = useMemo(() => generateRange(5, charSpeed, 1), [charSpeed]);
+
+  // 自动勾选固定字符速率
+  useEffect(() => {
+    if (charSpeed === minCharSpeed && !fixedCharSpeed) {
+      onFixedCharSpeedChange(true);
+    }
+  }, [charSpeed, minCharSpeed, fixedCharSpeed, onFixedCharSpeedChange]);
+
+  // 取消勾选固定字符速率
+  const handleFixedCharSpeedChange = (isChecked: boolean) => {
+    if (!isChecked && charSpeed === minCharSpeed) {
+      if (minCharSpeed > 5) {
+        onMinCharSpeedChange(minCharSpeed - 1);
+      } else {
+        onCharSpeedChange(charSpeed + 1);
+      }
+    }
+    onFixedCharSpeedChange(isChecked);
+  };
 
   return (
     <div className={styles.container}>
@@ -290,7 +314,7 @@ export const GenericWelcome = ({
                   }
                 }}
               >
-                {generateRange(5, 100, 1).map((speed) => (
+                {charSpeedOptions.map((speed) => (
                   <Option
                     key={speed}
                     value={speed.toString()}
@@ -325,7 +349,7 @@ export const GenericWelcome = ({
                 listbox={{ 
                   className: mergeClasses(
                     styles.dropdownListbox,
-                    generateRange(5, charSpeed, 1).length > 3 && styles.dropdownListboxWithHeight2
+                    minCharSpeedOptions.length > 3 && styles.dropdownListboxWithHeight2
                   )
                 }}
                 value={minCharSpeed.toString()}
@@ -334,7 +358,7 @@ export const GenericWelcome = ({
                   onMinCharSpeedChange(Number(data.optionValue));
                 }}
               >
-                {generateRange(5, charSpeed, 1).map((speed) => (
+                {minCharSpeedOptions.map((speed) => (
                   <Option
                     key={speed}
                     value={speed.toString()}
@@ -352,7 +376,16 @@ export const GenericWelcome = ({
           {/* 固定字符速率 */}
           <div className={styles.configItem}>
             <div className={styles.configLabel}>
-              <Text>Fixed character speed:</Text>
+              <Tooltip
+                content={{
+                  children: "If checked, the score will not be counted",
+                  className: styles.tooltip,
+                }}
+                relationship="label"
+                positioning="below-start"
+              >
+                <Text>Fixed character speed:</Text>
+              </Tooltip>
             </div>
             <div className={styles.configControl}>
               <Checkbox 
@@ -360,9 +393,7 @@ export const GenericWelcome = ({
                 className={styles.checkbox}
                 label={fixedCharSpeed ? "On" : "Off"}
                 checked={fixedCharSpeed}
-                onChange={(_, data) => 
-                  onFixedCharSpeedChange(data.checked === true)
-                }
+                onChange={(_, data) => handleFixedCharSpeedChange(data.checked === true)}
               />
             </div>
           </div>
@@ -393,7 +424,7 @@ export const GenericWelcome = ({
                   onToneChange(Number(data.optionValue));
                 }}
               >
-                {generateRange(400, 1000, 10).map((toneValue) => (
+                {toneOptions.map((toneValue) => (
                   <Option
                     key={toneValue}
                     value={toneValue.toString()}

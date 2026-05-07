@@ -26,6 +26,7 @@ import { WordWelcome } from "./advanced/WordWelcome";
 import { WordTraining } from "./advanced/WordTraining";
 import { CallsignWelcome } from "./advanced/CallsignWelcome";
 import { CallsignTraining } from "./advanced/CallsignTraining";
+import { QTCWelcome } from "./advanced/QTCWelcome";
 import { QTCTraining } from "./advanced/QTCTraining";
 import { ScorePage } from "./advanced/ScorePage";
 
@@ -252,7 +253,13 @@ export const AdvancedPage = () => {
             <CallsignTraining config={callsignConfig!} onBack={handleCallsignBack} />
           )
         )}
-        {selectedTab === "qtc" && <QTCTraining />}
+        {selectedTab === "qtc" && (
+          tabPageState.qtc === "welcome" ? (
+            <QTCWelcome onStart={handleQTCStart} />
+          ) : (
+            <QTCTraining config={qtcConfig!} onBack={handleQTCBack} />
+          )
+        )}
         {selectedTab === "score" && <ScorePage />}
       </div>
     </div>

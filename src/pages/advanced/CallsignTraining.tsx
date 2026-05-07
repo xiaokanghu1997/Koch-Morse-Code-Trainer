@@ -15,6 +15,7 @@ export const CallsignTraining = ({ config, onBack }: CallsignTrainingProps) => {
       dataLoader={getRandomCallsigns}
       inputPlaceholder="Input callsign here..."
       inputWidth="220px"
+      inputMaxLength={13}
       idPrefix="callsign"
       tooltips={{
         start: "Press enter to start",

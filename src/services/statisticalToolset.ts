@@ -756,3 +756,84 @@ export function formatDuration(seconds: number): string {
 export function formatAccuracy(accuracy: number): string {
   return `${accuracy.toFixed(2)}%`;
 }
+
+/** 
+ * 限制数字在指定范围内
+ * @param value - 输入值
+ * @param min - 最小值
+ * @param max - 最大值
+ * @returns 限制在 [min, max] 范围内的数字
+ */
+export function clampNumber(value: number, min: number, max: number) {
+  if (isNaN(value)) return min;
+  return Math.min(Math.max(value, min), max);
+}
+
+/** 
+ * 四舍五入到最接近的步长
+ * @param value - 输入值
+ * @param step - 步长
+ * @returns 四舍五入后的值
+ */
+export function roundToNearest(value: number, step: number): number {
+  return Math.round(value / step) * step;
+}
+
+/**
+ * 生成一个数字范围的数组
+ * @param start - 起始值
+ * @param end - 结束值
+ * @param step - 步长
+ * @returns 包含从 start 到 end 的数字数组，步长为 step
+ */
+export const generateRange = (
+  start: number, 
+  end: number, 
+  step: number
+): number[] => {
+  const result: number[] = [];
+  for (let i = start; i <= end; i += step) {
+    result.push(i);
+  }
+  return result;
+}
+
+/** 
+ * 生成随机音调（500-900Hz，步长10Hz）
+ * @param min - 最小音调
+ * @param max - 最大音调
+ * @param step - 步长
+ * @returns 随机生成的音调
+ */
+export const generateRandomTone = (
+  min = 500, 
+  max = 900, 
+  step = 10
+): number => {
+  const range = (max - min) / step + 1;
+  const randomSteps = Math.floor(Math.random() * range);
+  return min + randomSteps * step;
+}
+
+/** 
+ * 辅助函数：计算得分
+ * 根据字符长度、字符速度、重听次数计算得分，公式如下：
+ * l = sqrt(length)，s = power(speed / 20, 1.1)，r = exp(-0.1 * replay)
+ * score = round(l * s * r, 1) * 100
+ * @param length - 字符长度
+ * @param charSpeed - 字符速度
+ * @param replayCount - 重听次数
+ * @returns 计算得分
+ */
+export const calculateScore = (
+  length: number, 
+  charSpeed: number,
+  replayCount: number
+): number => {
+  const l = Math.sqrt(length);
+  const s = Math.pow(charSpeed / 20, 1.1);
+  // 重听次数最大为10次，超过10次按10次计算
+  const r = Math.exp(-0.1 * Math.min(replayCount, 10));
+  const score = Math.round(l * s * r * 10) / 10 * 100;
+  return score;
+};

@@ -15,6 +15,7 @@ export const WordTraining = ({ config, onBack }: WordTrainingProps) => {
       dataLoader={getRandomWords}
       inputPlaceholder="Input word here..."
       inputWidth="200px"
+      inputMaxLength={14}
       idPrefix="word"
       tooltips={{
         start: "Press enter to start",

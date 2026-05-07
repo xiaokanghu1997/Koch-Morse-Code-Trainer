@@ -32,6 +32,7 @@ import { useTextGenerator } from "../hooks/useTextGenerator";
 import { useMorsePlayer } from "../hooks/useMorsePlayer";
 import { useGeneratorStore } from "../stores/generatorStore";
 import type { GeneratorConfig } from "../lib/types";
+import { clampNumber, roundToNearest } from "../services/statisticalToolset";
 import { log } from "../utils/logger";
 
 // 样式定义
@@ -42,25 +43,27 @@ const useStyles = makeStyles({
     height: "100%",
     padding: "5px 10px",
   },
+  title: {
+    fontWeight: tokens.fontWeightSemibold,
+  },
   content: {
     display: "grid",
     gridTemplateColumns: "0.95fr 1fr",
     gap: "45px",
     margin: "0",
     flex: 1,
+    marginTop: "8px",
   },
   column: {
     display: "flex",
     flexDirection: "column",
-    gap: "0px",
-    marginTop: "-6px",
+    gap: "6px",
   },
   settingItem: {
     display: "flex",
     flexDirection: "row",
     alignItems: "center",
     gap: "6px",
-    padding: "5px 0px",
   },
   textContent: {
     flex: 1,
@@ -267,17 +270,6 @@ const useStyles = makeStyles({
     paddingBottom: "1.4px",
   },
 });
-
-// 工具函数
-/** 限制数字在指定范围内 */
-function clampNumber(value: number, min: number, max: number) {
-  if (isNaN(value)) return min;
-  return Math.min(Math.max(value, min), max);
-}
-/** 四舍五入到最接近的步长 */
-function roundToNearest(value: number, step: number): number {
-  return Math.round(value / step) * step;
-}
 
 // Tooltips 提示文本
 const tips = {
@@ -520,6 +512,9 @@ export const GeneratorPage = () => {
   // 渲染
   return (
     <div className={styles.container}>
+      <Text className={styles.title}>
+        Training audio setup and generation
+      </Text>
       <div className={styles.content}>
         {/* 左侧栏 */}
         <div className={styles.column}>

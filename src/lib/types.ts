@@ -26,6 +26,12 @@ export type PracticeModes = "Uniform" | "New focus" | "Gradual" | "Weighted";
 export type PlaybackStatus = "idle" | "playing" | "paused";
 
 /**
+ * 音调映射类型
+ * 键为字符在文本中的索引（从0开始），值为该字符的音调频率（Hz）
+ */
+export type ToneMap = Map<number, number>;
+
+/**
  * 字符比对结果类型
  * - correct: 正确
  * - incorrect: 错误
@@ -380,11 +386,17 @@ export interface CallsignTrainingConfig {
 
 /**
  * QTC训练配置接口
- * 包含字符速率、缩略数字、是否按时间顺序、是否缩略时间
+ * 包含字符速率、音调、要素间隔、缩略数字、是否按时间顺序、是否缩略时间
  */
 export interface QTCTrainingConfig {
   /** 字符速率（WPM） */
   charSpeed: number;
+
+  /** 音调频率（赫兹） */
+  tone: number;
+
+  /** 要素间隔 */
+  itemSpace: number;
 
   /** 缩略数字 */
   abbrevNumbers: number;
