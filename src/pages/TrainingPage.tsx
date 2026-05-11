@@ -16,7 +16,7 @@ import {
   PlayCircle20Regular, 
   PauseCircle20Regular, 
   ArrowUndo16Regular,
-  ArrowClockwise20Regular,
+  ArrowCounterclockwise20Regular,
   CheckmarkCircle20Regular,
   ChevronCircleRight20Regular,
 } from "@fluentui/react-icons";
@@ -937,7 +937,7 @@ export const TrainingPage = () => {
           </Button>
           <Button
             className={styles.button}
-            icon={<ArrowClockwise20Regular />}
+            icon={<ArrowCounterclockwise20Regular />}
             onClick={handleCharRestart}
             disabled={
               charPlayer.playbackState.currentTime <= 0 ||
@@ -1006,7 +1006,7 @@ export const TrainingPage = () => {
           </Button>
           <Button
             className={styles.button}
-            icon={<ArrowClockwise20Regular />}
+            icon={<ArrowCounterclockwise20Regular />}
             onClick={handleTextRestart}
             disabled={
               textPlayer.playbackState.currentTime <= 0 ||

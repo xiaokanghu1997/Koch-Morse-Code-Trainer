@@ -337,14 +337,13 @@ fn get_random_qtc(
   } else {
     (0..10).map(|_| generate_random_time()).collect()
   };
+  // 生成呼号
+  let callsigns = random_sample(&callsign_pool, 10);
   // 生成 10 条 QTC 记录
   let mut qtcs = Vec::new();
-  for time in times {
+  for (i, time) in times.iter().enumerate() {
     let serial = rng.random_range(10..1000).to_string();
-    let callsign = random_sample(&callsign_pool, 1)
-      .first()
-      .unwrap_or(&"NOCALL".to_string())
-      .clone();
+    let callsign = callsigns.get(i).unwrap_or(&"NOCALL".to_string()).clone();
     // 应用数字缩写
     let time_abbrev = abbreviate_number(&time, abbrenumbers);
     let serial_abbrev = abbreviate_number(&serial, abbrenumbers);

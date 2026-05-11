@@ -60,7 +60,7 @@ export const AboutPage = () => {
   
   // 软件信息
   const appTitle = "Koch - Morse Code Trainer";
-  const version = "Version 2.0.0-alpha.3";
+  const version = "Version 2.0.0-alpha.4";
 
   return (
     <div className={styles.container}>

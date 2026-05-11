@@ -11,11 +11,12 @@ import {
 import { 
   Fire20Regular,
   CheckmarkCircle20Regular,
+  ArrowRepeatAll20Regular,
   PlayCircle20Regular, 
   PauseCircle20Regular, 
   ArrowUndo16Regular,
-  ArrowClockwise20Regular,
-  ChevronCircleLeft20Regular,
+  ArrowCounterclockwise20Regular,
+  ArrowCircleLeft20Regular,
 } from "@fluentui/react-icons";
 import { 
   generateRandomTone, 
@@ -514,20 +515,20 @@ export const GenericTraining = ({
 
   // 开始训练
   const handleStart = async () => {
-    const datasetOrFilter = (config as any).dataset || (config as any).filter || [];
-    const newItems = await dataLoader(25, datasetOrFilter);
-    setItems(newItems);
-    setCurrentIndex(0);
-    setResults([]);
-    setInputText("");
-    setCurrentReplayCount(0);
+    setTrainingPhase("training");
     // 初始化音频配置
     setAudioConfig({
       charSpeed: config.charSpeed,
       effSpeed: 0,
       tone: config.randomTone ? generateRandomTone() : config.tone,
     });
-    setTrainingPhase("training");
+    setResults([]);
+    setInputText("");
+    setCurrentReplayCount(0);
+    const datasetOrFilter = (config as any).dataset || (config as any).filter || [];
+    const newItems = await dataLoader(25, datasetOrFilter);
+    setItems(newItems);
+    setCurrentIndex(0);
   };
 
   // 确认输入
@@ -854,7 +855,7 @@ export const GenericTraining = ({
                   ? <Fire20Regular /> 
                   : trainingPhase === "training"
                   ? <CheckmarkCircle20Regular />
-                  : <ArrowClockwise20Regular />
+                  : <ArrowRepeatAll20Regular />
               }
               onClick={handleButtonClick}>
               <Text className={styles.buttonText}>
@@ -926,7 +927,7 @@ export const GenericTraining = ({
           >
             <Button
               className={styles.button}
-              icon={<ArrowClockwise20Regular />}
+              icon={<ArrowCounterclockwise20Regular />}
               onClick={handleRestart}
               disabled={
                 player.playbackState.currentTime <= 0 ||
@@ -947,7 +948,7 @@ export const GenericTraining = ({
         <div className={styles.returnSection}>
           <Button
             className={mergeClasses(styles.button, styles.buttonWidth)}
-            icon={<ChevronCircleLeft20Regular />} 
+            icon={<ArrowCircleLeft20Regular />} 
             onClick={onBack}
           >
             <Text className={styles.buttonText}>
