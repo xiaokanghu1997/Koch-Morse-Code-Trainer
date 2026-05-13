@@ -1,11 +1,11 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { GeneratorConfig } from "../lib/types";
+import type { OptionsConfig } from "../lib/types";
 
 /**
  * 默认生成器配置
  */
-const INITIAL_CONFIG: GeneratorConfig = {
+const INITIAL_CONFIG: OptionsConfig = {
   // 音频参数
   charSpeed: 20,
   effSpeed: 10,
@@ -20,21 +20,22 @@ const INITIAL_CONFIG: GeneratorConfig = {
   groupCount: 10,
   startDelay: 3,
   usePrefixSuffix: false,
+  showWaveform: false,
 };
 
 /**
  * 生成器状态接口
  */
-interface GeneratorState {
+interface OptionsState {
   // ==================== 状态 ====================
 
   /** 已保存的配置 */
-  savedConfig: GeneratorConfig;
+  savedConfig: OptionsConfig;
   
   // ==================== 操作方法 ====================
 
   /** 保存配置 */
-  saveConfig: (config: GeneratorConfig) => void;
+  saveConfig: (config: OptionsConfig) => void;
   
   /** 重置配置 */
   reset: () => void;
@@ -43,7 +44,7 @@ interface GeneratorState {
 /**
  * 创建生成器Store
  */
-export const useGeneratorStore = create<GeneratorState>()(
+export const useOptionsStore = create<OptionsState>()(
   persist(
     (set) => ({
       // ==================== 初始状态 ====================
@@ -57,7 +58,7 @@ export const useGeneratorStore = create<GeneratorState>()(
       reset: () => set({ savedConfig: INITIAL_CONFIG }),
     }),
     {
-      name: "morse-generator-storage",
+      name: "morse-options-storage",
       partialize: (state) => ({
         savedConfig: state.savedConfig,
       }),

@@ -21,17 +21,16 @@ import {
   ChevronCircleRight20Regular,
 } from "@fluentui/react-icons";
 import { useState, useEffect, useRef, useMemo, useLayoutEffect } from "react";
-import { AccuracyResult } from "../lib/types";
-import { AudioWaveform } from "../components/AudioWaveform";
-import { HighlightedText } from "../components/HighlightedText";
-import { useTiming } from "../hooks/useTiming";
-import { useLessonManager } from "../hooks/useLessonManager";
-import { useTextGenerator } from "../hooks/useTextGenerator";
-import { useMorsePlayer } from "../hooks/useMorsePlayer";
-import { calculateAccuracy } from "../services/statisticalToolset";
-import { useTrainingStore } from "../stores/trainingStore";
-import { useGeneratorStore } from "../stores/generatorStore";
-import { useSettingsStore } from "../stores/settingsStore";
+import { AccuracyResult } from "../../lib/types";
+import { AudioWaveform } from "../../components/AudioWaveform";
+import { HighlightedText } from "../../components/HighlightedText";
+import { useTiming } from "../../hooks/useTiming";
+import { useLessonManager } from "../../hooks/useLessonManager";
+import { useTextGenerator } from "../../hooks/useTextGenerator";
+import { useMorsePlayer } from "../../hooks/useMorsePlayer";
+import { calculateAccuracy } from "../../services/statisticalToolset";
+import { useTrainingStore } from "../../stores/trainingStore";
+import { useOptionsStore } from "../../stores/optionsStore";
 
 // 样式定义
 const useStyles = makeStyles({
@@ -39,20 +38,21 @@ const useStyles = makeStyles({
     display: "flex",
     flexDirection: "column",
     height: "100%",
-    padding: "5px 10px",
+    width: "100%",
+    padding: "12px 15px",
   },
   containerGapCloseWave: {
-    gap: "10px",
+    gap: "6px",
   },
   containerGapOpenWave: {
-    gap: "5px",
+    gap: "2px",
   },
   // 第一行：课程进度和选择
   headerRow: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: "-5px",
+    marginTop: "-7px",
   },
   progressText: {
     fontSize: tokens.fontSizeBase300,
@@ -76,12 +76,12 @@ const useStyles = makeStyles({
     "::after": {
       display: "none",
     },
-    backgroundColor: tokens.colorNeutralBackground3,
+    backgroundColor: tokens.colorNeutralBackground4,
     ":hover": {
-      backgroundColor: tokens.colorNeutralBackground3Hover,
+      backgroundColor: tokens.colorNeutralBackground4Hover,
     },
     ":active": {
-      backgroundColor: tokens.colorNeutralBackground3Pressed,
+      backgroundColor: tokens.colorNeutralBackground4Pressed,
     },
     "& .fui-Dropdown__expandIcon": {
       transition: "transform 200ms ease",
@@ -95,7 +95,7 @@ const useStyles = makeStyles({
     minWidth: "100px",
     maxWidth: "100px",
     overflowY: "auto",
-    backgroundColor: tokens.colorNeutralBackground4,
+    backgroundColor: tokens.colorNeutralBackground5,
   },
   dropdownListboxWithHeight: {
     height: "166px",
@@ -105,18 +105,18 @@ const useStyles = makeStyles({
     position: "relative",
     paddingLeft: "12px",
     paddingTop: "4px",
-    backgroundColor: tokens.colorNeutralBackground4,
+    backgroundColor: tokens.colorNeutralBackground5,
     ":hover": {
-      backgroundColor: tokens.colorNeutralBackground4Hover,
+      backgroundColor: tokens.colorNeutralBackground5Hover,
     },
     ":active": {
-      backgroundColor: tokens.colorNeutralBackground4Pressed,
+      backgroundColor: tokens.colorNeutralBackground5Pressed,
     },
     "&[aria-selected='true']": {
-      backgroundColor: tokens.colorNeutralBackground4Selected,
+      backgroundColor: tokens.colorNeutralBackground5Selected,
     },
     "&[aria-selected='true']:hover": {
-      backgroundColor: tokens.colorNeutralBackground3Hover,
+      backgroundColor: tokens.colorNeutralBackground4Hover,
     },
     "&[aria-selected='true']::before": {
       content: '""',
@@ -182,7 +182,7 @@ const useStyles = makeStyles({
     transform: "translateY(1px)",
     marginRight: "-14px",
     "& .fui-Slider__thumb": {
-      backgroundColor: tokens.colorNeutralBackground3Selected,
+      backgroundColor: tokens.colorNeutralBackground4Selected,
       boxShadow: tokens.shadow2,
     },
     "& .fui-Slider__thumb::before": {
@@ -219,16 +219,16 @@ const useStyles = makeStyles({
     transform: "translateY(1.2px)",
     boxShadow: tokens.shadow2,
     fontWeight: tokens.fontWeightRegular,
-    backgroundColor: tokens.colorNeutralBackground3,
+    backgroundColor: tokens.colorNeutralBackground4,
     ":hover": {
-      backgroundColor: tokens.colorNeutralBackground3Hover,
+      backgroundColor: tokens.colorNeutralBackground4Hover,
     },
     ":active": {
-      backgroundColor: tokens.colorNeutralBackground3Pressed,
+      backgroundColor: tokens.colorNeutralBackground4Pressed,
     },
     "&:disabled": {
       cursor: "not-allowed",
-      backgroundColor: tokens.colorNeutralBackground3,
+      backgroundColor: tokens.colorNeutralBackground4,
       color: tokens.colorNeutralForegroundDisabled,
     },
   },
@@ -239,29 +239,38 @@ const useStyles = makeStyles({
     flexDirection: "column",
     paddingTop: "1px",
     position: "relative",
-    gap: "5px",
+    gap: "2px",
+  },
+  textAreaWrapper: {
+    flex: 1,
+    position: "relative",
+    display: "flex",
+    minHeight: 0,
   },
   textArea: {
     flex: 1,
+    width: "100%",
+    height: "100%",
     resize: "none",
     border: "none",
     borderRadius: tokens.borderRadiusMedium,
-    backgroundColor: tokens.colorNeutralBackground3,
+    backgroundColor: tokens.colorNeutralBackground4,
     boxShadow: tokens.shadow2,
     "& textarea": {
+      minHeight: "0px",
       fontFamily: tokens.fontFamilyMonospace,
       fontSize: "15px",
-      lineHeight: "20px",
-      padding: "8px 12px",
+      lineHeight: "16px",
+      padding: "6px 8px",
     },
     ":hover": {
-      backgroundColor: tokens.colorNeutralBackground3Hover,
+      backgroundColor: tokens.colorNeutralBackground4Hover,
     },
     ":focus-within": {
-      backgroundColor: tokens.colorNeutralBackground3Pressed,
+      backgroundColor: tokens.colorNeutralBackground4Pressed,
     },
     ":focus-within:hover": {
-      backgroundColor: tokens.colorNeutralBackground3Pressed,
+      backgroundColor: tokens.colorNeutralBackground4Pressed,
     },
     "::selection": {
       backgroundColor: tokens.colorCompoundBrandBackground,
@@ -269,9 +278,9 @@ const useStyles = makeStyles({
   },
   resultOverlay: {
     position: "absolute",
-    padding: "8px 12px",
+    padding: "6px 8px",
     borderRadius: tokens.borderRadiusMedium,
-    backgroundColor: tokens.colorNeutralBackground3,
+    backgroundColor: tokens.colorNeutralBackground4,
     overflowY: "auto",
     overflowX: "hidden",
     zIndex: 10,
@@ -293,13 +302,14 @@ const useStyles = makeStyles({
   },
   messageBar: {
     height: "32px",
+    minHeight: "32px",
     transform: "translateY(-1.2px)",
     boxShadow: tokens.shadow2,
   },
   messageBarBody: {
     display: "inline-flex",
     alignItems: "center",
-    paddingBottom: "1.2px",
+    paddingBottom: "1.4px",
     paddingRight: "4px",
     gap: "12px"
   },
@@ -310,12 +320,12 @@ const useStyles = makeStyles({
     transform: "translateY(1.2px)",
     boxShadow: tokens.shadow2,
     fontWeight: tokens.fontWeightRegular,
-    backgroundColor: tokens.colorNeutralBackground3,
+    backgroundColor: tokens.colorNeutralBackground4,
     ":hover": {
-      backgroundColor: tokens.colorNeutralBackground3Hover,
+      backgroundColor: tokens.colorNeutralBackground4Hover,
     },
     ":active": {
-      backgroundColor: tokens.colorNeutralBackground3Pressed,
+      backgroundColor: tokens.colorNeutralBackground4Pressed,
     },
   },
   buttonText: {
@@ -336,10 +346,10 @@ export const TrainingPage = () => {
   const styles = useStyles();
 
   // 获取配置
-  const { savedConfig } = useGeneratorStore();
+  const { savedConfig } = useOptionsStore();
 
-  // 获取波形图显示和主题
-  const showWaveform = useSettingsStore(state => state.showWaveform);
+  // 获取波形图显示
+  const showWaveform = savedConfig.showWaveform;
 
   // 获取当前训练进度
   const { 
@@ -347,7 +357,7 @@ export const TrainingPage = () => {
     currentLessonNumber,
     setLessonNumber,
     submitRecord,
-    syncFromGeneratorConfig,
+    syncFromOptionsConfig,
   } = useTrainingStore();
   
   const { 
@@ -422,7 +432,7 @@ export const TrainingPage = () => {
 
   // 同步生成器配置到训练存储
   useEffect(() => {
-    syncFromGeneratorConfig(savedConfig.datasetName);
+    syncFromOptionsConfig(savedConfig.datasetName);
   }, [savedConfig.datasetName]);
   
   // 字符音频文本生成
@@ -1027,28 +1037,30 @@ export const TrainingPage = () => {
           <AudioWaveform
             waveformData={activeWaveformData}
             playbackState={activePlaybackState}
-            height={60}
+            height={48}
             windowDuration={5.5}
             playheadPosition={1}
           />
         )}
-        {/* 练习文本输入框 */}
-        <Textarea
-          id="practice-textarea"
-          className={styles.textArea}
-          appearance="filled-darker"
-          placeholder="Enter your practice text here ..."
-          value={inputText}
-          onChange={handleTextareaChange}
-          disabled={checkedResult !== null}
-        />
+        <div className={styles.textAreaWrapper}>
+          {/* 练习文本输入框 */}
+          <Textarea
+            id="practice-textarea"
+            className={styles.textArea}
+            appearance="filled-darker"
+            placeholder="Enter your practice text here ..."
+            value={inputText}
+            onChange={handleTextareaChange}
+            disabled={checkedResult !== null}
+          />
 
-        {/* 结果显示 */}
-        {checkedResult && (
-          <div className={`${styles.resultOverlay} fluent-scrollbar`}>
-            <HighlightedText result={checkedResult} />
-          </div>
-        )}
+          {/* 结果显示 */}
+          {checkedResult && (
+            <div className={`${styles.resultOverlay} fluent-scrollbar`}>
+              <HighlightedText result={checkedResult} />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* 第六行：结果检查按钮 */}

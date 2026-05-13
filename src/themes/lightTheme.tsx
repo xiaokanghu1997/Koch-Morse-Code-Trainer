@@ -1,6 +1,6 @@
 import { Theme } from "@fluentui/react-components";
 
-export const kochLightTheme: Theme = {
+export const lightTheme: Theme = {
     "borderRadiusNone": "0",
     "borderRadiusSmall": "2px",
     "borderRadiusMedium": "4px",

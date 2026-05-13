@@ -36,12 +36,12 @@ const useStyles = makeStyles({
     display: "flex",
     flexDirection: "column",
     height: "100%",
-    padding: "5px 10px",
+    padding: "0px",
   },
   tabListContainer: {
     display: "flex",
     alignItems: "center",
-    marginTop: "-3px",
+    marginTop: "-2px",
   },
   tabList: {
     display: "flex",
@@ -59,6 +59,7 @@ const useStyles = makeStyles({
     borderTopRightRadius: tokens.borderRadiusMedium,
     borderBottomLeftRadius: "0px",
     borderBottomRightRadius: "0px",
+    gap: "4px",
     ":hover:not([aria-selected='true'])": {
       backgroundColor: "transparent",
       "& span": {
@@ -92,6 +93,9 @@ const useStyles = makeStyles({
     "& span": {
       color: `${tokens.colorNeutralForeground3} !important`,
       fontWeight: `${tokens.fontWeightRegular} !important`,
+    },
+    "& .fui-Tab__content": {
+      marginBottom: "2.5px",
     },
     "::before": {
       display: "none",

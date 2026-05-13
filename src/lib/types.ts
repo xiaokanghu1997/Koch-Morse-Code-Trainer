@@ -70,7 +70,7 @@ export interface AudioConfig {
  * 生成器完整配置接口
  * 继承AudioConfig，增加训练相关参数
  */
-export interface GeneratorConfig extends AudioConfig {
+export interface OptionsConfig extends AudioConfig {
   /** 训练字符集 */
   datasetName: DatasetNames;
   
@@ -94,6 +94,9 @@ export interface GeneratorConfig extends AudioConfig {
   
   /** 是否使用前后缀（VVV = ... AR） */
   usePrefixSuffix: boolean;
+
+  /** 显示波形可视化 */
+  showWaveform: boolean;
 }
 
 // ==================== 文本生成接口 ====================

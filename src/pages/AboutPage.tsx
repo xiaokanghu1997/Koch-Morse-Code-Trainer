@@ -18,9 +18,12 @@ const useStyles = makeStyles({
   container: {
     display: "flex",
     flexDirection: "column",
+    height: "100%",
+    width: "100%",
     gap: "8px",
   },
   card: {
+    minHeight: "60px",
     padding: "14px 16px",
     display: "flex",
     flexDirection: "row",
@@ -60,7 +63,7 @@ export const AboutPage = () => {
   
   // 软件信息
   const appTitle = "Koch - Morse Code Trainer";
-  const version = "Version 2.0.0-alpha.4";
+  const version = "Version 2.0.0-alpha.5";
 
   return (
     <div className={styles.container}>

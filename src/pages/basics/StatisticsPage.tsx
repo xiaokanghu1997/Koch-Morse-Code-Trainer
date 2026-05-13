@@ -7,13 +7,13 @@ import {
   tokens
 } from "@fluentui/react-components";
 import { ChevronDown16Regular } from "@fluentui/react-icons";
-import { StatisticsChart } from "../components/StatisticsChart";
 import { useState, useEffect, useMemo } from "react";
-import { useLessonManager } from "../hooks/useLessonManager";
-import { useStatisticalToolset } from "../hooks/useStatisticalToolset";
-import { useGeneratorStore } from "../stores/generatorStore";
-import { useTrainingStore } from "../stores/trainingStore";
-import { useSettingsStore } from "../stores/settingsStore";
+import { StatisticsChart } from "../../components/StatisticsChart";
+import { useLessonManager } from "../../hooks/useLessonManager";
+import { useStatisticalToolset } from "../../hooks/useStatisticalToolset";
+import { useOptionsStore } from "../../stores/optionsStore";
+import { useTrainingStore } from "../../stores/trainingStore";
+import { useSettingsStore } from "../../stores/settingsStore";
 
 // 样式定义
 const useStyles = makeStyles({
@@ -21,15 +21,16 @@ const useStyles = makeStyles({
     display: "flex",
     flexDirection: "column",
     height: "100%",
-    padding: "5px 10px",
-    gap: "10px",
+    width: "100%",
+    padding: "12px 15px",
+    gap: "6px",
   },
   // 第一行
   headerRow: {
     display: "flex",
     alignItems: "center",
-    marginTop: "-5px",
-    gap: "12px",
+    marginTop: "-7px",
+    gap: "16px",
   },
   selectContainer: {
     display: "flex",
@@ -48,12 +49,12 @@ const useStyles = makeStyles({
     "::after": {
       display: "none",
     },
-    backgroundColor: tokens.colorNeutralBackground3,
+    backgroundColor: tokens.colorNeutralBackground4,
     ":hover": {
-      backgroundColor: tokens.colorNeutralBackground3Hover,
+      backgroundColor: tokens.colorNeutralBackground4Hover,
     },
     ":active": {
-      backgroundColor: tokens.colorNeutralBackground3Pressed,
+      backgroundColor: tokens.colorNeutralBackground4Pressed,
     },
     "& .fui-Dropdown__expandIcon": {
       transition: "transform 200ms ease",
@@ -77,7 +78,7 @@ const useStyles = makeStyles({
   },
   dropdownListboxBase: {
     overflowY: "auto",
-    backgroundColor: tokens.colorNeutralBackground4,
+    backgroundColor: tokens.colorNeutralBackground5,
   },
   dropdownListboxWithHeight: {
     height: "166px",
@@ -99,18 +100,18 @@ const useStyles = makeStyles({
     position: "relative",
     paddingLeft: "12px",
     paddingTop: "4px",
-    backgroundColor: tokens.colorNeutralBackground4,
+    backgroundColor: tokens.colorNeutralBackground5,
     ":hover": {
-      backgroundColor: tokens.colorNeutralBackground4Hover,
+      backgroundColor: tokens.colorNeutralBackground5Hover,
     },
     ":active": {
-      backgroundColor: tokens.colorNeutralBackground4Pressed,
+      backgroundColor: tokens.colorNeutralBackground5Pressed,
     },
     "&[aria-selected='true']": {
-      backgroundColor: tokens.colorNeutralBackground4Selected,
+      backgroundColor: tokens.colorNeutralBackground5Selected,
     },
     "&[aria-selected='true']:hover": {
-      backgroundColor: tokens.colorNeutralBackground3Hover,
+      backgroundColor: tokens.colorNeutralBackground4Hover,
     },
     "&[aria-selected='true']::before": {
       content: '""',
@@ -162,7 +163,7 @@ export const StatisticsPage = () => {
   const theme = useSettingsStore((state) => state.theme);
 
   // 获取当前数据集
-  const currentDatasetName = useGeneratorStore((state) => state.savedConfig.datasetName);
+  const currentDatasetName = useOptionsStore((state) => state.savedConfig.datasetName);
 
   // 获取全局训练记录
   const globalRecords = useTrainingStore((state) => state.globalRecords);

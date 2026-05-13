@@ -21,19 +21,19 @@ import {
   PlayCircle20Regular, 
   PauseCircle20Regular, 
   ArrowUndo16Regular,
-  SoundWaveCircleSparkle20Regular,
+  CheckmarkCircle20Regular,
   CheckmarkCircle20Filled,
   DismissCircle16Filled,
   Dismiss20Regular,
 } from "@fluentui/react-icons";
 import { useState, useEffect, useMemo, useRef } from "react";
-import { useTiming } from "../hooks/useTiming";
-import { useTextGenerator } from "../hooks/useTextGenerator";
-import { useMorsePlayer } from "../hooks/useMorsePlayer";
-import { useGeneratorStore } from "../stores/generatorStore";
-import type { GeneratorConfig } from "../lib/types";
-import { clampNumber, roundToNearest } from "../services/statisticalToolset";
-import { log } from "../utils/logger";
+import { useTiming } from "../../hooks/useTiming";
+import { useTextGenerator } from "../../hooks/useTextGenerator";
+import { useMorsePlayer } from "../../hooks/useMorsePlayer";
+import { useOptionsStore } from "../../stores/optionsStore";
+import type { OptionsConfig } from "../../lib/types";
+import { clampNumber, roundToNearest } from "../../services/statisticalToolset";
+import { log } from "../../utils/logger";
 
 // 样式定义
 const useStyles = makeStyles({
@@ -41,10 +41,8 @@ const useStyles = makeStyles({
     display: "flex",
     flexDirection: "column",
     height: "100%",
-    padding: "5px 10px",
-  },
-  title: {
-    fontWeight: tokens.fontWeightSemibold,
+    width: "100%",
+    padding: "12px 15px",
   },
   content: {
     display: "grid",
@@ -52,12 +50,12 @@ const useStyles = makeStyles({
     gap: "45px",
     margin: "0",
     flex: 1,
-    marginTop: "8px",
+    marginTop: "-7px",
   },
   column: {
     display: "flex",
     flexDirection: "column",
-    gap: "6px",
+    gap: "4px",
   },
   settingItem: {
     display: "flex",
@@ -82,12 +80,12 @@ const useStyles = makeStyles({
     "::after": {
       display: "none",
     },
-    backgroundColor: tokens.colorNeutralBackground3,
+    backgroundColor: tokens.colorNeutralBackground4,
     ":hover": {
-      backgroundColor: tokens.colorNeutralBackground3Hover,
+      backgroundColor: tokens.colorNeutralBackground4Hover,
     },
     ":active": {
-      backgroundColor: tokens.colorNeutralBackground3Pressed,
+      backgroundColor: tokens.colorNeutralBackground4Pressed,
     },
     "& .fui-Dropdown__expandIcon": {
       transition: "transform 200ms ease",
@@ -101,7 +99,7 @@ const useStyles = makeStyles({
     minWidth: "120px",
     maxWidth: "120px",
     overflowY: "auto",
-    backgroundColor: tokens.colorNeutralBackground4,
+    backgroundColor: tokens.colorNeutralBackground5,
   },
   dropdownListboxWithHeight: {
     height: "166px",
@@ -111,18 +109,18 @@ const useStyles = makeStyles({
     position: "relative",
     paddingLeft: "12px",
     paddingTop: "4px",
-    backgroundColor: tokens.colorNeutralBackground4,
+    backgroundColor: tokens.colorNeutralBackground5,
     ":hover": {
-      backgroundColor: tokens.colorNeutralBackground4Hover,
+      backgroundColor: tokens.colorNeutralBackground5Hover,
     },
     ":active": {
-      backgroundColor: tokens.colorNeutralBackground4Pressed,
+      backgroundColor: tokens.colorNeutralBackground5Pressed,
     },
     "&[aria-selected='true']": {
-      backgroundColor: tokens.colorNeutralBackground4Selected,
+      backgroundColor: tokens.colorNeutralBackground5Selected,
     },
     "&[aria-selected='true']:hover": {
-      backgroundColor: tokens.colorNeutralBackground3Hover,
+      backgroundColor: tokens.colorNeutralBackground4Hover,
     },
     "&[aria-selected='true']::before": {
       content: '""',
@@ -142,15 +140,15 @@ const useStyles = makeStyles({
     paddingBottom: "1.5px",
     transform: "translateY(1.5px)",
     boxShadow: tokens.shadow2,
-    backgroundColor: tokens.colorNeutralBackground3,
+    backgroundColor: tokens.colorNeutralBackground4,
     "::before": {
       display: "none",
     },
     ":hover": {
-      backgroundColor: tokens.colorNeutralBackground3Hover,
+      backgroundColor: tokens.colorNeutralBackground4Hover,
     },
     ":active": {
-      backgroundColor: tokens.colorNeutralBackground3Pressed,
+      backgroundColor: tokens.colorNeutralBackground4Pressed,
     },
     "& input::selection": {
       backgroundColor: tokens.colorCompoundBrandBackground,
@@ -213,7 +211,7 @@ const useStyles = makeStyles({
     flexShrink: 0,
   },
   tooltip: {
-    backgroundColor: tokens.colorNeutralBackground1Hover,
+    backgroundColor: tokens.colorNeutralBackground2Hover,
     boxShadow: tokens.shadow2,
     maxWidth: "360px",
     whiteSpace: "normal",
@@ -223,14 +221,14 @@ const useStyles = makeStyles({
     justifyContent: "space-between",
     alignItems: "flex-end",
     gap: "0px",
-    height: "44px",
+    height: "40px",
     borderTop: `1px solid ${tokens.colorNeutralStroke2}`,
   },
   messageContainer: {
     flex: 1,
     display: "flex",
     alignItems: "center",
-    marginBottom: "-6px",
+    marginBottom: "-6.5px",
   },
   messageBar: {
     maxWidth: "450px",
@@ -258,12 +256,12 @@ const useStyles = makeStyles({
     transform: "translateY(1.2px)",
     boxShadow: tokens.shadow2,
     fontWeight: tokens.fontWeightRegular,
-    backgroundColor: tokens.colorNeutralBackground3,
+    backgroundColor: tokens.colorNeutralBackground4,
     ":hover": {
-      backgroundColor: tokens.colorNeutralBackground3Hover,
+      backgroundColor: tokens.colorNeutralBackground4Hover,
     },
     ":active": {
-      backgroundColor: tokens.colorNeutralBackground3Pressed,
+      backgroundColor: tokens.colorNeutralBackground4Pressed,
     },
   },
   buttonText: {
@@ -278,6 +276,7 @@ const tips = {
   groupLength: "Number of characters in each practice group",
   groupSpace: "Multiple of standard word space (7 dit) to separate groups",
   groupCount: "Number of character groups to generate",
+  waveform: "Show the audio waveform during playback",
   charSpeed: "Morse element speed in words per minute",
   effSpeed: "Overall transmission speed using Farnsworth timing",
   tone: "Audio tone frequency of the Morse signal",
@@ -290,7 +289,7 @@ const datasetOptions = ["Koch-LCWO", "Letters", "Numbers", "Punctuation"] as con
 const practiceModeOptions = ["Uniform", "New focus", "Gradual", "Weighted"] as const;
 
 // 生成器页面组件
-export const GeneratorPage = () => {
+export const OptionsPage = () => {
   // 使用样式
   const styles = useStyles();
 
@@ -303,10 +302,10 @@ export const GeneratorPage = () => {
   } | null>(null);
 
   // 从 Store 中获取配置
-  const { savedConfig, saveConfig } = useGeneratorStore();
+  const { savedConfig, saveConfig } = useOptionsStore();
 
   // 本地配置状态
-  const [currentConfig, setCurrentConfig] = useState<GeneratorConfig>(savedConfig);
+  const [currentConfig, setCurrentConfig] = useState<OptionsConfig>(savedConfig);
 
   // 使用生成器 Hook
   const textGen = useTextGenerator();
@@ -348,7 +347,7 @@ export const GeneratorPage = () => {
   }, [player.playbackState]);
 
   // 配置更新
-  const updateConfig = (updates: Partial<GeneratorConfig>) => {
+  const updateConfig = (updates: Partial<OptionsConfig>) => {
     setCurrentConfig((prev) => ({
       ...prev,
       ...updates,
@@ -387,8 +386,8 @@ export const GeneratorPage = () => {
     }
   };
 
-  // 生成按钮点击
-  const handleGenerate = () => {
+  // 确认按钮点击
+  const handleConfirm = () => {
     try {
       // 清除之前的消息
       setMessage(null);
@@ -412,10 +411,10 @@ export const GeneratorPage = () => {
       // 显示成功消息
       setMessage({
         type: "success",
-        title: "Training material generated successfully",
+        title: "Training material setup successfully",
         content: `${currentConfig.datasetName} | ${currentConfig.practiceMode} | ${currentConfig.groupCount} groups | ${charInfo}`,
       });
-      log.info("Training material generated", "GeneratorPage", currentConfig);
+      log.info("Training material setup successfully", "OptionsPage", currentConfig);
 
       // 3秒后自动隐藏消息
       setTimeout(() => setMessage(null), 3000);
@@ -423,10 +422,10 @@ export const GeneratorPage = () => {
       // 显示错误消息
       setMessage({
         type: "error",
-        title: "Generation failed",
+        title: "Training material setup failed",
         content: error instanceof Error ? error.message : "Unknown error occurred",
       });
-      log.error("Error generating text", "GeneratorPage", error);
+      log.error("Error setting up training material", "OptionsPage", error);
     }
   };
 
@@ -434,7 +433,7 @@ export const GeneratorPage = () => {
   const handleSpin = (
     min: number, 
     max: number, 
-    field: keyof GeneratorConfig
+    field: keyof OptionsConfig
   ) => (_: any, data: any) => {
     const raw = Number(data. value ??  data. displayValue);
     const clamped = clampNumber(raw, min, max);
@@ -512,9 +511,6 @@ export const GeneratorPage = () => {
   // 渲染
   return (
     <div className={styles.container}>
-      <Text className={styles.title}>
-        Training audio setup and generation
-      </Text>
       <div className={styles.content}>
         {/* 左侧栏 */}
         <div className={styles.column}>
@@ -545,7 +541,7 @@ export const GeneratorPage = () => {
               value={currentConfig.datasetName}
               selectedOptions={[currentConfig.datasetName]}
               onOptionSelect={(_, data) => 
-                updateConfig({ datasetName: data.optionValue as GeneratorConfig["datasetName"] })
+                updateConfig({ datasetName: data.optionValue as OptionsConfig["datasetName"] })
               }
             >
               {datasetOptions.map((dataset) => (
@@ -588,7 +584,7 @@ export const GeneratorPage = () => {
               value={currentConfig.practiceMode}
               selectedOptions={[currentConfig.practiceMode]}
               onOptionSelect={(_, data) => 
-                updateConfig({ practiceMode: data.optionValue as GeneratorConfig["practiceMode"] })
+                updateConfig({ practiceMode: data.optionValue as OptionsConfig["practiceMode"] })
               }
             >
               {practiceModeOptions.map((mode) => (
@@ -692,6 +688,31 @@ export const GeneratorPage = () => {
               max={30}
               value={currentConfig.groupCount}
               onChange={handleSpin(1, 30, "groupCount")}
+            />
+          </div>
+
+          {/* 波形显示 */}
+          <div className={styles.settingItem}>
+            <div className={styles.textContent}>
+              <Tooltip
+                content={{
+                  children: tips.waveform,
+                  className: styles.tooltip,
+                }}
+                relationship="label"
+                positioning="below-start"
+              >
+                <Text>Waveform diagram:</Text>
+              </Tooltip>
+            </div>
+            <Checkbox
+              id="waveform-checkbox"
+              className={styles.checkbox}
+              label={currentConfig.showWaveform ? "On" : "Off"}
+              checked={currentConfig.showWaveform}
+              onChange={(_, data) => 
+                updateConfig({ showWaveform: data.checked === true })
+              }
             />
           </div>
         </div>
@@ -886,14 +907,14 @@ export const GeneratorPage = () => {
               {previewButtonConfig.text}
             </Text>
           </Button>
-          {/* 生成按钮 */}
+          {/* 确认按钮 */}
           <Button
             className={styles.button}
-            icon={<SoundWaveCircleSparkle20Regular />}
-            onClick={handleGenerate}
+            icon={<CheckmarkCircle20Regular />}
+            onClick={handleConfirm}
           >
             <Text className={styles.buttonText}>
-              Generate
+              Confirm
             </Text>
           </Button>
         </div>

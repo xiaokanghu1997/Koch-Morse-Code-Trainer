@@ -4,16 +4,15 @@ import {
   Dropdown,
   Option,
   Slider,
-  Switch,
   makeStyles,
   tokens
 } from "@fluentui/react-components";
 import {
   ChevronDown16Regular,
+  Globe24Regular,
   Color24Regular,
   TransparencySquare24Regular,
-  Speaker224Regular,
-  PulseSquare24Regular
+  Speaker224Regular
 } from "@fluentui/react-icons";
 import { invoke } from "@tauri-apps/api/core";
 import { log } from "../utils/logger";
@@ -24,9 +23,12 @@ const useStyles = makeStyles({
   container: {
     display: "flex",
     flexDirection: "column",
+    height: "100%",
+    width: "100%",
     gap: "8px",
   },
   card: {
+    minHeight: "60px",
     padding: "14px 16px",
     display: "flex",
     flexDirection: "row",
@@ -173,15 +175,6 @@ const useStyles = makeStyles({
       transformOrigin: "right center",
     },
   },
-  switchValueText: {
-    fontSize: tokens.fontSizeBase300,
-    color: tokens.colorNeutralForeground1,
-    marginRight: "4px",
-    minWidth: "20px",
-    textAlign: "right",
-    paddingBottom: "1.5px",
-    flexShrink: 0,
-  },
 });
 
 export const SettingsPage = () => {
@@ -190,14 +183,14 @@ export const SettingsPage = () => {
 
   // 从 SettingsStore 获取设置状态和操作方法
   const {
+    language,
+    setLanguage,
     theme,
     setTheme,
     opacity,
     setOpacity,
     volume,
     setVolume,
-    showWaveform,
-    setShowWaveform,
   } = useSettingsStore();
 
   // 处理透明度变化
@@ -212,6 +205,46 @@ export const SettingsPage = () => {
 
   return (
     <div className={styles.container}>
+      {/* 语言设置 */}
+      <Card className={styles.card}>
+        <Globe24Regular className={styles.icon} />
+        <div className={styles.content}>
+          <Text className={styles.header}>Display Language</Text>
+          <Text className={styles.description}>
+            Select the display language of the application
+          </Text>
+        </div>
+        <Dropdown 
+          id="language-dropdown"
+          className={styles.dropdown}
+          expandIcon={<ChevronDown16Regular />}
+          listbox={{ className: styles.dropdownListbox }}
+          positioning="below-start"
+          value={language}
+          selectedOptions={[language]}
+          onOptionSelect={(_, data) => {
+            setLanguage(data.optionValue as "English" | "中文");
+          }}
+        >
+          <Option 
+            key="english" 
+            value="English"
+            className={styles.dropdownOption}
+            checkIcon={null}
+          >
+            English
+          </Option>
+          <Option 
+            key="chinese" 
+            value="中文"
+            className={styles.dropdownOption}
+            checkIcon={null}
+          >
+            中文
+          </Option>
+        </Dropdown>
+      </Card>
+
       {/* 主题设置 */}
       <Card className={styles.card}>
         <Color24Regular className={styles.icon} />
@@ -293,27 +326,6 @@ export const SettingsPage = () => {
             onChange={(_, data) => setVolume(data.value)}
           />
           <Text className={styles.sliderValueText}>{Math.round(volume)}%</Text>
-        </div>
-      </Card>
-
-      {/* 波形图显示开关 */}
-      <Card className={styles.card}>
-        <PulseSquare24Regular className={styles.icon} />
-        <div className={styles.content}>
-          <Text className={styles.header}>Waveform Display</Text>
-          <Text className={styles.description}>
-            Show the audio waveform during playback
-          </Text>
-        </div>
-        <div className={styles.controlContainer}>
-          <Switch 
-            className={styles.switch}
-            checked={showWaveform}
-            onChange={(_, data) => setShowWaveform(data.checked)}
-          />
-          <Text className={styles.switchValueText}>
-            {showWaveform ? "On" : "Off"}
-          </Text>
         </div>
       </Card>
     </div>

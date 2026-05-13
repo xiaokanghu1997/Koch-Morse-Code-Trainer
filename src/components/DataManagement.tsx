@@ -20,7 +20,7 @@ import {
 import { ChevronDown16Regular } from "@fluentui/react-icons";
 import { useEffect, useState, useMemo } from "react";
 import { useTrainingStore } from "../stores/trainingStore";
-import { useGeneratorStore } from "../stores/generatorStore";
+import { useOptionsStore } from "../stores/optionsStore";
 import { useLessonManager } from "../hooks/useLessonManager";
 import { save, open } from "@tauri-apps/plugin-dialog";
 import { writeTextFile, readTextFile } from "@tauri-apps/plugin-fs";
@@ -242,7 +242,7 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
   const styles = useStyles();
 
   // 获取当前数据集
-  const currentDatasetName = useGeneratorStore((state) => state.savedConfig.datasetName);
+  const currentDatasetName = useOptionsStore((state) => state.savedConfig.datasetName);
 
   // 获取全局训练记录
   const globalRecords = useTrainingStore((state) => state.globalRecords);

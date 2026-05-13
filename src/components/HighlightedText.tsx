@@ -7,12 +7,13 @@ const useStyles = makeStyles({
     fontSize: "15px",
     whiteSpace: "pre-wrap",
     wordBreak: "break-word",
-    lineHeight: "20px",
+    lineHeight: "16px",
     padding: "0",
     margin: "0",
   },
   separator: {
     color: tokens.colorNeutralStroke1Selected,
+    lineHeight: "4px",
   },
   correctText: {
     color: tokens.colorNeutralStroke1Selected,

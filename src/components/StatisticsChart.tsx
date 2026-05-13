@@ -52,6 +52,7 @@ const useStyles = makeStyles({
     justifyContent: "center",
     backgroundColor: "transparent",
     margin: "0px",
+    marginBottom: "-5px",
     overflow: "hidden",
     "& *": {
       cursor: "default !important",
@@ -62,7 +63,13 @@ const useStyles = makeStyles({
 // 计算X轴标签显示间隔
 const calculateLabelInterval = (flag: boolean, dataLength: number): number | "auto" => {
   if (flag) {
-    return 0; // 显示全部
+    if (dataLength <= 30) {
+      return 0; // 显示全部
+    } else if (dataLength <= 60) {
+      return 1; // 显示一半
+    } else {
+      return "auto"; // 自动计算
+    }
   } else {
     if (dataLength <= 10) {
       return 0; // 显示全部
@@ -165,7 +172,7 @@ export const StatisticsChart = React.memo(({
           inactiveWidth: 1
         },
         top: "0px",
-        left: "35px",
+        left: "37px",
         textStyle: {
           color: tokens.colorNeutralForeground1,
           fontFamily: tokens.fontFamilyBase,
@@ -251,10 +258,10 @@ export const StatisticsChart = React.memo(({
       },
     ],
     grid: {
-      top: "30px",
+      top: "25px",
       bottom: chartData.xLabel === "" ? "0px" : "18px",
       left: "18px",
-      right: "22px",
+      right: "23px",
       outerBoundsMode: "same",
       outerBoundsContain: "axisLabel",
       backgroundColor: tokens.colorNeutralForegroundInverted,
@@ -285,7 +292,7 @@ export const StatisticsChart = React.memo(({
           fontFamily: tokens.fontFamilyBase,
           fontSize: 13.5,
           margin: 2,
-          interval: calculateLabelInterval(chartData.chartType,chartData.xTickValues.length),
+          interval: calculateLabelInterval(chartData.chartType, chartData.xTickValues.length),
           lineHeight: 14,
         },
       }
@@ -295,7 +302,6 @@ export const StatisticsChart = React.memo(({
         type: "value",
         name: "Training Accuracy (%)",
         nameLocation: "center",
-        nameGap: 30,
         nameTextStyle: {
           color: tokens.colorNeutralForeground1,
           fontFamily: tokens.fontFamilyBase,
@@ -343,7 +349,6 @@ export const StatisticsChart = React.memo(({
         type: "value",
         name: chartData.yRightUnit === "" ? chartData.yRightLabel : chartData.yRightLabel + chartData.yRightUnit,
         nameLocation: "center",
-        nameGap: chartData.yRightLabel === "Training Count" ? 25 : 21,
         nameTextStyle: {
           color: tokens.colorNeutralForeground1,
           fontFamily: tokens.fontFamilyBase,

@@ -1,14 +1,12 @@
 import { FluentProvider, makeStyles } from "@fluentui/react-components";
 import { useSettingsStore } from "./stores/settingsStore";
-import { kochLightTheme } from "./themes/kochLightTheme";
-import { kochDarkTheme } from "./themes/kochDarkTheme";
+import { lightTheme } from "./themes/lightTheme";
+import { darkTheme } from "./themes/darkTheme";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { MainLayout } from "./layouts/MainLayout";
-import { TrainingPage } from "./pages/TrainingPage";
-import { ActivityPage } from "./pages/ActivityPage";
-import { StatisticsPage } from "./pages/StatisticsPage";
-import { GeneratorPage } from "./pages/GeneratorPage";
+import { BasicsPage } from "./pages/BasicsPage";
 import { AdvancedPage} from "./pages/AdvancedPage";
+import { ActivityPage } from "./pages/ActivityPage";
 import { AboutPage } from "./pages/AboutPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { useEffect } from "react";
@@ -47,20 +45,18 @@ function App() {
   return (
     <div className={styles.appWrapper}>
       <FluentProvider 
-        theme={theme === "Dark" ? kochDarkTheme : kochLightTheme} 
+        theme={theme === "Dark" ? darkTheme : lightTheme} 
         data-theme={theme === "Dark" ? "dark" : "light"}
       >
         <Routes>
           <Route path="/" element={<MainLayout />}>
-            <Route index element={<Navigate to="/training" replace />} />
-            <Route path="training" element={<TrainingPage />} />
-            <Route path="activity" element={<ActivityPage />} />
-            <Route path="statistics" element={<StatisticsPage />} />
-            <Route path="generator" element={<GeneratorPage />} />
+            <Route index element={<Navigate to="/basics" replace />} />
+            <Route path="basics" element={<BasicsPage />} />
             <Route path="advanced" element={<AdvancedPage />} />
+            <Route path="activity" element={<ActivityPage />} />
             <Route path="about" element={<AboutPage />} />
             <Route path="settings" element={<SettingsPage />} />
-            <Route path="*" element={<Navigate to="/training" replace />} />
+            <Route path="*" element={<Navigate to="/basics" replace />} />
           </Route>
         </Routes>
       </FluentProvider>

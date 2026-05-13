@@ -12,6 +12,8 @@ interface PlaybackEvent {
   time: number;
   duration: number;
   frequency?: number;
+  attack?: number;
+  release?: number;
 }
 
 /**
@@ -300,6 +302,16 @@ export class AudioPlayer {
     
     log.info("Playback completed", "AudioPlayer");
   }
+
+  // ==================== 包络时间计算 ====================
+  private calculateEnvelopeTimes(frequency: number): { attack: number; release: number } {
+    // 计算周期时间
+    const period = 1 / frequency;
+    // 包络时间为周期时间的5倍
+    const envelopeTime = period * 5;
+
+    return { attack: envelopeTime, release: envelopeTime };
+  }
   
   // ==================== 事件生成方法 ====================
   
@@ -326,7 +338,10 @@ export class AudioPlayer {
       const morse = MorseEncoder.encode(char);
       if (!morse) continue;
 
-      const frequency = toneMap?.get(i);
+      // 获取当前字符的频率（如果 toneMap 存在）
+      const frequency = toneMap?.get(i) ?? config.tone;
+      // 根据频率计算包络时间
+      const envelope = this.calculateEnvelopeTimes(frequency);
       
       const elements = morse.split("");
       for (let j = 0; j < elements.length; j++) {
@@ -345,6 +360,8 @@ export class AudioPlayer {
           time: currentTime,
           duration: duration,
           frequency: frequency,
+          attack: envelope.attack,
+          release: envelope.release,
         });
         
         currentTime += duration;
@@ -369,13 +386,21 @@ export class AudioPlayer {
       this.part = null;
     }
     
-    if (!this.context) return;
+    if (!this.context || !this.synth) return;
     
     // 在独立 Context 中创建 Part
     this.part = new Tone.Part({
       callback: (time, value) => {
         if (this.synth) {
+          // 动态设置包络参数
+          if (value.attack !== undefined) {
+            this.synth.envelope.attack = value.attack;
+          }
+          if (value.release !== undefined) {
+            this.synth.envelope.release = value.release;
+          }
           const frequency = value.frequency || this.synth.frequency.value;
+          // 播放音符
           this.synth.triggerAttackRelease(
             frequency,
             value.duration,
@@ -386,7 +411,9 @@ export class AudioPlayer {
       events: events.map(e => ({ 
         time: e.time, 
         duration: e.duration,
-        frequency: e.frequency
+        frequency: e.frequency,
+        attack: e.attack,
+        release: e.release
       })),
       context: this.context,
     });

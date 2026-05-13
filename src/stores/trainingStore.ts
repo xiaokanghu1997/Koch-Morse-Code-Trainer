@@ -46,8 +46,8 @@ interface TrainingState {
   /** 获取课程统计信息 */
   getLessonStats: (datasetName: string, lessonNumber: number) => LessonRecords | undefined;
 
-  /** 从生成器配置中同步训练集 */
-  syncFromGeneratorConfig: (generatorDatasetName: string) => void;
+  /** 从音频配置中同步训练集 */
+  syncFromOptionsConfig: (optionsDatasetName: string) => void;
 
   /** 导出训练数据 */
   exportData: () => string;
@@ -213,38 +213,38 @@ export const useTrainingStore = create<TrainingState>()(
         return get().globalRecords.datasets[datasetName]?.lessons[lessonNumber];
       },
 
-      /** 从生成器配置中同步训练集 */
-      syncFromGeneratorConfig: (generatorDatasetName) => {
+      /** 从音频配置中同步训练集 */
+      syncFromOptionsConfig: (optionsDatasetName) => {
         const state = get();
 
         // 验证数据集是否存在
-        if (!(generatorDatasetName in CHARACTER_SET)) {
-          log.error(`Unknown generator dataset: ${generatorDatasetName}`, "TrainingStore");
+        if (!(optionsDatasetName in CHARACTER_SET)) {
+          log.error(`Unknown options dataset: ${optionsDatasetName}`, "TrainingStore");
           return;
         }
 
         // 如果训练集名称相同，不需要修改（保持当前课程编号）
-        if (state.currentDatasetName === generatorDatasetName) {
+        if (state.currentDatasetName === optionsDatasetName) {
           log.info("Dataset already synced", "TrainingStore", {
-            datasetName: generatorDatasetName,
+            datasetName: optionsDatasetName,
             lessonNumber: state.currentLessonNumber,
           });
           return;
         }
 
         // 训练集名称不同，更新训练集名称和课程编号
-        const dataset = state.globalRecords.datasets[generatorDatasetName];
+        const dataset = state.globalRecords.datasets[optionsDatasetName];
         let newLessonNumber = 1;  // 默认课程编号为1
         // 如果数据集中有记录，设置为最新课程编号
         if (dataset && Object.keys(dataset.lessons).length > 0) {
           newLessonNumber = Math.max(...Object.keys(dataset.lessons).map(Number));
         }
         set({
-          currentDatasetName: generatorDatasetName,
+          currentDatasetName: optionsDatasetName,
           currentLessonNumber: newLessonNumber,
         });
-        log.info("Synced with generator config", "TrainingStore", {
-          datasetName: generatorDatasetName,
+        log.info("Synced with options config", "TrainingStore", {
+          datasetName: optionsDatasetName,
           lessonNumber: newLessonNumber,
         });
       },

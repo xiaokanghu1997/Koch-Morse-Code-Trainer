@@ -22,8 +22,9 @@ interface AudioWaveformProps {
 const useStyles = makeStyles({
   container: {
     width: "100%",
+    height: "48px",
     borderRadius: tokens.borderRadiusMedium,
-    backgroundColor: tokens.colorNeutralBackground3,
+    backgroundColor: tokens.colorNeutralBackground4,
     boxShadow: tokens.shadow2,
     overflow: "hidden",
   },

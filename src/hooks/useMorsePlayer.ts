@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { AudioPlayer } from "../services/audioPlayer";
-import type { ToneMap, AudioConfig, GeneratorConfig, PlaybackState } from "../lib/types";
+import type { ToneMap, AudioConfig, OptionsConfig, PlaybackState } from "../lib/types";
 import { log } from "../utils/logger";
 
 export interface UseMorsePlayerReturn {
@@ -15,7 +15,7 @@ export interface UseMorsePlayerReturn {
   /** 预加载 */
   preload: (
     text: string, 
-    config: AudioConfig | GeneratorConfig,
+    config: AudioConfig | OptionsConfig,
     toneMap?: ToneMap
   ) => void;
   /** 播放 */
@@ -79,7 +79,7 @@ export const useMorsePlayer = (): UseMorsePlayerReturn => {
   /** 预加载 */
   const preload = useCallback((
     text: string, 
-    config: AudioConfig | GeneratorConfig,
+    config: AudioConfig | OptionsConfig,
     toneMap?: ToneMap
   ) => {
     if (!playerRef.current) {

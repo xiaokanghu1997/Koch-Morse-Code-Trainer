@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from "react";
 import { TextGenerator } from "../services/textGenerator";
 import { TimingCalculator } from "../lib/timing";
 import { CHARACTER_SET } from "../lib/constants";
-import type { AudioConfig, GeneratorConfig } from "../lib/types";
+import type { AudioConfig, OptionsConfig } from "../lib/types";
 import { log } from "../utils/logger";
 
 export interface UseTextGeneratorReturn {
@@ -11,9 +11,9 @@ export interface UseTextGeneratorReturn {
   /** 预估时长（秒） */
   duration: number;
   /** 生成普通文本 */
-  generate: (config: GeneratorConfig, currentCharSet?: string) => void;
+  generate: (config: OptionsConfig, currentCharSet?: string) => void;
   /** 生成单字符文本 */
-  generateSingleChar: (char: string, count: number, config: GeneratorConfig) => void;
+  generateSingleChar: (char: string, count: number, config: OptionsConfig) => void;
   /** 生成指定文本 */
   generateCustomText: (customText: string, config: AudioConfig) => void;
 }
@@ -34,7 +34,7 @@ export const useTextGenerator = (): UseTextGeneratorReturn => {
 
   /** 生成普通文本 */
   const generate = useCallback((
-    config: GeneratorConfig, 
+    config: OptionsConfig, 
     currentCharSet?: string
   ) => {
 
@@ -77,7 +77,7 @@ export const useTextGenerator = (): UseTextGeneratorReturn => {
   const generateSingleChar = useCallback((
     char: string, 
     count: number, 
-    config: GeneratorConfig
+    config: OptionsConfig
   ) => {
     
     try {
