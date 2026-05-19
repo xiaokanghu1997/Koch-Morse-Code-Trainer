@@ -6,7 +6,7 @@
  * - Numbers: 10个数字
  * - Punctuation: 标点符号
  */
-export type DatasetNames = "Koch-LCWO" | "Letters" | "Numbers" | "Punctuation";
+export type DatasetName = "Koch-LCWO" | "Letters" | "Numbers" | "Punctuation";
 
 /**
  * 练习模式类型
@@ -15,7 +15,15 @@ export type DatasetNames = "Koch-LCWO" | "Letters" | "Numbers" | "Punctuation";
  * - Gradual: 渐进式（新字符1.5倍权重）
  * - Weighted: 难度加权（根据摩尔斯码长度）
  */
-export type PracticeModes = "Uniform" | "New focus" | "Gradual" | "Weighted";
+export type PracticeMode = "Uniform" | "New focus" | "Gradual" | "Weighted";
+
+/**
+ * 进阶训练类型
+ * - Word: 单词训练
+ * - Callsign: 呼号训练
+ * - QTC: QTC训练
+ */
+export type AdvancedType = "Word" | "Callsign" | "QTC";
 
 /**
  * 播放状态
@@ -23,7 +31,7 @@ export type PracticeModes = "Uniform" | "New focus" | "Gradual" | "Weighted";
  * - playing: 播放中
  * - paused: 已暂停
  */
-export type PlaybackStatus = "idle" | "playing" | "paused";
+export type PlaybackStatu = "idle" | "playing" | "paused";
 
 /**
  * 音调映射类型
@@ -38,7 +46,7 @@ export type ToneMap = Map<number, number>;
  * - extra: 多余
  * - missing: 缺失
  */
-export type ComparisonTypes = "correct" | "incorrect" | "extra" | "missing";
+export type ComparisonType = "correct" | "incorrect" | "extra" | "missing";
 
 /**
  * 时间段统计类型
@@ -48,7 +56,7 @@ export type ComparisonTypes = "correct" | "incorrect" | "extra" | "missing";
  * - month: 按月统计
  * - year: 按年统计
  */
-export type TimeStatTypes = "default" | "hour" | "day" | "month" | "year";
+export type TimeStatType = "default" | "hour" | "day" | "month" | "year";
 
 // ==================== 配置接口 ====================
 /**
@@ -72,10 +80,10 @@ export interface AudioConfig {
  */
 export interface OptionsConfig extends AudioConfig {
   /** 训练字符集 */
-  datasetName: DatasetNames;
+  datasetName: DatasetName;
   
   /** 练习模式 */
-  practiceMode: PracticeModes;
+  practiceMode: PracticeMode;
   
   /** 每组字符长度 */
   groupLength: number;      // 1-10 字符
@@ -108,7 +116,7 @@ export interface TextGeneratorOptions {
   /** 字符集 */
   charSet: string;
   /** 练习模式 */
-  mode: PracticeModes;
+  mode: PracticeMode;
   /** 每组字符长度（固定长度模式） */
   groupLength: number;
   /** 是否随机组长度 */
@@ -152,7 +160,7 @@ export interface TimingConfig {
  */
 export interface PlaybackState {
   /** 当前播放状态 */
-  status: PlaybackStatus;
+  status: PlaybackStatu;
   
   /** 当前播放时间（秒） */
   currentTime: number;
@@ -184,10 +192,10 @@ export interface Lesson {
 // ==================== 练习记录接口 ====================
 
 /**
- * 单次练习记录
+ * 基础练习记录
  * 包含练习时间戳、时长、准确率
  */
-export interface TrainingRecord {
+export interface BasicsRecord {
   /** 练习时间戳 */
   timestamp: number;
 
@@ -199,57 +207,21 @@ export interface TrainingRecord {
 }
 
 /**
- * 课程练习记录
- * 包含该次课程的总练习时长、总练习次数、平均准确率及单次记录列表
+ * 进阶练习记录
+ * 包含练习时间戳、时长、字符速率、分数
  */
-export interface LessonRecords {
-  /** 总练习时长（秒） */
-  totalDuration: number;
+export interface AdvancedRecord {
+  /** 练习时间戳 */
+  timestamp: number;
 
-  /** 总练习次数 */
-  recordCount: number;
+  /** 练习时长（秒） */
+  duration: number;
 
-  /** 平均准确率（0-100） */
-  averageAccuracy: number;
+  /** 字符速率（WPM） */
+  charSpeed: number;
 
-  /** 单次练习记录列表 */
-  records: TrainingRecord[];
-}
-
-/**
- * 数据集练习记录
- * 包含所有课程的总练习时长、总练习次数、平均准确率及各课程记录列表
- */
-export interface DatasetRecords {
-  /** 总练习时长（秒） */
-  totalDuration: number;
-
-  /** 总练习次数 */
-  recordCount: number;
-
-  /** 平均准确率（0-100） */
-  averageAccuracy: number;
-
-  /** 各课程练习记录列表 */
-  lessons: Record<number, LessonRecords>;
-}
-
-/**
- * 整体练习记录
- * 包含所有数据集的总练习时长、总练习次数、平均准确率及各数据集记录列表
- */
-export interface GlobalRecords {
-  /** 总练习时长（秒） */
-  totalDuration: number;
-
-  /** 总练习次数 */
-  recordCount: number;
-
-  /** 平均准确率（0-100） */
-  averageAccuracy: number;
-
-  /** 各数据集练习记录列表 */
-  datasets: Record<string, DatasetRecords>;
+  /** 练习分数 */
+  score: number;
 }
 
 // =================== 准确率计算接口 ====================
@@ -263,7 +235,7 @@ export interface ComparisonResult {
   char: string;
 
   /** 比对类型 */
-  type: ComparisonTypes;
+  type: ComparisonType;
 
   /** 字符位置索引 */
   index: number;
@@ -331,7 +303,7 @@ export interface TimeStatsResult {
   details: TimeStats[];
 }
 
-// =================== 进阶训练接口 ====================
+// =================== 进阶训练配置接口 ====================
 
 /**
  * 单词训练配置接口

@@ -9,7 +9,15 @@ import {
 import { ChevronDown16Regular } from "@fluentui/react-icons";
 import { CalendarHeatmap } from "../components/CalendarHeatmap";
 import { useState, useMemo } from "react";
-import { useStatisticalToolset } from "../hooks/useStatisticalToolset";
+import {
+  getAllYears,
+  getYearOverviewStats,
+  getDailyRecordCounts,
+  getAllDatasetStats,
+  formatDuration,
+  formatAccuracy,
+} from "../services/statisticalToolset";
+import { useBasicsStore } from "../stores/basicsStore";
 import { useSettingsStore } from "../stores/settingsStore";
 
 // 样式定义
@@ -123,17 +131,22 @@ export const ActivityPage = () => {
   // 使用样式
   const styles = useStyles();
 
-  // 获取统计工具集
-  const statisticalToolset = useStatisticalToolset();
-
   // 获取主题设置
   const theme = useSettingsStore((state) => state.theme);
 
+  // 获取基础训练记录数据
+  const datasets = useBasicsStore((state) => state.datasets);
+  const allBasicsRecords = useMemo(() => {
+    return Object.values(datasets).flatMap(dataset =>
+      Object.values(dataset).flatMap(lesson => lesson)
+    );
+  }, [datasets]);
+
   // 获取所有年份
   const allYears = useMemo(() => {
-    const years = statisticalToolset.getAllYears();
+    const years = getAllYears(allBasicsRecords);
     return years.length > 0 ? years : [new Date().getFullYear()];
-  }, [statisticalToolset]);
+  }, [allBasicsRecords]);
 
   // 选中的年份（默认当前年份）
   const [selectedYear, setSelectedYear] = useState<string>(
@@ -142,19 +155,19 @@ export const ActivityPage = () => {
 
   // 顶部统计数据
   const yearStats = useMemo(() => {
-    const overview = statisticalToolset.getYearOverviewStats(parseInt(selectedYear));
+    const overview = getYearOverviewStats(allBasicsRecords, parseInt(selectedYear));
     return {
       totalRecordCount: overview.totalRecordCount,
-      totalDuration: statisticalToolset.formatDuration(overview.totalDuration),
-      averageAccuracy: statisticalToolset.formatAccuracy(overview.averageAccuracy),
+      totalDuration: formatDuration(overview.totalDuration),
+      averageAccuracy: formatAccuracy(overview.averageAccuracy),
     };
-  }, [statisticalToolset, selectedYear]);
+  }, [allBasicsRecords,selectedYear]);
 
   // 日历热力数据
   const calendarData = useMemo(() => {
-    const data = statisticalToolset.getDailyRecordCounts(parseInt(selectedYear));
+    const data = getDailyRecordCounts(allBasicsRecords, parseInt(selectedYear));
     return data as Array<[string, number]>;
-  }, [statisticalToolset, selectedYear]);
+  }, [allBasicsRecords, selectedYear]);
 
   // 今日训练次数
   const todayCount = useMemo(() => {
@@ -165,8 +178,8 @@ export const ActivityPage = () => {
 
   // 底部统计数据
   const statsData = useMemo(() => {
-    return statisticalToolset.getAllDatasetStats();
-  }, [statisticalToolset, selectedYear]);
+    return getAllDatasetStats(datasets);
+  }, [datasets, selectedYear]);
 
   // 渲染
   return (

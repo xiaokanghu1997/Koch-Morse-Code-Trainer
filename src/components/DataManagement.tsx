@@ -3,6 +3,7 @@ import {
   PopoverTrigger,
   PopoverSurface,
   Button,
+  ToggleButton,
   Dialog,
   DialogSurface,
   DialogBody,
@@ -13,17 +14,27 @@ import {
   Option,
   Input,
   Text,
+  Tooltip,
   makeStyles,
   mergeClasses,
   tokens
 } from "@fluentui/react-components";
-import { ChevronDown16Regular } from "@fluentui/react-icons";
-import { useEffect, useState, useMemo } from "react";
-import { useTrainingStore } from "../stores/trainingStore";
-import { useOptionsStore } from "../stores/optionsStore";
-import { useLessonManager } from "../hooks/useLessonManager";
+import {
+  Quiz20Filled,
+  Quiz20Regular,
+  Certificate20Filled,
+  Certificate20Regular,
+  bundleIcon,
+} from "@fluentui/react-icons";
 import { save, open } from "@tauri-apps/plugin-dialog";
 import { writeTextFile, readTextFile } from "@tauri-apps/plugin-fs";
+import { ChevronDown16Regular } from "@fluentui/react-icons";
+import { useEffect, useState, useMemo } from "react";
+import { useBasicsStore } from "../stores/basicsStore";
+import { useAdvancedStore } from "../stores/advancedStore";
+import { useOptionsStore } from "../stores/optionsStore";
+import { useLessonManager } from "../hooks/useLessonManager";
+import { recordManager } from "../services/recordManager";
 import { log } from "../utils/logger";
 
 // 样式定义
@@ -37,7 +48,6 @@ const useStyles = makeStyles({
     padding: "6px",
   },
   button: {
-    width: "105px",
     height: "32px",
     border: "none",
     transform: "translateY(1.2px)",
@@ -57,25 +67,23 @@ const useStyles = makeStyles({
     },
   },
   buttonText: {
-    paddingBottom: "1.2px",
+    paddingBottom: "1.4px",
   },
   modifyDialogSurface: {
     display: "flex",
     flexDirection: "column",
     width: "280px",
-    height: "330px",
-    padding: "12px 16px",
+    padding: "10px 16px 12px 16px",
   },
   clearDialogSurface: {
     display: "flex",
     flexDirection: "column",
-    width: "360px",
-    height: "135px",
-    padding: "12px 16px",
+    width: "345px",
+    padding: "8px 16px 12px 16px",
   },
   modifyDialogContent: {
     fontSize: tokens.fontSizeBase300,
-    marginTop: "-4px",
+    marginTop: "-2px",
     marginBottom: "1px",
     marginLeft: "6px",
     flex: 1,
@@ -83,13 +91,28 @@ const useStyles = makeStyles({
   },
   clearDialogContent: {
     fontSize: tokens.fontSizeBase300,
-    marginTop: "-8px",
+    marginTop: "-10px",
     marginBottom: "-2px",
     marginLeft: "6px",
+  },
+  dialogTitleContainer: {
+    display: "flex",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    width: "230px",
+  },
+  dialogIconContainer: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "2px",
+    marginRight: "-16px",
   },
   dialogTitle: {
     fontSize: tokens.fontSizeBase400,
     fontWeight: tokens.fontWeightSemibold,
+    width: "180px",
   },
   dialogContentContainer: {
     display: "flex",
@@ -108,8 +131,8 @@ const useStyles = makeStyles({
     flexShrink: 0,
     textAlign: "left",
   },
-  dialogButton: {
-    width: "80px",
+  toggleButton: {
+    minWidth: "32px",
     height: "32px",
     border: "none",
     transform: "translateY(1.2px)",
@@ -231,6 +254,10 @@ const useStyles = makeStyles({
       color: tokens.colorPaletteRedForeground1,
     },
   },
+  tooltip: {
+    backgroundColor: tokens.colorNeutralBackground4Hover,
+    boxShadow: tokens.shadow2,
+  },
 });
 
 interface DataManagementProps {
@@ -238,27 +265,69 @@ interface DataManagementProps {
   onDataChange?: () => void;
 }
 
+const Basics = bundleIcon(Quiz20Filled, Quiz20Regular);
+const Advanced = bundleIcon(Certificate20Filled, Certificate20Regular);
+
+// 格式化时间戳为 "YYYY/MM/DD HH:mm:ss"
+const formatTimestamp = (timestamp: number) => {
+  const date = new Date(timestamp);
+  const year = date.getFullYear().toString().padStart(4, "0");
+  const month = (date.getMonth() + 1).toString().padStart(2, "0");
+  const day = date.getDate().toString().padStart(2, "0");
+  const hours = date.getHours().toString().padStart(2, "0");
+  const minutes = date.getMinutes().toString().padStart(2, "0");
+  const seconds = date.getSeconds().toString().padStart(2, "0");
+  return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
+};
+
+// 验证并解析时间戳字符串
+const validateTimestamp = (value: string): { valid: boolean; timestamp: number } => {
+  const timestampRegex = /^\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}$/;
+  if (!timestampRegex.test(value)) {
+    return { valid: false, timestamp: 0 };
+  }
+  const [datePart, timePart] = value.split(" ");
+  const [year, month, day] = datePart.split("/").map(Number);
+  const [hours, minutes, seconds] = timePart.split(":").map(Number);
+  const timestamp = new Date(year, month - 1, day, hours, minutes, seconds).getTime();
+  if (isNaN(timestamp)) {
+    return { valid: false, timestamp: 0 };
+  }
+  return { valid: true, timestamp };
+};
+
 export const DataManagement = ({ children, onDataChange }: DataManagementProps) => {
   const styles = useStyles();
 
   // 获取当前数据集
   const currentDatasetName = useOptionsStore((state) => state.savedConfig.datasetName);
 
-  // 获取全局训练记录
-  const globalRecords = useTrainingStore((state) => state.globalRecords);
+  // 获取训练记录
+  const basicsDatasets = useBasicsStore((state) => state.datasets);
+  const advancedWord = useAdvancedStore((state) => state.Word);
+  const advancedCallsign = useAdvancedStore((state) => state.Callsign);
+  const advancedQTC = useAdvancedStore((state) => state.QTC);
 
   // 获取有训练记录的数据集
-  const availableDatasets = useMemo(() => {
-    return Object.keys(globalRecords.datasets).filter(
-      (datasetName) => globalRecords.datasets[datasetName].recordCount > 0
-    );
-  }, [globalRecords]);
+  const availableBasicsDatasets = useMemo(() => {
+    return Object.keys(basicsDatasets).filter((datasetName) => {
+      const dataset = basicsDatasets[datasetName];
+      return Object.values(dataset).some(
+        (lesson) => lesson.length > 0
+      );
+    });
+  }, [basicsDatasets]);
+
+  const availableAdvancedTypes = useMemo(() => {
+    const types: string[] = [];
+    if (advancedWord.length > 0) types.push("Word");
+    if (advancedCallsign.length > 0) types.push("Callsign");
+    if (advancedQTC.length > 0) types.push("QTC");
+    return types;
+  }, [advancedWord, advancedCallsign, advancedQTC]);
 
   // Popover 状态
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-
-  // 数据操作函数
-  const { exportData, importData, clearAllData, modifyRecord } = useTrainingStore();
 
   // 修改数据操作
   const [isModifyEnabled, setIsModifyEnabled] = useState(false);
@@ -266,20 +335,28 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
 
   // 修改数据对话框状态
   const [isModifyDialogOpen, setIsModifyDialogOpen] = useState(false);
+  const [modifyStoreType, setModifyStoreType] = useState<"basics" | "advanced">("basics");
   const [modifySelectedDataset, setModifySelectedDataset] = useState<string>(() => {
-    if (availableDatasets.includes(currentDatasetName)) {
+    if (availableBasicsDatasets.includes(currentDatasetName)) {
       return currentDatasetName;
     }
-    return availableDatasets.length > 0 ? availableDatasets[0] : "";
+    return availableBasicsDatasets.length > 0 ? availableBasicsDatasets[0] : "";
   });
   const [modifySelectedLesson, setModifySelectedLesson] = useState<number>(0);
   const [modifySelectedRecord, setModifySelectedRecord] = useState<number>(0);
+  const [modifyAdvancedType, setModifyAdvancedType] = useState<"Word" | "Callsign" | "QTC">("Word");
+  const [modifyAdvancedIndex, setModifyAdvancedIndex] = useState<number>(0);
+
   const [editedTimestamp, setEditedTimestamp] = useState<string>("");
   const [editedAccuracy, setEditedAccuracy] = useState<string>("");
   const [editedDuration, setEditedDuration] = useState<string>("");
+  const [editedCharSpeed, setEditedCharSpeed] = useState<string>("");
+  const [editedScore, setEditedScore] = useState<string>("");
   const [timestampError, setTimestampError] = useState<boolean>(false);
   const [accuracyError, setAccuracyError] = useState<boolean>(false);
   const [durationError, setDurationError] = useState<boolean>(false);
+  const [charSpeedError, setCharSpeedError] = useState<boolean>(false);
+  const [scoreError, setScoreError] = useState<boolean>(false);
 
   // 清空数据对话框状态
   const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
@@ -295,9 +372,7 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
         log.info("Data modification enabled", "DataManagement");
       }
     };
-
     window.addEventListener("keydown", handleKeyDown);
-
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
@@ -308,15 +383,19 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
 
   // 筛选出有记录的课程
   const availableLessons = useMemo(() => {
-    const dataset = globalRecords.datasets[modifySelectedDataset];
+    if (!modifySelectedDataset) {
+      return [];
+    }
+    const dataset = basicsDatasets[modifySelectedDataset];
     if (!dataset) {
       return [];
     }
-    const lessonsWithRecords = lessons.filter(
-      (lesson) => dataset.lessons[lesson.lessonNumber]?.recordCount > 0
-    );
+    const lessonsWithRecords = lessons.filter((lesson) => {
+      const lessonData = dataset[lesson.lessonNumber];
+      return lessonData && lessonData.length > 0;
+    });
     return lessonsWithRecords;
-  }, [globalRecords, modifySelectedDataset, lessons]);
+  }, [basicsDatasets, modifySelectedDataset, lessons]);
 
   // 获取当前选中课程的显示文本
   const modifySelectedLessonDisplay = useMemo(() => {
@@ -326,19 +405,39 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
 
   // 获取可用的记录列表
   const availableRecords = useMemo(() => {
-    const dataset = globalRecords.datasets[modifySelectedDataset];
-    if (!dataset || !dataset.lessons[modifySelectedLesson]) {
+    if (!modifySelectedDataset) {
       return [];
     }
-    const records = dataset.lessons[modifySelectedLesson].records;
-    return records.map((record, index) => ({
+    const dataset = basicsDatasets[modifySelectedDataset];
+    if (!dataset || !dataset[modifySelectedLesson]) {
+      return [];
+    }
+    const lessonRecords = dataset[modifySelectedLesson];
+    return lessonRecords.map((record, index) => ({
       index: index,
       displayText: `Record #${(index + 1).toString().padStart(2, "0")}`,
       timestamp: record.timestamp,
       accuracy: record.accuracy,
       duration: record.duration,
     }));
-  }, [globalRecords, modifySelectedDataset, modifySelectedLesson]);
+  }, [basicsDatasets, modifySelectedDataset, modifySelectedLesson]);
+
+  const availableAdvancedRecords = useMemo(() => {
+    const recordsMap: Record<string, any[]> = {
+      "Word": advancedWord,
+      "Callsign": advancedCallsign,
+      "QTC": advancedQTC,
+    };
+    const records = recordsMap[modifyAdvancedType] || [];
+    return records.map((record, index) => ({
+      index: index,
+      displayText: `Record #${(index + 1).toString().padStart(2, "0")}`,
+      timestamp: record.timestamp,
+      duration: record.duration,
+      charSpeed: record.charSpeed,
+      score: record.score,
+    }));
+  }, [modifyAdvancedType, advancedWord, advancedCallsign, advancedQTC]);
 
   // 获取当前选中记录的显示文本
   const modifySelectedRecordDisplay = useMemo(() => {
@@ -346,29 +445,32 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
     return record?.displayText || "";
   }, [availableRecords, modifySelectedRecord]);
 
+  const modifyAdvancedRecordDisplay = useMemo(() => {
+    const record = availableAdvancedRecords.find(r => r.index === modifyAdvancedIndex);
+    return record?.displayText || "";
+  }, [availableAdvancedRecords, modifyAdvancedIndex]);
+
   // 数据集变化时重置课程和记录选择
   useEffect(() => {
-    const dataset = globalRecords.datasets[modifySelectedDataset];
-
+    if (!modifySelectedDataset) {
+      return;
+    }
+    const dataset = basicsDatasets[modifySelectedDataset];
     if (dataset) {
-      const lessons = Object.keys(dataset.lessons)
-        .map(Number)
-        .sort((a, b) => b - a);
-      
-      if (lessons.length > 0) {
-        const latestLesson = lessons[0];
+      const lessonNumbers = Object.keys(dataset).map(Number).sort((a, b) => b - a);
+      if (lessonNumbers.length > 0) {
+        const latestLesson = lessonNumbers[0];
         setModifySelectedLesson(latestLesson);
-
-        const records = dataset.lessons[latestLesson].records;
-        if (records && records.length > 0) {
-          const latestRecordIndex = records.length - 1;
+        const lessonRecords = dataset[latestLesson];
+        if (lessonRecords && lessonRecords.length > 0) {
+          const latestRecordIndex = lessonRecords.length - 1;
           setModifySelectedRecord(latestRecordIndex);
         }
       }
     }
-  }, [modifySelectedDataset, globalRecords]);
+  }, [modifySelectedDataset, basicsDatasets]);
 
-  // 课程变化时重置记录选择
+  // 变化时重置记录选择
   useEffect(() => {
     if (availableRecords.length > 0) {
       const latestRecordIndex = availableRecords.length - 1;
@@ -376,59 +478,109 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
     }
   }, [modifySelectedLesson, availableRecords]);
 
+  useEffect(() => {
+    if (availableAdvancedRecords.length > 0) {
+      const latestRecordIndex = availableAdvancedRecords.length - 1;
+      setModifyAdvancedIndex(latestRecordIndex);
+    }
+  }, [modifyAdvancedType, availableAdvancedRecords]);
+
   // 选中记录变化时更新编辑数据
   useEffect(() => {
-    const record = availableRecords.find(r => r.index === modifySelectedRecord);
-    if (record) {
-      const date = new Date(record.timestamp);
-      const year = date.getFullYear().toString().padStart(4, "0");
-      const month = (date.getMonth() + 1).toString().padStart(2, "0");
-      const day = date.getDate().toString().padStart(2, "0");
-      const hours = date.getHours().toString().padStart(2, "0");
-      const minutes = date.getMinutes().toString().padStart(2, "0");
-      const seconds = date.getSeconds().toString().padStart(2, "0");
-      const formattedTimestamp = `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
-    
-      setEditedTimestamp(formattedTimestamp);
-      setEditedAccuracy(record.accuracy.toString());
-      setEditedDuration(record.duration.toString());
+    if (modifyStoreType === "basics") {
+      if (availableRecords.length === 0) {
+        setEditedTimestamp("");
+        setEditedAccuracy("");
+        setEditedDuration("");
+        return;
+      }
+      const record = availableRecords.find(r => r.index === modifySelectedRecord);
+      if (record) {
+        setEditedTimestamp(formatTimestamp(record.timestamp));
+        setEditedAccuracy(record.accuracy.toString());
+        setEditedDuration(record.duration.toString());
+      }
+    } else {
+      if (availableAdvancedRecords.length === 0) {
+        setEditedTimestamp("");
+        setEditedDuration("");
+        setEditedCharSpeed("");
+        setEditedScore("");
+        return;
+      }
+      const record = availableAdvancedRecords.find(r => r.index === modifyAdvancedIndex);
+      if (record) {
+        setEditedTimestamp(formatTimestamp(record.timestamp));
+        setEditedDuration(record.duration.toString());
+        setEditedCharSpeed(record.charSpeed.toString());
+        setEditedScore(record.score.toString());
+      }
     }
-  }, [modifySelectedRecord, availableRecords]);
+  }, [modifyStoreType, modifySelectedRecord, availableRecords, modifyAdvancedIndex, availableAdvancedRecords]);
+
+  // 初始化基础训练
+  const initializeBasicsSelection = () => {
+    if (availableBasicsDatasets.length === 0) {
+      setModifySelectedDataset("");
+      setModifySelectedLesson(0);
+      setModifySelectedRecord(0);
+      return;
+    }
+    const defaultDataset = availableBasicsDatasets.includes(currentDatasetName)
+      ? currentDatasetName
+      : availableBasicsDatasets[0];
+    setModifySelectedDataset(defaultDataset);
+    const dataset = basicsDatasets[defaultDataset];
+    if (!dataset) return;
+    const lessonNumbers = Object.keys(dataset).map(Number).sort((a, b) => b - a);
+    if (lessonNumbers.length === 0) return;
+    const latestLesson = lessonNumbers[0];
+    setModifySelectedLesson(latestLesson);
+    const lessonRecords = dataset[latestLesson];
+    if (lessonRecords && lessonRecords.length > 0) {
+      setModifySelectedRecord(lessonRecords.length - 1);
+    }
+  };
+
+  // 初始化进阶训练
+  const initializeAdvancedSelection = () => {
+    if (availableAdvancedTypes.length === 0) {
+      setModifyAdvancedType("Word");
+      setModifyAdvancedIndex(0);
+      return;
+    }
+    const defaultType = availableAdvancedTypes[0] as "Word" | "Callsign" | "QTC";
+    setModifyAdvancedType(defaultType);
+    const recordsMap: Record<string, any[]> = {
+      "Word": advancedWord,
+      "Callsign": advancedCallsign,
+      "QTC": advancedQTC,
+    };
+    const records = recordsMap[defaultType] || [];
+    if (records.length > 0) {
+      setModifyAdvancedIndex(records.length - 1);
+    }
+  };
 
   // 打开对话框时初始化选择
   useEffect(() => {
-    if (isModifyDialogOpen && availableDatasets.length > 0) {
-      const defaultDataset = availableDatasets.includes(currentDatasetName) 
-        ? currentDatasetName 
-        : availableDatasets[0];
-      setModifySelectedDataset(defaultDataset);
-
-      const dataset = globalRecords.datasets[defaultDataset];
-      if (dataset) {
-        const lessons = Object.keys(dataset.lessons)
-          .map(Number)
-          .sort((a, b) => b - a);
-
-        if (lessons.length > 0) {
-          const latestLesson = lessons[0];
-          setModifySelectedLesson(latestLesson);
-
-          const records = dataset.lessons[latestLesson].records;
-          if (records && records.length > 0) {
-            const latestRecordIndex = records.length - 1;
-            setModifySelectedRecord(latestRecordIndex);
-          }
-        }
+    if (isModifyDialogOpen) {
+      if (modifyStoreType === "basics") {
+        initializeBasicsSelection();
+      } else {
+        initializeAdvancedSelection();
       }
     }
-  }, [isModifyDialogOpen]);
+  }, [isModifyDialogOpen, modifyStoreType, availableBasicsDatasets, availableAdvancedRecords]);
 
   // 当选中记录变化或对话框关闭时，清除错误提示
   useEffect(() => {
     setTimestampError(false);
     setAccuracyError(false);
     setDurationError(false);
-  }, [modifySelectedRecord, isModifyDialogOpen]);
+    setCharSpeedError(false);
+    setScoreError(false);
+  }, [modifyStoreType, modifySelectedRecord, modifyAdvancedIndex, isModifyDialogOpen]);
 
   // 导出数据
   const handleExport = async () => {
@@ -443,7 +595,7 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
       });
 
       if (filePath) {
-        const jsonData = exportData();
+        const jsonData = recordManager.exportData();
         await writeTextFile(filePath, jsonData);
         setIsPopoverOpen(false);
         onDataChange?.();
@@ -468,13 +620,75 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
 
       if (filePath && typeof filePath === "string") {
         const content = await readTextFile(filePath);
-        importData(content);
-        setIsPopoverOpen(false);
-        onDataChange?.();
+        const success = recordManager.importData(content);
+        if (success) {
+          setIsPopoverOpen(false);
+          onDataChange?.();
+        }
       }
     } catch (error) {
       log.error(`Error importing data: ${error}`, "DataManagement");
     }
+  };
+
+  // 验证基础训练数据
+  const validateBasicsData = () => {
+    let hasError = false;
+    // 验证时间戳
+    const { valid: timestampValid, timestamp } = validateTimestamp(editedTimestamp);
+    if (!timestampValid) {
+      setTimestampError(true);
+      hasError = true;
+    }
+    // 验证准确率
+    const accuracy = Number(editedAccuracy);
+    if (isNaN(accuracy) || accuracy < 0 || accuracy > 100) {
+      setAccuracyError(true);
+      hasError = true;
+    }
+    // 验证时长
+    const duration = Number(editedDuration);
+    if (isNaN(duration) || duration < 0) {
+      setDurationError(true);
+      hasError = true;
+    }
+    if (hasError) {
+      return null;
+    }
+    return { timestamp, accuracy, duration };
+  };
+
+  // 验证进阶训练数据
+  const validateAdvancedData = () => {
+    let hasError = false;
+    // 验证时间戳
+    const { valid: timestampValid, timestamp } = validateTimestamp(editedTimestamp);
+    if (!timestampValid) {
+      setTimestampError(true);
+      hasError = true;
+    }
+    // 验证字符速率
+    const charSpeed = Number(editedCharSpeed);
+    if (isNaN(charSpeed) || charSpeed < 5 || charSpeed > 125) {
+      setCharSpeedError(true);
+      hasError = true;
+    }
+    // 验证分数
+    const score = Number(editedScore);
+    if (isNaN(score) || score < 0) {
+      setScoreError(true);
+      hasError = true;
+    }
+    // 验证时长
+    const duration = Number(editedDuration);
+    if (isNaN(duration) || duration < 0) {
+      setDurationError(true);
+      hasError = true;
+    }
+    if (hasError) {
+      return null;
+    }
+    return { timestamp, charSpeed, score, duration };
   };
 
   // 修改数据
@@ -482,71 +696,114 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
     setTimestampError(false);
     setAccuracyError(false);
     setDurationError(false);
+    setCharSpeedError(false);
+    setScoreError(false);
 
-    let hasError = false;
-
-    // 验证时间戳格式
-    const timestampRegex = /^\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}$/;
-    if (!timestampRegex.test(editedTimestamp)) {
-      setTimestampError(true);
-      hasError = true;
+    let success = false;
+    if (modifyStoreType === "basics") {
+      const data = validateBasicsData();
+      if (!data) return;
+      success = recordManager.modifyBasicsRecord(
+        modifySelectedDataset,
+        modifySelectedLesson,
+        modifySelectedRecord,
+        data
+      );
+    } else {
+      const data = validateAdvancedData();
+      if (!data) return;
+      success = recordManager.modifyAdvancedRecord(
+        modifyAdvancedType,
+        modifyAdvancedIndex,
+        data
+      );
     }
-
-    // 解析时间戳
-    let timestamp = 0;
-    if (!timestampError) {
-      const [datePart, timePart] = editedTimestamp.split(" ");
-      const [year, month, day] = datePart.split("/").map(Number);
-      const [hours, minutes, seconds] = timePart.split(":").map(Number);
-      timestamp = new Date(year, month - 1, day, hours, minutes, seconds).getTime();
-
-      if (isNaN(timestamp)) {
-        setTimestampError(true);
-        hasError = true;
-      }
-    }
-
-    // 验证准确率
-    const accuracy = Number(editedAccuracy);
-    if (isNaN(accuracy) || accuracy < 0 || accuracy > 100) {
-      setAccuracyError(true);
-      hasError = true;
-    }
-
-    // 验证时长
-    const duration = Number(editedDuration);
-    if (isNaN(duration) || duration < 0) {
-      setDurationError(true);
-      hasError = true;
-    }
-
-    if (hasError) {
-      return;
-    }
-
-    const success = modifyRecord(
-      modifySelectedDataset,
-      modifySelectedLesson,
-      modifySelectedRecord,
-      {
-        timestamp,
-        accuracy,
-        duration,
-      }
-    );
 
     if (success) {
       log.info("Record modified successfully", "DataManagement");
-      setIsModifyDialogOpen(false);
       onDataChange?.();
     } else {
       log.error("Failed to modify record", "DataManagement");
     }
   };
 
+  // 更新基础训练数据选择
+  const updateBasicsSelection = () => {
+    const dataset = basicsDatasets[modifySelectedDataset];
+    if (!dataset || Object.keys(dataset).length === 0) {
+      const remainDatasets = availableBasicsDatasets.filter(name => name !== modifySelectedDataset);
+      if (remainDatasets.length > 0) {
+        setModifySelectedDataset(remainDatasets[0]);
+      }
+      return;
+    } 
+    const lessonRecords = dataset[modifySelectedLesson];
+    if (!lessonRecords || lessonRecords.length === 0) {
+      const lessonNumbers = Object.keys(dataset).map(Number).sort((a, b) => b - a);
+      if (lessonNumbers.length > 0) {
+        const newLesson = lessonNumbers[0];
+        setModifySelectedLesson(newLesson);
+        const newLessonRecords = dataset[newLesson];
+        if (newLessonRecords && newLessonRecords.length > 0) {
+          setModifySelectedRecord(newLessonRecords.length - 1);
+        }
+      }
+      return;
+    }
+    setModifySelectedRecord(Math.max(0, lessonRecords.length - 1));
+  };
+
+  // 更新进阶训练数据选择
+  const updateAdvancedSelection = () => {
+    const recordsMap: Record<string, any[]> = {
+      "Word": advancedWord,
+      "Callsign": advancedCallsign,
+      "QTC": advancedQTC,
+    };
+    const records = recordsMap[modifyAdvancedType] || [];
+    if (records.length === 0) {
+      const remainTypes = availableAdvancedTypes.filter(type => type !== modifyAdvancedType);
+      if (remainTypes.length > 0) {
+        setModifyAdvancedType(remainTypes[0] as "Word" | "Callsign" | "QTC");
+      }
+      return;
+    }
+    setModifyAdvancedIndex(Math.max(0, records.length - 1));
+  };
+
+  // 删除数据
+  const handleDelete = () => {
+    let success = false;
+    if (modifyStoreType === "basics") {
+      success = recordManager.deleteBasicsRecord(
+        modifySelectedDataset,
+        modifySelectedLesson,
+        modifySelectedRecord
+      );
+      if (success) {
+        updateBasicsSelection();
+      }
+    } else {
+      success = recordManager.deleteAdvancedRecord(
+        modifyAdvancedType,
+        modifyAdvancedIndex
+      );
+      if (success) {
+        updateAdvancedSelection();
+      }
+    }
+
+    if (success) {
+      log.info("Record deleted successfully", "DataManagement");
+      onDataChange?.();
+    } else {
+      log.error("Failed to delete record", "DataManagement");
+    }
+  };
+
   // 清空数据
   const handleClear = () => {
-    clearAllData();
+    recordManager.clearAllData();
     setIsClearDialogOpen(false);
     setIsPopoverOpen(false);
     onDataChange?.();
@@ -608,166 +865,357 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
       >
         <DialogSurface className={styles.modifyDialogSurface}>
           <DialogBody>
-            <DialogTitle className={styles.dialogTitle}>
-              Modify Training Data
-            </DialogTitle>
+            <div className={styles.dialogTitleContainer}>
+              <DialogTitle className={styles.dialogTitle}>
+                Modify {modifyStoreType === "basics" ? "Basics" : "Advanced"} Data
+              </DialogTitle>
+              <div className={styles.dialogIconContainer}>
+                <Tooltip
+                  content={{
+                    children: "Basics",
+                    className: styles.tooltip,
+                  }}
+                  relationship="label"
+                  positioning="below-end"
+                >
+                  <ToggleButton
+                    className={styles.toggleButton}
+                    appearance="transparent"
+                    icon={<Basics />}
+                    checked={modifyStoreType === "basics"}
+                    onClick={() => setModifyStoreType("basics")}
+                  />
+                </Tooltip>
+                <Tooltip
+                  content={{
+                    children: "Advanced",
+                    className: styles.tooltip,
+                  }}
+                  relationship="label"
+                  positioning="below-end"
+                >
+                  <ToggleButton
+                    className={styles.toggleButton}
+                    appearance="transparent"
+                    icon={<Advanced />}
+                    checked={modifyStoreType === "advanced"}
+                    onClick={() => setModifyStoreType("advanced")}
+                  />
+                </Tooltip>
+              </div>
+            </div>
             <DialogContent className={styles.modifyDialogContent}>
               <div className={styles.dialogContentContainer}>
-                <div className={styles.dialogRow}>
-                  <Text className={styles.dialogLabel}>Select dataset:</Text>
-                  <Dropdown
-                    id="modify-dataset-dropdown"
-                    className={styles.dropdown}
-                    expandIcon={<ChevronDown16Regular />}
-                    listbox={{ 
-                      className: mergeClasses(
-                        styles.dropdownListbox,
-                        availableDatasets.length >= 5 && styles.dropdownListboxWithHeight
-                      ) 
-                    }}
-                    value={modifySelectedDataset}
-                    selectedOptions={[modifySelectedDataset]}
-                    onOptionSelect={(_, data) => {
-                      if (data.optionValue) {
-                        setModifySelectedDataset(data.optionValue);
-                      }
-                    }}
-                  >
-                    {availableDatasets.map((dataset) => (
-                      <Option
-                        key={dataset}
-                        value={dataset}
-                        className={styles.dropdownOption}
-                        checkIcon={null}
+                {modifyStoreType === "basics" ? (
+                  <>
+                    <div className={styles.dialogRow}>
+                      <Text className={styles.dialogLabel}>Select dataset:</Text>
+                      <Dropdown
+                        id="modify-basics-dataset-dropdown"
+                        className={styles.dropdown}
+                        expandIcon={<ChevronDown16Regular />}
+                        listbox={{ 
+                          className: mergeClasses(
+                            styles.dropdownListbox,
+                            availableBasicsDatasets.length >= 5 && styles.dropdownListboxWithHeight
+                          ) 
+                        }}
+                        value={availableRecords.length > 0 ? modifySelectedDataset : ""}
+                        selectedOptions={availableRecords.length > 0 ? [modifySelectedDataset] : []}
+                        onOptionSelect={(_, data) => {
+                          if (data.optionValue) {
+                            setModifySelectedDataset(data.optionValue);
+                          }
+                        }}
+                        disabled={availableBasicsDatasets.length === 0}
                       >
-                        {dataset}
-                      </Option>
-                    ))}
-                  </Dropdown>
-                </div>
-                <div className={styles.dialogRow}>
-                  <Text className={styles.dialogLabel}>Select lesson:</Text>
-                  <Dropdown
-                    id="modify-lesson-dropdown"
-                    className={styles.dropdown}
-                    expandIcon={<ChevronDown16Regular />}
-                    listbox={{ 
-                      className: mergeClasses(
-                        styles.dropdownListbox,
-                        availableLessons.length >= 5 && styles.dropdownListboxWithHeight
-                      ) 
-                    }}
-                    value={modifySelectedLessonDisplay}
-                    selectedOptions={[modifySelectedLesson.toString()]}
-                    onOptionSelect={(_, data) => {
-                      if (data.optionValue) {
-                        setModifySelectedLesson(Number(data.optionValue));
-                      }
-                    }}
-                  >
-                    {availableLessons.map((lesson) => (
-                      <Option
-                        key={lesson.lessonNumber}
-                        value={lesson.lessonNumber.toString()}
-                        className={styles.dropdownOption}
-                        checkIcon={null}
+                        {availableBasicsDatasets.map((dataset) => (
+                          <Option
+                            key={dataset}
+                            value={dataset}
+                            className={styles.dropdownOption}
+                            checkIcon={null}
+                          >
+                            {dataset}
+                          </Option>
+                        ))}
+                      </Dropdown>
+                    </div>
+                    <div className={styles.dialogRow}>
+                      <Text className={styles.dialogLabel}>Select lesson:</Text>
+                      <Dropdown
+                        id="modify-basics-lesson-dropdown"
+                        className={styles.dropdown}
+                        expandIcon={<ChevronDown16Regular />}
+                        listbox={{ 
+                          className: mergeClasses(
+                            styles.dropdownListbox,
+                            availableLessons.length >= 5 && styles.dropdownListboxWithHeight
+                          ) 
+                        }}
+                        value={availableLessons.length > 0 ? modifySelectedLessonDisplay : ""}
+                        selectedOptions={availableLessons.length > 0 ? [modifySelectedLesson.toString()] : []}
+                        onOptionSelect={(_, data) => {
+                          if (data.optionValue) {
+                            setModifySelectedLesson(Number(data.optionValue));
+                          }
+                        }}
+                        disabled={availableLessons.length === 0}
                       >
-                        {lesson.displayText}
-                      </Option>
-                    ))}
-                  </Dropdown>
-                </div>
-                <div className={styles.dialogRow}>
-                  <Text className={styles.dialogLabel}>Select record:</Text>
-                  <Dropdown
-                    id="modify-record-dropdown"
-                    className={styles.dropdown}
-                    expandIcon={<ChevronDown16Regular />}
-                    listbox={{ 
-                      className: mergeClasses(
-                        styles.dropdownListbox,
-                        availableRecords.length >= 5 && styles.dropdownListboxWithHeight
-                      ) 
-                    }}
-                    value={modifySelectedRecordDisplay}
-                    selectedOptions={[modifySelectedRecord.toString()]}
-                    onOptionSelect={(_, data) => {
-                      if (data.optionValue) {
-                        setModifySelectedRecord(Number(data.optionValue));
-                      }
-                    }}
-                  >
-                    {availableRecords.map((record) => (
-                      <Option
-                        key={record.index}
-                        value={record.index.toString()}
-                        className={styles.dropdownOption}
-                        checkIcon={null}
+                        {availableLessons.map((lesson) => (
+                          <Option
+                            key={lesson.lessonNumber}
+                            value={lesson.lessonNumber.toString()}
+                            className={styles.dropdownOption}
+                            checkIcon={null}
+                          >
+                            {lesson.displayText}
+                          </Option>
+                        ))}
+                      </Dropdown>
+                    </div>
+                    <div className={styles.dialogRow}>
+                      <Text className={styles.dialogLabel}>Select record:</Text>
+                      <Dropdown
+                        id="modify-basics-record-dropdown"
+                        className={styles.dropdown}
+                        expandIcon={<ChevronDown16Regular />}
+                        listbox={{ 
+                          className: mergeClasses(
+                            styles.dropdownListbox,
+                            availableRecords.length >= 5 && styles.dropdownListboxWithHeight
+                          ) 
+                        }}
+                        value={availableRecords.length > 0 ? modifySelectedRecordDisplay : ""}
+                        selectedOptions={availableRecords.length > 0 ? [modifySelectedRecord.toString()] : []}
+                        onOptionSelect={(_, data) => {
+                          if (data.optionValue) {
+                            setModifySelectedRecord(Number(data.optionValue));
+                          }
+                        }}
+                        disabled={availableRecords.length === 0}
                       >
-                        {record.displayText}
-                      </Option>
-                    ))}
-                  </Dropdown>
-                </div>
-                <div className={styles.dialogRow}>
-                  <Text className={styles.dialogLabel}>Timestamp:</Text>
-                  <Input 
-                    id="modify-timestamp-input"
-                    className={mergeClasses(
-                      styles.inputBase, 
-                      styles.inputLong,
-                      timestampError && styles.inputWithError
-                    )}
-                    value={editedTimestamp}
-                    onFocus={() => setTimestampError(false)}
-                    onChange={(_, data) => setEditedTimestamp(data.value)}
-                    autoComplete="off"
-                  />
-                </div>
-                <div className={styles.dialogRow}>
-                  <Text className={styles.dialogLabel}>Accuracy (%):</Text>
-                  <Input 
-                    id="modify-accuracy-input"
-                    className={mergeClasses(
-                      styles.inputBase, 
-                      styles.inputShort,
-                      accuracyError && styles.inputWithError
-                    )}
-                    value={editedAccuracy}
-                    onFocus={() => setAccuracyError(false)}
-                    onChange={(_, data) => setEditedAccuracy(data.value)}
-                    autoComplete="off"
-                  />
-                </div>
-                <div className={styles.dialogRow}>
-                  <Text className={styles.dialogLabel}>Duration (s):</Text>
-                  <Input
-                    id="modify-duration-input"
-                    className={mergeClasses(
-                      styles.inputBase, 
-                      styles.inputShort,
-                      durationError && styles.inputWithError
-                    )}
-                    value={editedDuration}
-                    onFocus={() => setDurationError(false)}
-                    onChange={(_, data) => setEditedDuration(data.value)}
-                    autoComplete="off"
-                  />
-                </div>
+                        {availableRecords.map((record) => (
+                          <Option
+                            key={record.index}
+                            value={record.index.toString()}
+                            className={styles.dropdownOption}
+                            checkIcon={null}
+                          >
+                            {record.displayText}
+                          </Option>
+                        ))}
+                      </Dropdown>
+                    </div>
+                    <div className={styles.dialogRow}>
+                      <Text className={styles.dialogLabel}>Timestamp:</Text>
+                      <Input 
+                        id="modify-basics-timestamp-input"
+                        className={mergeClasses(
+                          styles.inputBase, 
+                          styles.inputLong,
+                          timestampError && styles.inputWithError
+                        )}
+                        value={availableRecords.length > 0 ? editedTimestamp : ""}
+                        onFocus={() => setTimestampError(false)}
+                        onChange={(_, data) => setEditedTimestamp(data.value)}
+                        autoComplete="off"
+                        disabled={availableRecords.length === 0}
+                      />
+                    </div>
+                    <div className={styles.dialogRow}>
+                      <Text className={styles.dialogLabel}>Accuracy (%):</Text>
+                      <Input 
+                        id="modify-basics-accuracy-input"
+                        className={mergeClasses(
+                          styles.inputBase, 
+                          styles.inputShort,
+                          accuracyError && styles.inputWithError
+                        )}
+                        value={availableRecords.length > 0 ? editedAccuracy : ""}
+                        onFocus={() => setAccuracyError(false)}
+                        onChange={(_, data) => setEditedAccuracy(data.value)}
+                        autoComplete="off"
+                        disabled={availableRecords.length === 0}
+                      />
+                    </div>
+                    <div className={styles.dialogRow}>
+                      <Text className={styles.dialogLabel}>Duration (s):</Text>
+                      <Input
+                        id="modify-basics-duration-input"
+                        className={mergeClasses(
+                          styles.inputBase, 
+                          styles.inputShort,
+                          durationError && styles.inputWithError
+                        )}
+                        value={availableRecords.length > 0 ? editedDuration : ""}
+                        onFocus={() => setDurationError(false)}
+                        onChange={(_, data) => setEditedDuration(data.value)}
+                        autoComplete="off"
+                        disabled={availableRecords.length === 0}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className={styles.dialogRow}>
+                      <Text className={styles.dialogLabel}>Training type:</Text>
+                      <Dropdown
+                        id="modify-advanced-type-dropdown"
+                        className={styles.dropdown}
+                        expandIcon={<ChevronDown16Regular />}
+                        listbox={{ className: styles.dropdownListbox }}
+                        value={availableAdvancedTypes.length > 0 ? modifyAdvancedType : ""}
+                        selectedOptions={availableAdvancedTypes.length > 0 ? [modifyAdvancedType] : []}
+                        onOptionSelect={(_, data) => {
+                          if (data.optionValue) {
+                            setModifyAdvancedType(data.optionValue as "Word" | "Callsign" | "QTC");
+                          }
+                        }}
+                        disabled={availableAdvancedTypes.length === 0}
+                      >
+                        {availableAdvancedTypes.map((type) => (
+                          <Option
+                            key={type}
+                            value={type}
+                            className={styles.dropdownOption}
+                            checkIcon={null}
+                          >
+                            {type}
+                          </Option>
+                        ))}
+                      </Dropdown>
+                    </div>
+                    <div className={styles.dialogRow}>
+                      <Text className={styles.dialogLabel}>Select record:</Text>
+                      <Dropdown
+                        id="modify-advanced-record-dropdown"
+                        className={styles.dropdown}
+                        expandIcon={<ChevronDown16Regular />}
+                        listbox={{ 
+                          className: mergeClasses(
+                            styles.dropdownListbox,
+                            availableAdvancedRecords.length >= 5 && styles.dropdownListboxWithHeight
+                          ) 
+                        }}
+                        value={availableAdvancedRecords.length > 0 ? modifyAdvancedRecordDisplay : ""}
+                        selectedOptions={availableAdvancedRecords.length > 0 ? [modifyAdvancedIndex.toString()] : []}
+                        onOptionSelect={(_, data) => {
+                          if (data.optionValue) {
+                            setModifyAdvancedIndex(Number(data.optionValue));
+                          }
+                        }}
+                        disabled={availableAdvancedRecords.length === 0}
+                      >
+                        {availableAdvancedRecords.map((record) => (
+                          <Option
+                            key={record.index}
+                            value={record.index.toString()}
+                            className={styles.dropdownOption}
+                            checkIcon={null}
+                          >
+                            {record.displayText}
+                          </Option>
+                        ))}
+                      </Dropdown>
+                    </div>
+                    <div className={styles.dialogRow}>
+                      <Text className={styles.dialogLabel}>Timestamp:</Text>
+                      <Input 
+                        id="modify-advanced-timestamp-input"
+                        className={mergeClasses(
+                          styles.inputBase, 
+                          styles.inputLong,
+                          timestampError && styles.inputWithError
+                        )}
+                        value={availableAdvancedRecords.length > 0 ? editedTimestamp : ""}
+                        onFocus={() => setTimestampError(false)}
+                        onChange={(_, data) => setEditedTimestamp(data.value)}
+                        autoComplete="off"
+                        disabled={availableAdvancedRecords.length === 0}
+                      />
+                    </div>
+                    <div className={styles.dialogRow}>
+                      <Text className={styles.dialogLabel}>Score:</Text>
+                      <Input 
+                        id="modify-advanced-score-input"
+                        className={mergeClasses(
+                          styles.inputBase, 
+                          styles.inputShort,
+                          scoreError && styles.inputWithError
+                        )}
+                        value={availableAdvancedRecords.length > 0 ? editedScore : ""}
+                        onFocus={() => setScoreError(false)}
+                        onChange={(_, data) => setEditedScore(data.value)}
+                        autoComplete="off"
+                        disabled={availableAdvancedRecords.length === 0}
+                      />
+                    </div>
+                    <div className={styles.dialogRow}>
+                      <Text className={styles.dialogLabel}>Char speed (WPM):</Text>
+                      <Input
+                        id="modify-advanced-speed-input"
+                        className={mergeClasses(
+                          styles.inputBase, 
+                          styles.inputShort,
+                          charSpeedError && styles.inputWithError
+                        )}
+                        value={availableAdvancedRecords.length > 0 ? editedCharSpeed : ""}
+                        onFocus={() => setCharSpeedError(false)}
+                        onChange={(_, data) => setEditedCharSpeed(data.value)}
+                        autoComplete="off"
+                        disabled={availableAdvancedRecords.length === 0}
+                      />
+                    </div>
+                    <div className={styles.dialogRow}>
+                      <Text className={styles.dialogLabel}>Duration (s):</Text>
+                      <Input
+                        id="modify-advanced-duration-input"
+                        className={mergeClasses(
+                          styles.inputBase, 
+                          styles.inputShort,
+                          durationError && styles.inputWithError
+                        )}
+                        value={availableAdvancedRecords.length > 0 ? editedDuration : ""}
+                        onFocus={() => setDurationError(false)}
+                        onChange={(_, data) => setEditedDuration(data.value)}
+                        autoComplete="off"
+                        disabled={availableAdvancedRecords.length === 0}
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             </DialogContent>
             <DialogActions>
               <Button 
-                className={styles.dialogButton}
+                className={styles.button}
+                style={{ minWidth: "75px" }}
                 onClick={handleModify}
+                disabled={
+                  (modifyStoreType === "basics" && availableRecords.length === 0) ||
+                  (modifyStoreType === "advanced" && availableAdvancedRecords.length === 0)
+                }
               >
                 <Text className={styles.buttonText}>Modify</Text>
               </Button>
               <Button 
-                className={styles.dialogButton}
+                className={styles.button}
+                style={{ minWidth: "75px" }}
+                onClick={handleDelete}
+                disabled={
+                  (modifyStoreType === "basics" && availableRecords.length === 0) ||
+                  (modifyStoreType === "advanced" && availableAdvancedRecords.length === 0)
+                }
+              >
+                <Text className={styles.buttonText}>Delete</Text>
+              </Button>
+              <Button 
+                className={styles.button}
+                style={{ minWidth: "75px" }}
                 onClick={() => setIsModifyDialogOpen(false)}
               >
-                <Text className={styles.buttonText}>Cancel</Text>
+                <Text className={styles.buttonText}>Close</Text>
               </Button>
             </DialogActions>
           </DialogBody>
@@ -793,13 +1241,15 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
             </DialogContent>
             <DialogActions>
               <Button 
-                className={styles.dialogButton}
+                className={styles.button}
+                style={{ minWidth: "85px" }}
                 onClick={handleClear}
               >
                 <Text className={styles.buttonText}>Yes</Text>
               </Button>
               <Button 
-                className={styles.dialogButton}
+                className={styles.button}
+                style={{ minWidth: "85px" }}
                 onClick={() => setIsClearDialogOpen(false)}
               >
                 <Text className={styles.buttonText}>No</Text>

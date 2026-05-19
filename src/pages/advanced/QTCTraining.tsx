@@ -20,11 +20,12 @@ import {
 } from "@fluentui/react-icons";
 import { useState, useEffect, useMemo, useRef, useLayoutEffect } from "react";
 import type { AudioConfig, AccuracyResult, QTCTrainingConfig } from "../../lib/types";
-import { getRandomQTC } from "../../services/dataLoader";
+import { getRandomQTC } from "../../services/contentGenerator";
 import { useTiming } from "../../hooks/useTiming";
 import { useTextGenerator } from "../../hooks/useTextGenerator";
 import { useMorsePlayer } from "../../hooks/useMorsePlayer";
 import { calculateAccuracy, calculateScore } from "../../services/statisticalToolset";
+import { useAdvancedStore } from "../../stores/advancedStore";
 
 // 样式定义
 const useStyles = makeStyles({
@@ -271,6 +272,12 @@ export const QTCTraining = ({ config, onBack }: QTCTrainingProps) => {
   // 使用样式
   const styles = useStyles();
 
+  // 进阶训练记录提交
+  const submitAdvancedRecord = useAdvancedStore((state) => state.submitRecord);
+
+  // 训练开始时间戳
+  const [trainingStartTime, setTrainingStartTime] = useState<number | null>(null);  
+
   // 训练数据及索引状态
   const [qtcs, setQtcs] = useState<string[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -506,6 +513,7 @@ export const QTCTraining = ({ config, onBack }: QTCTrainingProps) => {
   const handleStart = async () => {
     // 设置状态
     setTrainingPhase("training");
+    setTrainingStartTime(Date.now());
     setReplayCounts(Array(11).fill(0));
     setGrNumInputText("");
     setTimeInputTexts(Array(10).fill(""));
@@ -598,8 +606,21 @@ export const QTCTraining = ({ config, onBack }: QTCTrainingProps) => {
           scores.push(0);
         }
       }
-      setQtcScores([grNumScore, ...scores]);
+      const finalScores = [grNumScore, ...scores];
+      setQtcScores(finalScores);
       setCorrectQtcCount(correctCount);
+      // 提交记录
+      if (trainingStartTime !== null) {
+        const endTime = Date.now();
+        const duration = (endTime - trainingStartTime) / 1000; // 转换为秒
+        const totalScore = finalScores.reduce((sum, score) => sum + score, 0);
+        submitAdvancedRecord("QTC", {
+          timestamp: trainingStartTime,
+          duration: duration,
+          charSpeed: config.charSpeed,
+          score: Math.round(totalScore),
+        });
+      }
     }
   };
 
@@ -612,6 +633,7 @@ export const QTCTraining = ({ config, onBack }: QTCTrainingProps) => {
     timing.updateCurrentTime(0);
     timing.setTotalDuration(0);
     setTrainingPhase("notStarted");
+    setTrainingStartTime(null);
     setQtcs([]);
     setCurrentIndex(0);
     setReplayCounts(Array(11).fill(0));

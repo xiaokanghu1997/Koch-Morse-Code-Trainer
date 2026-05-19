@@ -28,6 +28,7 @@ import type { AudioConfig, AccuracyResult, TrainingResult } from "../lib/types";
 import { useTiming } from "../hooks/useTiming";
 import { useTextGenerator } from "../hooks/useTextGenerator";
 import { useMorsePlayer } from "../hooks/useMorsePlayer";
+import { useAdvancedStore } from "../stores/advancedStore";
 
 // 样式定义
 const useStyles = makeStyles({
@@ -316,6 +317,12 @@ export const GenericTraining = ({
   // 使用样式
   const styles = useStyles();
 
+  // 进阶训练记录提交
+  const submitAdvancedRecord = useAdvancedStore((state) => state.submitRecord);
+
+  // 训练开始时间戳
+  const [trainingStartTime, setTrainingStartTime] = useState<number | null>(null);
+
   // 训练数据及索引状态
   const [items, setItems] = useState<string[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -516,6 +523,7 @@ export const GenericTraining = ({
   // 开始训练
   const handleStart = async () => {
     setTrainingPhase("training");
+    setTrainingStartTime(Date.now());
     // 初始化音频配置
     setAudioConfig({
       charSpeed: config.charSpeed,
@@ -561,6 +569,21 @@ export const GenericTraining = ({
         player.stop();
       }
       timing.stop();
+      // 提交进阶训练记录（固定速度下不提交）
+      if (!config.fixedCharSpeed && trainingStartTime !== null) {
+        const endTime = Date.now();
+        const duration = (endTime - trainingStartTime) / 1000; // 转换为秒
+        const allResults = [...results, newResult];
+        const maxSpeed = Math.max(...allResults.map(r => r.wpm));
+        const totalScore = allResults.reduce((sum, r) => sum + r.score, 0);
+        const trainingType = (config as any).dataset ? "Word" : "Callsign";
+        submitAdvancedRecord(trainingType, {
+          timestamp: trainingStartTime,
+          duration: duration,
+          charSpeed: maxSpeed,
+          score: Math.round(totalScore),
+        });
+      }
     } else {
       // 准备进入下一训练，调整音频配置
       setAudioConfig(prev => {
@@ -586,6 +609,7 @@ export const GenericTraining = ({
   // 重新开始全部训练
   const handleRetry = () => {
     setTrainingPhase("notStarted");
+    setTrainingStartTime(null);
     setItems([]);
     setCurrentIndex(0);
     setResults([]);
@@ -692,6 +716,7 @@ export const GenericTraining = ({
   const totalScore = useMemo(() => {
     return results.reduce((sum, result) => sum + result.score, 0);
   }, [results]);
+
 
   // 根据训练阶段获取对应的提示文本
   const getCurrentTip = () => {

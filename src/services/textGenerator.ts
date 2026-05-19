@@ -1,6 +1,6 @@
 import { MorseEncoder } from "../lib/encoder";
 import { PREFIX_SUFFIX } from "../lib/constants";
-import type { TextGeneratorOptions, PracticeModes } from "../lib/types";
+import type { TextGeneratorOptions, PracticeMode } from "../lib/types";
 import { log } from "../utils/logger";
 
 /**
@@ -9,7 +9,6 @@ import { log } from "../utils/logger";
 export class TextGenerator {
   /**
    * 生成训练文本
-   * 
    * @param options - 生成选项
    * @returns 格式化的文本
    */
@@ -65,12 +64,11 @@ export class TextGenerator {
 
   /**
    * 计算字符权重
-   * 
    * @param charSet - 字符集
    * @param mode - 练习模式
    * @returns 权重数组（与字符顺序对应）
    */
-  private calculateWeights(charSet: string, mode: PracticeModes): number[] {
+  private calculateWeights(charSet: string, mode: PracticeMode): number[] {
     const chars = charSet.split("");
     const n = chars.length;
 
@@ -100,7 +98,6 @@ export class TextGenerator {
 
   /**
    * 生成字符序列
-   * 
    * @param charSet - 字符集
    * @param count - 字符数量
    * @param weights - 字符权重
@@ -144,7 +141,6 @@ export class TextGenerator {
 
   /**
    * 生成固定长度的字符序列
-   * 
    * @param charSet - 字符集
    * @param groupLength - 每组长度
    * @param groupCount - 组数
@@ -185,7 +181,6 @@ export class TextGenerator {
 
   /**
    * 生成随机长度的字符序列
-   * 
    * @param charSet - 字符集
    * @param groupCount - 组数
    * @param groupSpace - 组间间隔
@@ -225,7 +220,6 @@ export class TextGenerator {
 
   /**
    * 添加前后缀
-   * 
    * @param text - 原始文本
    * @param groupSpace - 组间间隔
    * @returns 添加前后缀的文本
@@ -237,10 +231,7 @@ export class TextGenerator {
   // ==================== 单字符生成 ====================
 
   /**
-   * 生成单个字符的重复序列
-   * 
-   * 用于字符学习
-   * 
+   * 生成单个字符的重复序列（用于字符学习）
    * @param char - 字符
    * @param count - 重复次数
    * @returns 文本

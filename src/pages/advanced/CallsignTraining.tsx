@@ -1,6 +1,6 @@
 import type { CallsignTrainingConfig } from "../../lib/types";
 import { GenericTraining } from "../../components/GenericTraining";
-import { getRandomCallsigns } from "../../services/dataLoader";
+import { getRandomCallsigns } from "../../services/contentGenerator";
 
 // Props 接口
 interface CallsignTrainingProps {

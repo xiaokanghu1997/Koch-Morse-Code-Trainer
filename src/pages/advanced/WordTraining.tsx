@@ -1,6 +1,6 @@
 import type { WordTrainingConfig } from "../../lib/types";
 import { GenericTraining } from "../../components/GenericTraining";
-import { getRandomWords } from "../../services/dataLoader";
+import { getRandomWords } from "../../services/contentGenerator";
 
 // Props 接口
 interface WordTrainingProps {

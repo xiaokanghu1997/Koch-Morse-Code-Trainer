@@ -17,7 +17,7 @@ export async function getRandomWords(
       datasets: datasets 
     });
   } catch (error) {
-    log.error("Failed to get random words", "DataLoader", error);
+    log.error("Failed to get random words", "ContentGenerator", error);
     return [];
   }
 }
@@ -38,7 +38,7 @@ export async function getRandomCallsigns(
       filter: filter
     });
   } catch (error) {
-    log.error("Failed to get random callsigns", "DataLoader", error);
+    log.error("Failed to get random callsigns", "ContentGenerator", error);
     return [];
   }
 }
@@ -70,7 +70,7 @@ export async function getRandomQTC(
       abbretimes: abbrevTimes
     });
   } catch (error) {
-    log.error("Failed to get random QTC", "DataLoader", error);
+    log.error("Failed to get random QTC", "ContentGenerator", error);
     return null;
   }
 }

@@ -1,4 +1,4 @@
-import type { DatasetNames } from "./types";
+import type { DatasetName } from "./types";
 
 // ==================== Koch方法学习序列 ====================
 
@@ -7,7 +7,7 @@ import type { DatasetNames } from "./types";
  * 
  * 每个序列都经过科学设计，按照学习难度递增
  */
-export const CHARACTER_SET: Record<DatasetNames, string> = {
+export const CHARACTER_SET: Record<DatasetName, string> = {
   /**
    * Koch-LCWO: 标准Koch方法序列（41字符）
    * 来源: Learn CW Online (lcwo.net)

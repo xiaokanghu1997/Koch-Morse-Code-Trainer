@@ -8,12 +8,13 @@ import {
 } from "@fluentui/react-components";
 import { ChevronDown16Regular } from "@fluentui/react-icons";
 import { useState, useEffect, useMemo } from "react";
+import { TimeStatType } from "../../lib/types";
 import { StatisticsChart } from "../../components/StatisticsChart";
 import { useLessonManager } from "../../hooks/useLessonManager";
-import { useStatisticalToolset } from "../../hooks/useStatisticalToolset";
 import { useOptionsStore } from "../../stores/optionsStore";
-import { useTrainingStore } from "../../stores/trainingStore";
+import { useBasicsStore } from "../../stores/basicsStore";
 import { useSettingsStore } from "../../stores/settingsStore";
+import { getTimeStats, getLessonStatsForDataset } from "../../services/statisticalToolset";
 
 // 样式定义
 const useStyles = makeStyles({
@@ -156,24 +157,24 @@ export const StatisticsPage = () => {
   // 使用样式
   const styles = useStyles();
 
-  // 获取统计工具集
-  const statisticalToolset = useStatisticalToolset();
-
   // 获取主题设置
   const theme = useSettingsStore((state) => state.theme);
 
   // 获取当前数据集
   const currentDatasetName = useOptionsStore((state) => state.savedConfig.datasetName);
 
-  // 获取全局训练记录
-  const globalRecords = useTrainingStore((state) => state.globalRecords);
+  // 获取基础训练记录数据
+  const datasets = useBasicsStore((state) => state.datasets);
 
   // 获取有训练记录的数据集
   const availableDatasets = useMemo(() => {
-    return Object.keys(globalRecords.datasets).filter(
-      (datasetName) => globalRecords.datasets[datasetName].recordCount > 0
-    );
-  }, [globalRecords]);
+    return Object.keys(datasets).filter((datasetName) => {
+      const dataset = datasets[datasetName];
+      return Object.values(dataset).some(
+        (lesson) => lesson.length > 0
+      );
+    });
+  }, [datasets]);
 
   // 初始化 selectedDataset 时使用第一个有记录的数据集
   const [selectedDataset, setSelectedDataset] = useState<string>(currentDatasetName);
@@ -189,20 +190,21 @@ export const StatisticsPage = () => {
 
   // 筛选出有记录的课程，并添加 All 选项
   const availableLessons = useMemo(() => {
-    const dataset = globalRecords.datasets[selectedDataset];
+    const dataset = datasets[selectedDataset];
     if (!dataset) {
       return [];
     }
     // 获取有记录的课程编号
-    const lessonsWithRecords = lessons.filter(
-      (lesson) => dataset.lessons[lesson.lessonNumber]?.recordCount > 0
-    );
+    const lessonsWithRecords = lessons.filter((lesson) => {
+      const lessonData = dataset[lesson.lessonNumber];
+      return lessonData && lessonData.length > 0;
+    });
     // 添加 "All" 选项
     return [
       { lessonNumber: 0, characters: [], displayText: "All" },
       ...lessonsWithRecords,
     ];
-  }, [globalRecords, selectedDataset, lessons]);
+  }, [datasets, selectedDataset, lessons]);
 
   // 获取当前选中课程的显示文本
   const selectedLessonDisplay = useMemo(() => {
@@ -219,7 +221,7 @@ export const StatisticsPage = () => {
   const chartData = useMemo(() => {
     // 情况1：选择了所有课程
     if (selectedLesson === 0) {
-      const result = statisticalToolset.getLessonStatsForDataset(selectedDataset);
+      const result = getLessonStatsForDataset(datasets, selectedDataset);
       const allLessonNumbers = Array.from({ length: totalLessonNumber }, (_, i) => i + 1);
 
       const lessonDisplayTexts = allLessonNumbers.map(lessonNumber => {
@@ -249,10 +251,12 @@ export const StatisticsPage = () => {
     }
 
     // 情况2：选择了具体课程
-    const timeStatsResult = statisticalToolset.getTimeStats(selectedStatType.toLowerCase(), {
-      datasetName: selectedDataset,
-      lessonNumber: selectedLesson,
-    });
+    const dataset = datasets[selectedDataset];
+    const lessonRecords = dataset?.[selectedLesson] || [];
+    const timeStatsResult = getTimeStats(
+      lessonRecords,
+      selectedStatType.toLowerCase() as TimeStatType
+    );
 
     let yRightLabel = "";
     let yRightUnit = "";
@@ -289,7 +293,7 @@ export const StatisticsPage = () => {
       legendLoc3: legendLoc3,
     };
   }, [
-    statisticalToolset,
+    datasets,
     selectedDataset,
     selectedLesson,
     selectedStatType,

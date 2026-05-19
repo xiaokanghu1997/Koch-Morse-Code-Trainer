@@ -29,7 +29,7 @@ import { useLessonManager } from "../../hooks/useLessonManager";
 import { useTextGenerator } from "../../hooks/useTextGenerator";
 import { useMorsePlayer } from "../../hooks/useMorsePlayer";
 import { calculateAccuracy } from "../../services/statisticalToolset";
-import { useTrainingStore } from "../../stores/trainingStore";
+import { useBasicsStore } from "../../stores/basicsStore";
 import { useOptionsStore } from "../../stores/optionsStore";
 
 // 样式定义
@@ -358,7 +358,7 @@ export const TrainingPage = () => {
     setLessonNumber,
     submitRecord,
     syncFromOptionsConfig,
-  } = useTrainingStore();
+  } = useBasicsStore();
   
   const { 
     lessons, 
