@@ -1,5 +1,6 @@
 import type {
   BasicsRecord,
+  AdvancedRecord,
   ComparisonType,
   ComparisonResult,
   AccuracyResult,
@@ -74,60 +75,6 @@ export function calculateDatasetStats(
     recordCount: totalRecordCount,
     averageAccuracy: totalRecordCount > 0 ? totalWeightedAccuracy / totalRecordCount : 0,
   };
-}
-
-
-/**
- * 获取各数据集的统计信息
- * @param datasets - 所有训练记录
- * @returns 包含各数据集统计信息的数组
- */
-export function getAllDatasetStats(
-  datasets: Record<string, Record<number, BasicsRecord[]>>,
-): Array<{ 
-  datasetName: string;
-  lessonProgress: string;
-  totalRecordCount: string;
-  totalDuration: string;
-  averageAccuracy: string;
-}> {
-  const datasetStats: Array<{
-    datasetName: string;
-    lessonProgress: string;
-    totalRecordCount: string;
-    totalDuration: string;
-    averageAccuracy: string;
-  }> = [];
-  // 遍历所有数据集
-  Object.keys(CHARACTER_SET).forEach((datasetName) => {
-    let totalLessons = 0;
-    let completedLessons = 0;
-    let totalDuration = 0;
-    let recordCount = 0;
-    let averageAccuracy = 0;
-    // 获取该数据集的记录
-    const dataset = datasets[datasetName];
-    if (dataset) {
-      const stats = calculateDatasetStats(dataset);
-      totalDuration = stats.totalDuration;
-      recordCount = stats.recordCount;
-      averageAccuracy = stats.averageAccuracy;
-      completedLessons = Object.keys(dataset).length;
-    }
-    // 获取总课程数
-    if (datasetName in CHARACTER_SET) {
-      totalLessons = CHARACTER_SET[datasetName as keyof typeof CHARACTER_SET].length - 1;
-    }
-    // 统计信息
-    datasetStats.push({
-      datasetName,
-      lessonProgress: `${String(completedLessons)} / ${String(totalLessons)}`,
-      totalRecordCount: recordCount.toString(),
-      totalDuration: formatDuration(totalDuration),
-      averageAccuracy: formatAccuracy(averageAccuracy),
-    });
-  });
-  return datasetStats;
 }
 
 /**
@@ -610,29 +557,38 @@ export function calculateAccuracy(
 // ==================== 活动页面统计 ====================
 
 /**
+ * 获取包含所有练习的年份
+ * @param records - 训练记录
+ * @returns 包含所有练习年份的数组
+ */
+export function getAllYears(records: { timestamp: number }[]): number[] {
+  const yearSet = new Set<number>();
+  records.forEach((record) => {
+    const year = new Date(record.timestamp).getFullYear();
+    yearSet.add(year);
+  });
+  const years = Array.from(yearSet);
+  years.sort((a, b) => a - b);  // 升序排序
+  return years;
+}
+
+/**
  * 获取某年各天的练习次数
  * @param records - 训练记录
  * @param year - 指定年份
  * @returns 包含各天练习次数的数组
  */
 export function getDailyRecordCounts(
-  records: BasicsRecord[],
+  records: { timestamp: number }[],
   year: number
 ): Array<[string, number]> {
-  // 过滤出指定年份的记录
-  const yearRecords = records.filter((r) => {
-    return new Date(r.timestamp).getFullYear() === year;
-  });
-
-  // 按天统计练习次数
-  const result = getTimeStats(yearRecords, "day");
-
   // 转换为 Array 格式
   const countMap: Record<string, number> = {};
-  result.details.forEach((detail, index) => {
-    // 生成完整日期字符串：YYYY-MM-DD
-    const fullDate = `${year}-${result.timeLabels[index]}`;
-    countMap[fullDate] = detail.recordCount;
+  records.forEach((record) => {
+    const date = new Date(record.timestamp);
+    if (date.getFullYear() !== year) return;
+    const key = `${year}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    countMap[key] = (countMap[key] ?? 0) + 1;
   });
   return Object.entries(countMap).map(([date, count]) => [date, count]);
 }
@@ -644,50 +600,237 @@ export function getDailyRecordCounts(
  * @returns 概览统计数据
  */
 export function getYearOverviewStats(
-  records: BasicsRecord[],
+  records: { timestamp: number; duration: number }[],
   year: number
-): {
-  totalRecordCount: number;
-  totalDuration: number;
-  averageAccuracy: number;
-} {
+): { totalRecordCount: number; totalDuration: number } {
   // 过滤指定年份的记录
-  const yearRecords = records.filter((r) => {
-    return new Date(r.timestamp).getFullYear() === year;
-  });
-  if (yearRecords.length === 0) {
-    return {
-      totalRecordCount: 0,
-      totalDuration: 0,
-      averageAccuracy: 0,
-    };
-  }
-  const totalDuration = yearRecords.reduce((sum, r) => sum + r.duration, 0);
-  const totalAccuracy = yearRecords.reduce((sum, r) => sum + r.accuracy, 0);
+  const yearRecords = records.filter(
+    (r) => new Date(r.timestamp).getFullYear() === year
+  );
   return {
     totalRecordCount: yearRecords.length,
-    totalDuration,
-    averageAccuracy: totalAccuracy / yearRecords.length,
+    totalDuration: yearRecords.reduce((sum, r) => sum + r.duration, 0),
   };
 }
 
 /**
- * 获取包含所有练习的年份
- * @param records - 训练记录
- * @returns 包含所有练习年份的数组
+ * 获取总体信息
+ * @param basicsData - 基础训练记录数据
+ * @param advancedData - 进阶训练记录数据
+ * @year - 年份
+ * @returns 包含基础训练和进阶训练总体信息的对象
  */
-export function getAllYears(records: BasicsRecord[]): number[] {
-  const yearSet = new Set<number>();
-  records.forEach((record) => {
-    const year = new Date(record.timestamp).getFullYear();
-    yearSet.add(year);
+export function getOverviewStats(
+  basicsData: Record<string, Record<number, BasicsRecord[]>>,
+  advancedData: { Word: AdvancedRecord[]; Callsign: AdvancedRecord[]; QTC: AdvancedRecord[] },
+  year: number
+): {
+  basics: { 
+    totalRecordCount: string; 
+    totalDuration: string; 
+    averageAccuracy: string; 
+    bestScore: string
+  };
+  advanced: { 
+    totalRecordCount: string; 
+    totalDuration: string; 
+    averageAccuracy: string; 
+    bestScore: string
+  };
+} {
+  // Basics: 打平所有记录，过滤年份
+  const allBasicsRecords = Object.values(basicsData)
+    .flatMap(lesson => Object.values(lesson).flat())
+    .filter(r => new Date(r.timestamp).getFullYear() === year);
+  const basicsTotalDuration = allBasicsRecords.reduce((sum, r) => sum + r.duration, 0);
+  const basicsAvgAccuracy = allBasicsRecords.length > 0 
+    ? allBasicsRecords.reduce((sum, r) => sum + r.accuracy, 0) / allBasicsRecords.length 
+    : 0;
+  
+  // Advanced: 合并所有记录，过滤年份
+  const allAdvancedRecords = [
+    ...advancedData.Word, 
+    ...advancedData.Callsign, 
+    ...advancedData.QTC
+  ].filter(r => new Date(r.timestamp).getFullYear() === year);
+  const advancedTotalDuration = allAdvancedRecords.reduce((sum, r) => sum + r.duration, 0);
+  const allAdvancedScores = allAdvancedRecords.map(r => r.score);
+  const bestScore = allAdvancedScores.length > 0 
+    ? Math.max(...allAdvancedScores).toString()
+    : "-";
+  
+  return {
+    basics: {
+      totalRecordCount: allBasicsRecords.length.toString(),
+      totalDuration: formatDuration(basicsTotalDuration),
+      averageAccuracy: allBasicsRecords.length > 0 ? formatAccuracy(basicsAvgAccuracy) : "0.00%",
+      bestScore: "-",
+    },
+    advanced: {
+      totalRecordCount: allAdvancedRecords.length.toString(),
+      totalDuration: formatDuration(advancedTotalDuration),
+      averageAccuracy: "-",
+      bestScore: bestScore,
+    },
+  };
+}
+
+/**
+ * 获取基础训练信息
+ * @param basicsData - 基础训练记录数据
+ * @year - 年份
+ * @returns 包含基础训练信息的对象
+ */
+export function getBasicsStats(
+  basicsData: Record<string, Record<number, BasicsRecord[]>>,
+  year: number
+): Array<{
+  datasetName: string;
+  lessonProgress: string;
+  totalRecordCount: string;
+  totalDuration: string;
+  averageAccuracy: string;
+}> {
+  return Object.keys(CHARACTER_SET).map((datasetName) => {
+    const dataset = basicsData[datasetName];
+    // lessonProgress 基于全量数据
+    const completedLessons = dataset ? Object.keys(dataset).length : 0;
+    const totalLessons = CHARACTER_SET[datasetName as keyof typeof CHARACTER_SET].length;
+    // 统计指定年份的记录
+    const yearRecords = dataset
+      ? Object.values(dataset).flat().filter(r => new Date(r.timestamp).getFullYear() === year)
+      : [];
+    const totalDuration = yearRecords.reduce((sum, r) => sum + r.duration, 0);
+    const averageAccuracy = yearRecords.length > 0
+      ? yearRecords.reduce((sum, r) => sum + r.accuracy, 0) / yearRecords.length
+      : 0;
+    return {
+      datasetName,
+      lessonProgress: `${completedLessons} / ${totalLessons}`,
+      totalRecordCount: yearRecords.length.toString(),
+      totalDuration: formatDuration(totalDuration),
+      averageAccuracy: yearRecords.length > 0 ? formatAccuracy(averageAccuracy) : "0.00%",
+    };
   });
-  const years = Array.from(yearSet);
-  years.sort((a, b) => a - b);  // 升序排序
-  return years;
+}
+
+/**
+ * 获取进阶训练信息
+ * @param advancedData - 进阶训练记录数据
+ * @year - 年份
+ * @return 包含进阶训练信息的对象
+ */
+export function getAdvancedStats(
+  advancedData: { Word: AdvancedRecord[]; Callsign: AdvancedRecord[]; QTC: AdvancedRecord[] },
+  year: number
+): Array<{
+  trainingType: string;
+  totalRecordCount: string;
+  totalDuration: string;
+  bestScore: string;
+  maxSpeed: string;
+}> {
+  const types: Array<keyof typeof advancedData> = ["Word", "Callsign", "QTC"];
+  return types.map((type) => {
+    const records = advancedData[type].filter(r => new Date(r.timestamp).getFullYear() === year);
+    const totalDuration = records.reduce((sum, r) => sum + r.duration, 0);
+    const bestScore = records.length > 0 
+      ? Math.max(...records.map(r => r.score)).toString()
+      : "-";
+    const maxSpeed = records.length > 0
+      ? `${Math.max(...records.map(r => r.charSpeed))} WPM`
+      : "-";
+    return {
+      trainingType: type,
+      totalRecordCount: records.length.toString(),
+      totalDuration: formatDuration(totalDuration),
+      bestScore: bestScore,
+      maxSpeed: maxSpeed,
+    };
+  });
+}
+
+/**
+ * 获取活跃度信息
+ * @param allRecords - 所有训练记录
+ * @year - 年份
+ * @returns 包含活跃度信息的对象
+ */
+export function getActivityStats(
+  allRecords: { timestamp: number }[],
+  year: number
+): {
+  activeDays: string;
+  bestStreak: string;
+  currentStreak: string;
+  lastSessionDate: string;
+} {
+  if (allRecords.length === 0) {
+    return { activeDays: "0", bestStreak: "0", currentStreak: "0", lastSessionDate: "-" };
+  }
+  const toDateStr = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const allDateSet = new Set(allRecords.map(r => toDateStr(new Date(r.timestamp))));
+  const yearDateSet = Array.from(
+    new Set(
+      allRecords
+        .filter(r => new Date(r.timestamp).getFullYear() === year)
+        .map(r => toDateStr(new Date(r.timestamp)))
+    )
+  ).sort();
+  const activeDays = yearDateSet.length;
+  const allDates = Array.from(allDateSet).sort();
+  let bestStreak = allDates.length > 0 ? 1 : 0;
+  let runLength = allDates.length > 0 ? 1 : 0;
+  for (let i = 1; i < allDates.length; i++) {
+    const prev = new Date(allDates[i - 1]);
+    prev.setDate(prev.getDate() + 1);
+    if (toDateStr(prev) === allDates[i]) {
+      runLength++;
+      bestStreak = Math.max(bestStreak, runLength);
+    } else {
+      runLength = 1;
+    }
+  }
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  let currentStreak = 0;
+  const checkDate = new Date(today);
+  while (allDateSet.has(toDateStr(checkDate))) {
+    currentStreak++;
+    checkDate.setDate(checkDate.getDate() - 1);
+  }
+  const maxTimestamp = Math.max(...allRecords.map(r => r.timestamp));
+  const lastSessionDate = toDateStr(new Date(maxTimestamp));
+  return {
+    activeDays: activeDays.toString(),
+    bestStreak: bestStreak.toString(),
+    currentStreak: currentStreak.toString(),
+    lastSessionDate: lastSessionDate,
+  };
 }
 
 // ==================== 工具函数 ====================
+
+/**
+ * 格式化时间（时间戳 -> 可读格式）
+ * @param timestamp - 时间戳
+ * @param flag - 是否包含秒（true: "YYYY/MM/DD HH:mm:ss", false: "YYYY/MM/DD HH:mm"）
+ * @returns 格式化后的时间字符串
+ */
+export function formatTimestamp(timestamp: number, flag = false): string {
+  const date = new Date(timestamp);
+  const year = date.getFullYear().toString().padStart(4, "0");
+  const month = (date.getMonth() + 1).toString().padStart(2, "0");
+  const day = date.getDate().toString().padStart(2, "0");
+  const hours = date.getHours().toString().padStart(2, "0");
+  const minutes = date.getMinutes().toString().padStart(2, "0");
+  const seconds = date.getSeconds().toString().padStart(2, "0");
+  if (!flag) {
+    return `${year}/${month}/${day} ${hours}:${minutes}`;
+  } else {
+    return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
+  }
+}
 
 /**
  * 格式化时长（秒 -> 可读格式）

@@ -35,6 +35,7 @@ const useStyles = makeStyles({
     alignItems: "center",
     gap: "16px",
     backgroundColor: tokens.colorNeutralBackground3,
+    boxShadow: tokens.shadow2,
   },
   icon: {
     color: tokens.colorBrandForeground1,

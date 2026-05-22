@@ -23,6 +23,25 @@ export interface UseLessonManagerReturn {
 export function useLessonManager(datasetName: string, currentLessonNumber: number): UseLessonManagerReturn {
   /** 获取当前训练集的字符集 */
   const characterSet = CHARACTER_SET[datasetName as keyof typeof CHARACTER_SET];
+
+  /** 生成课程列表（使用 useMemo 缓存） */
+  const lessons = useMemo(
+    () => (characterSet ? generateLessons(characterSet.split("")) : []),
+    [characterSet]
+  );
+
+  /** 获取课程总数 */
+  const totalLessonNumber = lessons.length;
+
+  /** 获取当前课程 */
+  const currentLesson = useMemo<Lesson>(() => {
+    if (!characterSet ||currentLessonNumber <= 0 || currentLessonNumber > totalLessonNumber) {
+      log.error(`Invalid lesson number: ${currentLessonNumber}`, "LessonManager");
+      return { lessonNumber: 0, characters: [], displayText: "" };
+    }
+    return lessons[currentLessonNumber - 1];
+  }, [characterSet, currentLessonNumber, lessons, totalLessonNumber]);
+
   if (!characterSet) {
     log.error(`Unknown training dataset: ${datasetName}`, "LessonManager");
     return {
@@ -32,23 +51,7 @@ export function useLessonManager(datasetName: string, currentLessonNumber: numbe
     };
   }
 
-  /** 生成课程列表（使用 useMemo 缓存） */
-  const lessons = useMemo(() => generateLessons(characterSet.split("")), [characterSet]);
-
-  /** 获取课程总数 */
-  const totalLessonNumber = lessons.length;
-
-  /** 获取当前课程 */
-  const currentLesson = useMemo<Lesson>(() => {
-    if (currentLessonNumber <= 0 || currentLessonNumber > totalLessonNumber) {
-      log.error(`Invalid lesson number: ${currentLessonNumber}`, "LessonManager");
-      return { lessonNumber: 0, characters: [], displayText: "" };
-    }
-    return lessons[currentLessonNumber - 1];
-  }, [currentLessonNumber, lessons, totalLessonNumber]);
-
   // 返回接口
-  
   return {
     lessons,
     currentLesson,

@@ -2,22 +2,36 @@ import {
   Text, 
   Dropdown,
   Option,
+  ToggleButton,
+  Tooltip,
   makeStyles,
   mergeClasses,
   tokens
 } from "@fluentui/react-components";
-import { ChevronDown16Regular } from "@fluentui/react-icons";
+import { 
+  ChevronDown16Regular,
+  ContentView20Filled,
+  ContentView20Regular,
+  Quiz20Filled,
+  Quiz20Regular,
+  Certificate20Filled,
+  Certificate20Regular,
+  bundleIcon,
+} from "@fluentui/react-icons";
 import { CalendarHeatmap } from "../components/CalendarHeatmap";
 import { useState, useMemo } from "react";
 import {
   getAllYears,
   getYearOverviewStats,
   getDailyRecordCounts,
-  getAllDatasetStats,
+  getOverviewStats,
+  getBasicsStats,
+  getAdvancedStats,
+  getActivityStats,
   formatDuration,
-  formatAccuracy,
 } from "../services/statisticalToolset";
 import { useBasicsStore } from "../stores/basicsStore";
+import { useAdvancedStore } from "../stores/advancedStore";
 import { useSettingsStore } from "../stores/settingsStore";
 
 // 样式定义
@@ -33,8 +47,13 @@ const useStyles = makeStyles({
   headerRow: {
     display: "flex",
     alignItems: "center",
+    justifyContent: "space-between",
     marginTop: "-5px",
-    gap: "8px",
+  },
+  infoContainer: {
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
   },
   describeText: {
     fontSize: tokens.fontSizeBase300,
@@ -44,13 +63,14 @@ const useStyles = makeStyles({
     fontWeight: tokens.fontWeightSemibold,
   },
   dropdown: {
-    minWidth: "85px",
-    maxWidth: "85px",
+    minWidth: "80px",
+    maxWidth: "80px",
     height: "32px",
     paddingBottom: "1.5px",
     transform: "translateY(1.5px)",
     border: "none",
     boxShadow: tokens.shadow2,
+    marginRight: "-2px",
     "::after": {
       display: "none",
     },
@@ -70,8 +90,8 @@ const useStyles = makeStyles({
     },
   },
   dropdownListbox: {
-    minWidth: "85px",
-    maxWidth: "85px",
+    minWidth: "80px",
+    maxWidth: "80px",
     overflowY: "auto",
     backgroundColor: tokens.colorNeutralBackground4,
   },
@@ -107,17 +127,86 @@ const useStyles = makeStyles({
       backgroundColor: tokens.colorBrandForeground1,
     },
   },
+  buttonContainer: {
+    display: "flex",
+    alignItems: "center",
+    gap: "2px",
+  },
+  toggleButton: {
+    minWidth: "32px",
+    height: "32px",
+    border: "none",
+    transform: "translateY(1.2px)",
+    boxShadow: tokens.shadow2,
+    fontWeight: tokens.fontWeightRegular,
+    backgroundColor: tokens.colorNeutralBackground3,
+    ":hover": {
+      backgroundColor: tokens.colorNeutralBackground3Hover,
+    },
+    ":active": {
+      backgroundColor: tokens.colorNeutralBackground3Pressed,
+    },
+    "&:disabled": {
+      cursor: "not-allowed",
+      backgroundColor: tokens.colorNeutralBackground3,
+      color: tokens.colorNeutralForegroundDisabled,
+    },
+  },
+  tooltip: {
+    backgroundColor: tokens.colorNeutralBackground4Hover,
+    boxShadow: tokens.shadow2,
+  },
   // 第三行
   statsContainer: {
-    display: "grid",
-    gridTemplateColumns: "220px repeat(4, 1fr)",
-    gap: "2px",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "stretch",
     overflow: "hidden",
-    marginTop: "-2px",
   },
-  statsHeaderCell: {
-    justifyContent: "flex-start",
-    paddingLeft: "32px",
+  statsOverview: {
+    display: "grid",
+    gridTemplateColumns: "170px 1fr 1fr",
+    gap: "2px",
+    marginTop: "-2px",
+    marginLeft: "32px",
+    overflow: "hidden",
+    width: "410px",
+    alignContent: "space-between",
+  },
+  statsBasics: {
+    display: "grid",
+    gridTemplateColumns: "140px 1fr 1fr 1fr 1fr",
+    gap: "2px",
+    marginTop: "-2px",
+    overflow: "hidden",
+    width: "520px",
+    alignContent: "space-between",
+  },
+  statsAdvanced: {
+    display: "grid",
+    gridTemplateColumns: "160px 1fr 1fr 1fr",
+    gap: "2px",
+    marginTop: "-2px",
+    marginLeft: "32px",
+    overflow: "hidden",
+    width: "490px",
+    alignContent: "space-between",
+  },
+  verticalDivider: {
+    width: "2px",
+    alignSelf: "stretch",
+    backgroundColor: tokens.colorNeutralStroke2,
+    flexShrink: 0,
+    marginRight: "20px",
+  },
+  statsActivity: {
+    display: "grid",
+    gridTemplateColumns: "120px 1fr",
+    gap: "2px",
+    marginTop: "-2px",
+    overflow: "hidden",
+    width: "255px",
+    alignContent: "space-between",
   },
   statsCell: {
     display: "flex",
@@ -127,6 +216,10 @@ const useStyles = makeStyles({
   },
 });
 
+const Overview = bundleIcon(ContentView20Filled, ContentView20Regular);
+const Basics = bundleIcon(Quiz20Filled, Quiz20Regular);
+const Advanced = bundleIcon(Certificate20Filled, Certificate20Regular);
+
 export const ActivityPage = () => {
   // 使用样式
   const styles = useStyles();
@@ -134,19 +227,30 @@ export const ActivityPage = () => {
   // 获取主题设置
   const theme = useSettingsStore((state) => state.theme);
 
-  // 获取基础训练记录数据
-  const datasets = useBasicsStore((state) => state.datasets);
+  // 当前数据显示状态
+  const [activeView, setActiveView] = useState<"overview" | "basics" | "advanced">("overview");
+
+  // 获取训练记录数据
+  const basicsData = useBasicsStore((state) => state.datasets);
+  const advancedWord = useAdvancedStore((state) => state.Word);
+  const advancedCallsign = useAdvancedStore((state) => state.Callsign);
+  const advnacedQTC = useAdvancedStore((state) => state.QTC);
+
   const allBasicsRecords = useMemo(() => {
-    return Object.values(datasets).flatMap(dataset =>
+    return Object.values(basicsData).flatMap(dataset =>
       Object.values(dataset).flatMap(lesson => lesson)
     );
-  }, [datasets]);
+  }, [basicsData]);
+  const allAdvancedRecords = useMemo(() => {
+    return [...advancedWord, ...advancedCallsign, ...advnacedQTC];
+  }, [advancedWord, advancedCallsign, advnacedQTC]);
 
   // 获取所有年份
   const allYears = useMemo(() => {
-    const years = getAllYears(allBasicsRecords);
+    const combined = [...allBasicsRecords, ...allAdvancedRecords];
+    const years = getAllYears(combined);
     return years.length > 0 ? years : [new Date().getFullYear()];
-  }, [allBasicsRecords]);
+  }, [allBasicsRecords, allAdvancedRecords]);
 
   // 选中的年份（默认当前年份）
   const [selectedYear, setSelectedYear] = useState<string>(
@@ -155,19 +259,25 @@ export const ActivityPage = () => {
 
   // 顶部统计数据
   const yearStats = useMemo(() => {
-    const overview = getYearOverviewStats(allBasicsRecords, parseInt(selectedYear));
+    const records = 
+      activeView === "overview" ? [...allBasicsRecords, ...allAdvancedRecords] :
+      activeView === "basics" ? allBasicsRecords :
+      allAdvancedRecords;
+    const stats = getYearOverviewStats(records, parseInt(selectedYear));
     return {
-      totalRecordCount: overview.totalRecordCount,
-      totalDuration: formatDuration(overview.totalDuration),
-      averageAccuracy: formatAccuracy(overview.averageAccuracy),
+      totalRecordCount: stats.totalRecordCount,
+      totalDuration: formatDuration(stats.totalDuration),
     };
-  }, [allBasicsRecords,selectedYear]);
+  }, [activeView, allBasicsRecords, allAdvancedRecords, selectedYear]);
 
   // 日历热力数据
   const calendarData = useMemo(() => {
-    const data = getDailyRecordCounts(allBasicsRecords, parseInt(selectedYear));
-    return data as Array<[string, number]>;
-  }, [allBasicsRecords, selectedYear]);
+    const records =
+      activeView === "overview" ? [...allBasicsRecords, ...allAdvancedRecords] :
+      activeView === "basics" ? allBasicsRecords :
+      allAdvancedRecords;
+    return getDailyRecordCounts(records, parseInt(selectedYear));
+  }, [activeView, allBasicsRecords, allAdvancedRecords, selectedYear]);
 
   // 今日训练次数
   const todayCount = useMemo(() => {
@@ -177,56 +287,130 @@ export const ActivityPage = () => {
   }, [calendarData]);
 
   // 底部统计数据
-  const statsData = useMemo(() => {
-    return getAllDatasetStats(datasets);
-  }, [datasets, selectedYear]);
+  const overviewStats = useMemo(() => 
+    getOverviewStats(
+      basicsData,
+      { Word: advancedWord, Callsign: advancedCallsign, QTC: advnacedQTC },
+      parseInt(selectedYear)
+    ),
+    [basicsData, advancedWord, advancedCallsign, advnacedQTC, selectedYear]
+  );
+  const basicsStats = useMemo(() => 
+    getBasicsStats(basicsData, parseInt(selectedYear)),
+    [basicsData, selectedYear]
+  );
+  const advancedStats = useMemo(() => 
+    getAdvancedStats(
+      { Word: advancedWord, Callsign: advancedCallsign, QTC: advnacedQTC },
+      parseInt(selectedYear)
+    ),
+    [advancedWord, advancedCallsign, advnacedQTC, selectedYear]
+  );
+  const activityStats = useMemo(() => {
+    const records = 
+      activeView === "overview" ? [...allBasicsRecords, ...allAdvancedRecords] :
+      activeView === "basics" ? allBasicsRecords :
+      allAdvancedRecords;
+    return getActivityStats(records, parseInt(selectedYear));
+    }, [activeView, allBasicsRecords, allAdvancedRecords, selectedYear]
+  );
 
   // 渲染
   return (
     <div className={styles.container}>
       {/* 第一行：文本和下拉选择 */}
       <div className={styles.headerRow}>
-        <Text className={styles.describeText}>
-          A total of{" "}
-          <span className={styles.infoText}>
-            {yearStats.totalRecordCount}
-          </span>{" "}training sessions were completed in{" "}
-          <span className={styles.infoText}>
-            {yearStats.totalDuration}
-          </span>{" "}with{" "}
-          <span className={styles.infoText}>
-            {yearStats.averageAccuracy}
-          </span>{" "}average accuracy in
-        </Text>
-        <Dropdown
-          id="year-dropdown"
-          className={styles.dropdown}
-          expandIcon={<ChevronDown16Regular />}
-          listbox={{ 
-            className: mergeClasses(
-              styles.dropdownListbox,
-              allYears.length >= 5 && styles.dropdownListboxWithHeight
-            )
-          }}
-          value={selectedYear}
-          selectedOptions={[selectedYear]}
-          onOptionSelect={(_, data) => {
-            if (data.optionValue) {
-              setSelectedYear(data.optionValue);
-            }
-          }}
-        >
-          {allYears.map((year) => (
-            <Option
-              key={year}
-              value={year.toString()}
-              className={styles.dropdownOption}
-              checkIcon={null}
-            >
-              {year.toString()}
-            </Option>
-          ))}
-        </Dropdown>
+        <div className={styles.infoContainer}>
+          <Text className={styles.describeText}>In</Text>
+          <Dropdown
+            id="year-dropdown"
+            className={styles.dropdown}
+            expandIcon={<ChevronDown16Regular />}
+            listbox={{ 
+              className: mergeClasses(
+                styles.dropdownListbox,
+                allYears.length >= 5 && styles.dropdownListboxWithHeight
+              )
+            }}
+            value={selectedYear}
+            selectedOptions={[selectedYear]}
+            onOptionSelect={(_, data) => {
+              if (data.optionValue) {
+                setSelectedYear(data.optionValue);
+              }
+            }}
+          >
+            {allYears.map((year) => (
+              <Option
+                key={year}
+                value={year.toString()}
+                className={styles.dropdownOption}
+                checkIcon={null}
+              >
+                {year.toString()}
+              </Option>
+            ))}
+          </Dropdown>
+          <Text className={styles.describeText}>
+            ,{" "}
+            <span className={styles.infoText}>
+              {yearStats.totalRecordCount}
+            </span>{" "}training sessions were completed with a total duration of{" "}
+            <span className={styles.infoText}>
+              {yearStats.totalDuration}
+            </span>
+          </Text>
+        </div>
+        <div className={styles.buttonContainer}>
+          <Tooltip
+            content={{
+              children: "Overview",
+              className: styles.tooltip,
+            }}
+            relationship="label"
+            positioning="below-end"
+          >
+            <ToggleButton
+              className={styles.toggleButton}
+              appearance="transparent"
+              icon={<Overview />}
+              checked={activeView === "overview"}
+              onClick={() => setActiveView("overview")}
+            />
+          </Tooltip>
+          <Tooltip
+            content={{
+              children: "Basics",
+              className: styles.tooltip,
+            }}
+            relationship="label"
+            positioning="below-end"
+          >
+            <ToggleButton
+              className={styles.toggleButton}
+              appearance="transparent"
+              icon={<Basics />}
+              checked={activeView === "basics"}
+              onClick={() => setActiveView("basics")}
+            />
+          </Tooltip>
+          <Tooltip
+            content={{
+              children: "Advanced",
+              className: styles.tooltip,
+            }}
+            relationship="label"
+            positioning="below-end"
+          >
+            <ToggleButton
+              className={styles.toggleButton}
+              appearance="transparent"
+              icon={<Advanced />}
+              checked={activeView === "advanced"}
+              onClick={() => setActiveView("advanced")}
+            />
+          </Tooltip>
+        </div>
       </div>
 
       {/* 第二行：图表区域 */}
@@ -238,55 +422,109 @@ export const ActivityPage = () => {
       />
       {/* 第三行：底部文本 */}
       <div className={styles.statsContainer}>
-        {/* 第一行 */}
-        <div className={styles.statsHeaderCell}>
-          <Text>Training dataset:</Text>
-        </div>
-        {statsData.map((dataset, index) => (
-          <div key={`name-${index}`} className={styles.statsCell}>
-            <Text>{dataset.datasetName}</Text>
+        {/* 左侧表格信息 */}
+        {activeView === "overview" && (
+          <div className={styles.statsOverview}>
+            <div className={styles.statsCell}><Text>Training type:</Text></div>
+            <div className={styles.statsCell}><Text>Basics</Text></div>
+            <div className={styles.statsCell}><Text>Advanced</Text></div>
+            <div className={styles.statsCell}><Text>Total training count:</Text></div>
+            <div className={styles.statsCell}><Text>{overviewStats.basics.totalRecordCount}</Text></div>
+            <div className={styles.statsCell}><Text>{overviewStats.advanced.totalRecordCount}</Text></div>
+            <div className={styles.statsCell}><Text>Total training time:</Text></div>
+            <div className={styles.statsCell}><Text>{overviewStats.basics.totalDuration}</Text></div>
+            <div className={styles.statsCell}><Text>{overviewStats.advanced.totalDuration}</Text></div>
+            <div className={styles.statsCell}><Text>Average accuracy:</Text></div>
+            <div className={styles.statsCell}><Text>{overviewStats.basics.averageAccuracy}</Text></div>
+            <div className={styles.statsCell}><Text>{overviewStats.advanced.averageAccuracy}</Text></div>
+            <div className={styles.statsCell}><Text>Best training score:</Text></div>
+            <div className={styles.statsCell}><Text>{overviewStats.basics.bestScore}</Text></div>
+            <div className={styles.statsCell}><Text>{overviewStats.advanced.bestScore}</Text></div>
           </div>
-        ))}
+        )}
+        {activeView === "basics" && (
+          <div className={styles.statsBasics}>
+            <div className={styles.statsCell}><Text>Training dataset:</Text></div>
+            {basicsStats.map((d, i) => (
+              <div key={i} className={styles.statsCell}><Text>{d.datasetName}</Text></div>
+            ))}
+            <div className={styles.statsCell}><Text>Lesson progress:</Text></div>
+            {basicsStats.map((d, i) => (
+              <div key={i} className={styles.statsCell}><Text>{d.lessonProgress}</Text></div>
+            ))}
+            <div className={styles.statsCell}><Text>Total training count:</Text></div>
+            {basicsStats.map((d, i) => (
+              <div key={i} className={styles.statsCell}><Text>{d.totalRecordCount}</Text></div>
+            ))}
+            <div className={styles.statsCell}><Text>Total training time:</Text></div>
+            {basicsStats.map((d, i) => (
+              <div key={i} className={styles.statsCell}><Text>{d.totalDuration}</Text></div>
+            ))}
+            <div className={styles.statsCell}><Text>Average accuracy:</Text></div>
+            {basicsStats.map((d, i) => (
+              <div key={i} className={styles.statsCell}><Text>{d.averageAccuracy}</Text></div>
+            ))}
+          </div>
+        )}
+        {activeView === "advanced" && (
+          <div className={styles.statsAdvanced}>
+            <div className={styles.statsCell}><Text>Training type:</Text></div>
+            {advancedStats.map((d, i) => (
+              <div key={i} className={styles.statsCell}><Text>{d.trainingType}</Text></div>
+            ))}
+            <div className={styles.statsCell}><Text>Total training count:</Text></div>
+            {advancedStats.map((d, i) => (
+              <div key={i} className={styles.statsCell}><Text>{d.totalRecordCount}</Text></div>
+            ))}
+            <div className={styles.statsCell}><Text>Total training time:</Text></div>
+            {advancedStats.map((d, i) => (
+              <div key={i} className={styles.statsCell}><Text>{d.totalDuration}</Text></div>
+            ))}
+            <div className={styles.statsCell}><Text>Best training score:</Text></div>
+            {advancedStats.map((d, i) => (
+              <div key={i} className={styles.statsCell}><Text>{d.bestScore}</Text></div>
+            ))}
+            <div className={styles.statsCell}><Text>Max character speed:</Text></div>
+            {advancedStats.map((d, i) => (
+              <div key={i} className={styles.statsCell}><Text>{d.maxSpeed}</Text></div>
+            ))}
+          </div>
+        )}
 
-        {/* 第二行 */}
-        <div className={styles.statsHeaderCell}>
-          <Text>Lesson progress:</Text>
-        </div>
-        {statsData.map((dataset, index) => (
-          <div key={`progress-${index}`} className={styles.statsCell}>
-            <Text>{dataset.lessonProgress}</Text>
-          </div>
-        ))}
+        {/* 中间分割线 */}
+        <div 
+          className={styles.verticalDivider}
+          style={{ 
+            marginLeft: 
+              activeView === "overview" ? "-30px" : 
+              activeView === "basics" ? "4px" : 
+              "-20px"
+          }}
+        />
 
-        {/* 第三行 */}
-        <div className={styles.statsHeaderCell}>
-          <Text>Total training count:</Text>
+        {/* 右侧活动统计信息 */}
+        <div 
+          className={styles.statsActivity}
+          style={{
+            width:
+              activeView === "overview" ? "250px" :
+              activeView === "basics"   ? "190px" :
+              "245px",
+            gridTemplateColumns:
+              activeView === "overview" ? "140px 1fr" :
+              activeView === "basics"   ? "110px 1fr" :
+              "120px 1fr",
+          }}
+        >
+          <div className={styles.statsCell}><Text>Active days:</Text></div>
+          <div className={styles.statsCell}><Text>{activityStats.activeDays}</Text></div>
+          <div className={styles.statsCell}><Text>Best streak:</Text></div>
+          <div className={styles.statsCell}><Text>{activityStats.bestStreak}</Text></div>
+          <div className={styles.statsCell}><Text>Current streak:</Text></div>
+          <div className={styles.statsCell}><Text>{activityStats.currentStreak}</Text></div>
+          <div className={styles.statsCell}><Text>Last active day:</Text></div>
+          <div className={styles.statsCell}><Text>{activityStats.lastSessionDate}</Text></div>
         </div>
-        {statsData.map((dataset, index) => (
-          <div key={`count-${index}`} className={styles.statsCell}>
-            <Text>{dataset.totalRecordCount}</Text>
-          </div>
-        ))}
-
-        {/* 第四行 */}
-        <div className={styles.statsHeaderCell}>
-          <Text>Total training time:</Text>
-        </div>
-        {statsData.map((dataset, index) => (
-          <div key={`duration-${index}`} className={styles.statsCell}>
-            <Text>{dataset.totalDuration}</Text>
-          </div>
-        ))}
-
-        {/* 第五行 */}
-        <div className={styles.statsHeaderCell}>
-          <Text>Average accuracy:</Text>
-        </div>
-        {statsData.map((dataset, index) => (
-          <div key={`accuracy-${index}`} className={styles.statsCell}>
-            <Text>{dataset.averageAccuracy}</Text>
-          </div>
-        ))}
       </div>
     </div>
   );

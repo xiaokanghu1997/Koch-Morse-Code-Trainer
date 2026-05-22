@@ -35,6 +35,7 @@ import { useAdvancedStore } from "../stores/advancedStore";
 import { useOptionsStore } from "../stores/optionsStore";
 import { useLessonManager } from "../hooks/useLessonManager";
 import { recordManager } from "../services/recordManager";
+import { formatTimestamp } from "../services/statisticalToolset";
 import { log } from "../utils/logger";
 
 // 样式定义
@@ -260,25 +261,15 @@ const useStyles = makeStyles({
   },
 });
 
+// 数据管理组件
 interface DataManagementProps {
-  children?: React.ReactNode; // 用于接收触发图标
+  children?: React.ReactNode;
   onDataChange?: () => void;
 }
 
+// 类型图标
 const Basics = bundleIcon(Quiz20Filled, Quiz20Regular);
 const Advanced = bundleIcon(Certificate20Filled, Certificate20Regular);
-
-// 格式化时间戳为 "YYYY/MM/DD HH:mm:ss"
-const formatTimestamp = (timestamp: number) => {
-  const date = new Date(timestamp);
-  const year = date.getFullYear().toString().padStart(4, "0");
-  const month = (date.getMonth() + 1).toString().padStart(2, "0");
-  const day = date.getDate().toString().padStart(2, "0");
-  const hours = date.getHours().toString().padStart(2, "0");
-  const minutes = date.getMinutes().toString().padStart(2, "0");
-  const seconds = date.getSeconds().toString().padStart(2, "0");
-  return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
-};
 
 // 验证并解析时间戳字符串
 const validateTimestamp = (value: string): { valid: boolean; timestamp: number } => {
@@ -468,7 +459,7 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
         }
       }
     }
-  }, [modifySelectedDataset, basicsDatasets]);
+  }, [modifySelectedDataset]);
 
   // 变化时重置记录选择
   useEffect(() => {
@@ -496,7 +487,7 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
       }
       const record = availableRecords.find(r => r.index === modifySelectedRecord);
       if (record) {
-        setEditedTimestamp(formatTimestamp(record.timestamp));
+        setEditedTimestamp(formatTimestamp(record.timestamp, true));
         setEditedAccuracy(record.accuracy.toString());
         setEditedDuration(record.duration.toString());
       }
@@ -510,7 +501,7 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
       }
       const record = availableAdvancedRecords.find(r => r.index === modifyAdvancedIndex);
       if (record) {
-        setEditedTimestamp(formatTimestamp(record.timestamp));
+        setEditedTimestamp(formatTimestamp(record.timestamp, true));
         setEditedDuration(record.duration.toString());
         setEditedCharSpeed(record.charSpeed.toString());
         setEditedScore(record.score.toString());
@@ -565,13 +556,19 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
   // 打开对话框时初始化选择
   useEffect(() => {
     if (isModifyDialogOpen) {
-      if (modifyStoreType === "basics") {
-        initializeBasicsSelection();
-      } else {
-        initializeAdvancedSelection();
-      }
+      setModifyStoreType("basics");
+      initializeBasicsSelection();
     }
-  }, [isModifyDialogOpen, modifyStoreType, availableBasicsDatasets, availableAdvancedRecords]);
+  }, [isModifyDialogOpen]);
+
+  useEffect(() => {
+    if (!isModifyDialogOpen) return;
+    if (modifyStoreType === "basics") {
+      initializeBasicsSelection();
+    } else {
+      initializeAdvancedSelection();
+    }
+  }, [modifyStoreType]);
 
   // 当选中记录变化或对话框关闭时，清除错误提示
   useEffect(() => {
@@ -729,11 +726,31 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
 
   // 更新基础训练数据选择
   const updateBasicsSelection = () => {
-    const dataset = basicsDatasets[modifySelectedDataset];
+    const freshDatasets = useBasicsStore.getState().datasets;
+    const dataset = freshDatasets[modifySelectedDataset];
     if (!dataset || Object.keys(dataset).length === 0) {
       const remainDatasets = availableBasicsDatasets.filter(name => name !== modifySelectedDataset);
+      if (modifySelectedDataset === currentDatasetName) {
+        if (remainDatasets.length > 0) {
+          const nextDataset = remainDatasets[0];
+          const nextLessons = Object.keys(freshDatasets[nextDataset]).map(Number).sort((a, b) => b - a);
+          useBasicsStore.setState({
+            currentDatasetName: nextDataset,
+            currentLessonNumber: nextLessons[0] ?? 1,
+          });
+        } else {
+          useBasicsStore.setState({
+            currentDatasetName: "Koch-LCWO",
+            currentLessonNumber: 1,
+          });
+        }
+      }
       if (remainDatasets.length > 0) {
         setModifySelectedDataset(remainDatasets[0]);
+      } else {
+        setModifySelectedDataset("");
+        setModifySelectedLesson(0);
+        setModifySelectedRecord(0);
       }
       return;
     } 
@@ -746,6 +763,9 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
         const newLessonRecords = dataset[newLesson];
         if (newLessonRecords && newLessonRecords.length > 0) {
           setModifySelectedRecord(newLessonRecords.length - 1);
+        }
+        if (modifySelectedDataset === currentDatasetName) {
+          useBasicsStore.setState({ currentLessonNumber: newLesson });
         }
       }
       return;
@@ -1152,7 +1172,7 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
                       />
                     </div>
                     <div className={styles.dialogRow}>
-                      <Text className={styles.dialogLabel}>Char speed (WPM):</Text>
+                      <Text className={styles.dialogLabel}>Speed (WPM):</Text>
                       <Input
                         id="modify-advanced-speed-input"
                         className={mergeClasses(

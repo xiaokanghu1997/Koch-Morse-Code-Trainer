@@ -844,7 +844,7 @@ export const TrainingPage = () => {
           </span> of{" "}
           <span className={styles.lessonNumber}>
             {formattedProgress.total}
-          </span> total lessons.
+          </span> total lessons
         </Text>
         <div className={styles.lessonSelector}>
           <Text>Change to lesson: </Text>

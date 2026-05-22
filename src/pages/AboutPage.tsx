@@ -30,6 +30,7 @@ const useStyles = makeStyles({
     alignItems: "center",
     gap: "16px",
     backgroundColor: tokens.colorNeutralBackground3,
+    boxShadow: tokens.shadow2,
   },
   icon: {
     color: tokens.colorBrandForeground1,
@@ -63,7 +64,7 @@ export const AboutPage = () => {
   
   // 软件信息
   const appTitle = "Koch - Morse Code Trainer";
-  const version = "Version 2.0.0-alpha.6";
+  const version = "Version 2.0.0-alpha.7";
 
   return (
     <div className={styles.container}>
