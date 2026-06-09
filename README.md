@@ -2,12 +2,12 @@
 
 **基于 Koch 方法的摩尔斯电码学习工具**
 
-## 版本信息
-- **当前版本**：v2.0.0
+## 🏷️ 版本信息
+- **当前版本**：v2.0.1
 - **作者**：Xiaokang HU
 - **更新日期**：2026-06-09
 
-![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)
+![Version](https://img.shields.io/badge/version-2.0.1-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Status](https://img.shields.io/badge/status-开发中-yellow.svg)
 
@@ -28,7 +28,7 @@ Koch 是一款专业的摩尔斯电码学习训练工具，面向业余无线电
 ## 📚 软件演示
 
 <div align="center">
-  <img src="dist/assets/software-info.gif" width="900">
+  <img src="docs/software-info.gif" width="900">
 </div>
 
 

@@ -4,6 +4,13 @@
 
 ---
 
+## [2.0.1] - 2026-06-09
+
+### 修复
+- 🐛 修复 README 文件中图片丢失问题
+
+---
+
 ## [2.0.0] - 2026-06-09
 
 ### 改进
@@ -205,6 +212,7 @@
   - 自动生成练习音频和文本文件
 
 
+[2.0.1]: https://github.com/xiaokanghu1997/Koch-Morse-Code-Trainer/releases/tag/v2.0.1
 [2.0.0]: https://github.com/xiaokanghu1997/Koch-Morse-Code-Trainer/releases/tag/v2.0.0
 [2.0.0-alpha.7]: https://github.com/xiaokanghu1997/Koch-Morse-Code-Trainer/releases/tag/v2.0.0-alpha.7
 [2.0.0-alpha.6]: https://github.com/xiaokanghu1997/Koch-Morse-Code-Trainer/releases/tag/v2.0.0-alpha.6
