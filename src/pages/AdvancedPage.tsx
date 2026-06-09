@@ -22,13 +22,15 @@ import {
   CallsignTrainingConfig, 
   QTCTrainingConfig 
 } from "../lib/types";
+import { useTranslation } from "react-i18next";
 import { WordWelcome } from "./advanced/WordWelcome";
 import { WordTraining } from "./advanced/WordTraining";
 import { CallsignWelcome } from "./advanced/CallsignWelcome";
 import { CallsignTraining } from "./advanced/CallsignTraining";
 import { QTCWelcome } from "./advanced/QTCWelcome";
 import { QTCTraining } from "./advanced/QTCTraining";
-import { ScorePage } from "./advanced/ScorePage";
+import { LeaderboardPage } from "./advanced/LeaderboardPage";
+import { useSettingsStore } from "../stores/settingsStore";
 
 // 样式定义
 const useStyles = makeStyles({
@@ -49,7 +51,6 @@ const useStyles = makeStyles({
     backgroundColor: "transparent",
   },
   tab: {
-    width: "110px",
     height: "32px",
     padding: "0px",
     backgroundColor: "transparent",
@@ -94,14 +95,21 @@ const useStyles = makeStyles({
       color: `${tokens.colorNeutralForeground3} !important`,
       fontWeight: `${tokens.fontWeightRegular} !important`,
     },
-    "& .fui-Tab__content": {
-      marginBottom: "2.5px",
-    },
     "::before": {
       display: "none",
     },
     "::after": {
       display: "none",
+    },
+  },
+  tabContentOffsetEn: {
+    "& .fui-Tab__content": {
+      marginBottom: "2.5px",
+    },
+  },
+  tabContentOffsetZh: {
+    "& .fui-Tab__content": {
+      marginBottom: "1.5px",
     },
   },
   tabContent: {
@@ -128,23 +136,26 @@ const useStyles = makeStyles({
 const WordIcon = bundleIcon(BookLetter20Filled, BookLetter20Regular);
 const CallsignIcon = bundleIcon(ContactCard20Filled, ContactCard20Regular);
 const QTCIcon = bundleIcon(SlideTextMultiple20Filled, SlideTextMultiple20Regular);
-const ScoreIcon = bundleIcon(Trophy20Filled, Trophy20Regular);
+const LeaderboardIcon = bundleIcon(Trophy20Filled, Trophy20Regular);
 
 // 类型定义
-type TabValue = "word" | "callsign" | "qtc" | "score";
+type TabValue = "word" | "callsign" | "qtc" | "leaderboard";
 type PageState = "welcome" | "training";
 
 export const AdvancedPage = () => {
   // 使用样式
   const styles = useStyles();
-
+  // 使用 i18n 获取翻译函数
+  const { t } = useTranslation();
+  // 从设置存储中获取当前语言
+  const { language } = useSettingsStore();
   // 状态定义
   const [selectedTab, setSelectedTab] = useState<TabValue>("word");
   const [tabPageState, setTabPageState] = useState<Record<TabValue, PageState>>({
     word: "welcome",
     callsign: "welcome",
     qtc: "welcome",
-    score: "welcome",
+    leaderboard: "welcome",
   });
   const [wordConfig, setWordConfig] = useState<WordTrainingConfig | null>(null);
   const [callsignConfig, setCallsignConfig] = useState<CallsignTrainingConfig | null>(null);
@@ -204,32 +215,48 @@ export const AdvancedPage = () => {
           onTabSelect={(_, data) => handleTabChange(data.value as TabValue)}
         >
           <Tab
-            className={styles.tab}
+            className={mergeClasses(
+              styles.tab,
+              language === "English" ? styles.tabContentOffsetEn : styles.tabContentOffsetZh
+            )}
+            style={{ width: language === "English" ? "110px" : "100px" }}
             icon={<WordIcon />}
             value="word"
           >
-            Word
+            {t("advanced.tabs.word")}
           </Tab>
           <Tab
-            className={styles.tab}
+            className={mergeClasses(
+              styles.tab,
+              language === "English" ? styles.tabContentOffsetEn : styles.tabContentOffsetZh
+            )}
+            style={{ width: language === "English" ? "110px" : "100px" }}
             icon={<CallsignIcon />}
             value="callsign"
           >
-            Callsign
+            {t("advanced.tabs.callsign")}
           </Tab>
           <Tab
-            className={styles.tab}
+            className={mergeClasses(
+              styles.tab,
+              language === "English" ? styles.tabContentOffsetEn : styles.tabContentOffsetZh
+            )}
+            style={{ width: language === "English" ? "110px" : "100px" }}
             icon={<QTCIcon />}
             value="qtc"
           >
-            QTC
+            {t("advanced.tabs.qtc")}
           </Tab>
           <Tab
-            className={styles.tab}
-            icon={<ScoreIcon />}
-            value="score"
+            className={mergeClasses(
+              styles.tab,
+              language === "English" ? styles.tabContentOffsetEn : styles.tabContentOffsetZh
+            )}
+            style={{ width: language === "English" ? "140px" : "110px" }}
+            icon={<LeaderboardIcon />}
+            value="leaderboard"
           >
-            Score
+            {t("advanced.tabs.leaderboard")}
           </Tab>
         </TabList>
       </div>
@@ -264,7 +291,7 @@ export const AdvancedPage = () => {
             <QTCTraining config={qtcConfig!} onBack={handleQTCBack} />
           )
         )}
-        {selectedTab === "score" && <ScorePage />}
+        {selectedTab === "leaderboard" && <LeaderboardPage />}
       </div>
     </div>
   );

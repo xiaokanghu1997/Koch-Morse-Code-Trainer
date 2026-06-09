@@ -11,6 +11,7 @@ import {
   Mail24Regular,
   Heart24Regular,
 } from "@fluentui/react-icons";
+import { useTranslation } from "react-i18next";
 import { DataManagement } from "../components/DataManagement";
 
 // 样式定义
@@ -61,10 +62,13 @@ const useStyles = makeStyles({
 export const AboutPage = () => {
   // 使用样式
   const styles = useStyles();
+
+  // 使用 i18n 获取翻译函数
+  const { t } = useTranslation();
   
   // 软件信息
   const appTitle = "Koch - Morse Code Trainer";
-  const version = "Version 2.0.0-alpha.7";
+  const version = "2.0.0";
 
   return (
     <div className={styles.container}>
@@ -76,34 +80,30 @@ export const AboutPage = () => {
         <div className={styles.content}>
           <Text className={styles.header}>{appTitle}</Text>
           <Text className={styles.description}>
-            © 2026 Xiaokang HU. Licensed under MIT.
+            {t("about.title.copyright", { info: "© 2026 Xiaokang HU · MIT" })}
           </Text>
         </div>
-        <Text className={styles.value}>{version}</Text>
+        <Text className={styles.value}>{t("about.title.version", { version })}</Text>
       </Card>
 
       {/* 设计目的 */}
       <Card className={styles.card}>
         <TargetArrow24Regular className={styles.icon} />
         <div className={styles.content}>
-          <Text className={styles.header}>Purpose</Text>
+          <Text className={styles.header}>{t("about.purpose.header")}</Text>
           <Text className={styles.description}>
-            Koch-method listening and copying practice
+            {t("about.purpose.description")}
           </Text>
         </div>
-        <Text className={styles.value}>
-          Train faster and more accurate decoding
-        </Text>
+        <Text className={styles.value}>{t("about.purpose.value")}</Text>
       </Card>
 
       {/* 联系方式 */}
       <Card className={styles.card}>
         <Mail24Regular className={styles.icon} />
         <div className={styles.content}>
-          <Text className={styles.header}>Contact</Text>
-          <Text className={styles.description}>
-            Get in touch with the developer
-          </Text>
+          <Text className={styles.header}>{t("about.contact.header")}</Text>
+          <Text className={styles.description}>{t("about.contact.description")}</Text>
         </div>
         <Text className={styles.value}>xiaokangh@foxmail.com</Text>
       </Card>
@@ -112,13 +112,11 @@ export const AboutPage = () => {
       <Card className={styles.card}>
         <Heart24Regular className={styles.icon} />
         <div className={styles.content}>
-          <Text className={styles.header}>Acknowledgements</Text>
-          <Text className={styles.description}>
-            Thanks for the inspiration and support
-          </Text>
+          <Text className={styles.header}>{t("about.acknowledgements.header")}</Text>
+          <Text className={styles.description}>{t("about.acknowledgements.description")}</Text>
         </div>
         <Text className={styles.value}>
-          Inspired and supported by <Link href="https://fkurz.net/ham/jscwlib.html" target="_blank">jscwlib</Link>
+          {t("about.acknowledgements.value")} <Link href="https://lcwo.net/" target="_blank">LCWO</Link>
         </Text>
       </Card>
     </div>

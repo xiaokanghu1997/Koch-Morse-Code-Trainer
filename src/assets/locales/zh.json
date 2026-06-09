@@ -1,0 +1,497 @@
+{
+  "mainlayout": {
+    "basics": "基础训练",
+    "advanced": "进阶训练",
+    "activity": "活动记录",
+    "about": "关于",
+    "settings": "设置"
+  },
+
+  "basics": {
+    "tabs": {
+      "training": "训练",
+      "statistics": "统计",
+      "options": "配置"
+    },
+    "training": {
+      "progress": "正在练习第 <num>{{current}}</num> 课内容，当前课程共包含 <num>{{total}}</num> 课",
+      "currentLesson": "选择课程：",
+      "currentChars": "当前课程字符：",
+      "charSound": "字符音频：",
+      "practiceText": "训练文本：",
+      "placeholder": "在此输入听抄结果 ...",
+      "buttons": {
+        "play": "播放",
+        "pause": "暂停",
+        "cancel": "取消",
+        "restart": "重播",
+        "checkResult": "检查结果",
+        "nextTraining": "下一个练习"
+      },
+      "result": {
+        "accuracy": "准确率：",
+        "excellent": "表现优秀，准确率极高！",
+        "good": "表现良好，已达到基本要求！",
+        "close": "接近通过，还需继续练习！",
+        "again": "仍需加强练习，加油！"
+      }
+    },
+    "statistics": {
+      "selectDataset": "选择训练集：",
+      "datasetName": {
+        "koch-lcwo": "Koch-LCWO",
+        "letters": "英文字母",
+        "numbers": "数字",
+        "punctuation": "标点符号"
+      },
+      "selectLesson": "选择课程：",
+      "statisticBy": "统计方式：",
+      "allLessons": "全部",
+      "statTypes": {
+        "default": "默认",
+        "hour": "按小时",
+        "day": "按天",
+        "month": "按月",
+        "year": "按年"
+      },
+      "chart": {
+        "accuracy": "准确率",
+        "averageAccuracy": "平均准确率：",
+        "accuracyThreshold": "准确率阈值",
+        "trainingCount": "训练次数",
+        "trainingDuration": "训练时长",
+        "trainingAccuracy": "训练准确率 (%)",
+        "lessonId": "课程编号",
+        "lessonPrefix": "课程 ",
+        "durationUnit": " (分钟)"
+      }
+    },
+    "options": {
+      "labels": {
+        "trainingDataset": "训练数据集：",
+        "practiceMode": "训练模式：",
+        "groupLength": "每组长度：",
+        "fixed": "固定字符",
+        "random": "2-7 随机字符",
+        "groupSpace": "组间间隔：",
+        "groupCount": "字符组数量：",
+        "waveform": "波形图：",
+        "charSpeed": "字符速率：",
+        "effSpeed": "有效速率：",
+        "tone": "音调：",
+        "startDelay": "启动延迟：",
+        "prefixSuffix": "前后缀："
+      },
+      "units": {
+        "dits": "点",
+        "wpm": "字/分",
+        "hz": "赫兹",
+        "seconds": "秒"
+      },
+      "status": {
+        "on": "启用",
+        "off": "禁用"
+      },
+      "datasets": {
+        "koch-lcwo": "Koch-LCWO",
+        "letters": "英文字母",
+        "numbers": "数字",
+        "punctuation": "标点符号"
+      },
+      "modes": {
+        "uniform": "均匀分布",
+        "newFocus": "新字符优先",
+        "gradual": "渐进式",
+        "weighted": "加权分布"
+      },
+      "tooltips": {
+        "trainingDataset": "选择用于生成训练材料的字符集",
+        "practiceMode": "控制训练材料中字符的分布方式",
+        "groupLength": "每个练习组中的字符数量 (1-10)",
+        "groupSpace": "每组之间的停顿时长 (标准间距为 7 个点)",
+        "groupCount": "要生成的字符组数量 (1-30)",
+        "waveform": "音频播放期间显示可视化波形图",
+        "charSpeed": "摩尔斯电码元素 (点和划) 的速度",
+        "effSpeed": "使用 Farnsworth 时序法的整体传输速度",
+        "tone": "音频音调的频率",
+        "startDelay": "音频播放开始前的倒计时延迟 (0-30 秒)",
+        "prefixSuffix": "训练前后添加标准摩尔斯练习信号"
+      },
+      "buttons": {
+        "preview": "预览",
+        "pause": "暂停",
+        "resume": "继续",
+        "retry": "重听",
+        "cancel": "取消",
+        "confirm": "确认"
+      },
+      "messages": {
+        "success": {
+          "title": "训练材料设置成功",
+          "content": "{{dataset}} | {{mode}} | {{groupCount}} 组 | {{charInfo}} 字符"
+        },
+        "error": {
+          "title": "训练材料设置失败",
+          "unknown": "发生未知错误"
+        }
+      }
+    }
+  },
+
+  "advanced": {
+    "tabs": {
+      "word": "单词",
+      "callsign": "呼号",
+      "qtc": "QTC",
+      "leaderboard": "排行榜"
+    },
+    "word": {
+      "welcome": {
+        "title": "单词训练",
+        "subtitle": "(用于练习单词听抄)",
+        "description": "每次训练包含 25 个单词。训练开始前，您可以自行设置初始字符速度。训练过程中，系统将根据您的听抄结果实时调整字符速度：当单词所有字符均抄收正确时，字符速度增加 1 字/分；若出现任意错误，字符速度减少 1 字/分。",
+        "labels": {
+          "dataset": "训练数据集：",
+          "skipAfter5s": "5 秒后自动跳过："
+        },
+        "datasets": {
+          "abbreviations": "CW 缩略语",
+          "qcodes": "Q 简语",
+          "commonWords": "常用英文单词"
+        },
+        "tooltips": {
+          "skipAfter5s": "音频播放结束 5 秒后，自动播放下一个单词"
+        },
+        "status": {
+          "on": "开启",
+          "off": "关闭"
+        }
+      },
+      "training": {
+        "inputPlaceholder": "在此输入单词...",
+        "tooltips": {
+          "start": "按回车键开始",
+          "next": "按回车键确认并进入下一个单词",
+          "retry": "按回车键重新开始",
+          "repeat": "按句号键重播"
+        }
+      }
+    },
+    "callsign": {
+      "welcome": {
+        "title": "呼号训练",
+        "subtitle": "（用于练习呼号听抄）",
+        "description": "每次训练包含 25 个呼号。训练开始前，您可以自行设置初始字符速度。训练过程中，系统将根据您的听抄结果实时调整字符速度：当呼号所有字符均抄收正确时，字符速度增加 1 字/分；若出现任意错误，字符速度减少 1 字/分。",
+        "labels": {
+          "filter": "呼号过滤：",
+          "blindMode": "盲测模式："
+        },
+        "filters": {
+          "shortOnly": "仅短呼号",
+          "noSlashed": "过滤斜线呼号",
+          "all": "无过滤"
+        },
+        "tooltips": {
+          "blindMode": "所有呼号完成后再统一查看训练结果" 
+        },
+        "status": {
+          "on": "开启",
+          "off": "关闭"
+        }
+      },
+      "training": {
+        "inputPlaceholder": "在此输入呼号...",
+        "tooltips": {
+          "start": "按回车键开始",
+          "next": "按回车键确认并进入下一个呼号",
+          "retry": "按回车键重新开始",
+          "repeat": "按句号键重播"
+        }
+      }
+    },
+    "generic": {
+      "welcome": {
+        "labels": {
+          "charSpeed": "字符速度：",
+          "minCharSpeed": "最小字符速度：",
+          "fixedSpeed": "固定字符速度：",
+          "tone": "音调：",
+          "randomTone": "随机 500-900 赫兹"
+        },
+        "units": {
+          "wpm": "字/分",
+          "hz": "赫兹"
+        },
+        "status": {
+          "on": "开启",
+          "off": "关闭"
+        },
+        "tooltips": {
+          "fixedSpeed": "勾选后，将不进行分数计算"
+        },
+        "buttons": {
+          "start": "开始训练"
+        }
+      },
+      "training": {
+        "labels": {
+          "currentSpeed": "当前字符速度：",
+          "maxSpeed": "最大字符速度：",
+          "score": "训练分数："
+        },
+        "units": {
+          "wpm": "字/分"
+        },
+        "buttons": {
+          "start": "开始",
+          "ok": "确定",
+          "retry": "重试",
+          "back": "返回"
+        },
+        "table": {
+          "sent": "发送",
+          "received": "接收",
+          "wpm": "速度"
+        }
+      }
+    },
+    "qtc": {
+      "welcome": {
+        "title": "QTC 训练",
+        "subtitle": "（用于练习 QTC 听抄）",
+        "description": "每次训练包含 1 组 QTC 报文。每组由 10 条 QTC 构成，并以组号/编号信息作为开头。在点击开始按钮后，请先确认编号信息，然后依次抄收每条 QTC。按回车键可以进入下一条报文，使用空格键可以在不同输入项之间切换。完成最后一条 QTC 后，请先检查并确认所有内容，然后点击验证按钮。只有内容完全正确的 QTC 才会被计为有效成绩。",
+        "labels": {
+          "charSpeed": "字符速度：",
+          "tone": "音调：",
+          "itemSpace": "要素间隔：",
+          "abbrevNumbers": "缩略数字：",
+          "chronological": "按时间顺序：",
+          "abbrevTimes": "缩略时间："
+        },
+        "units": {
+          "wpm": "字/分",
+          "hz": "赫兹",
+          "dits": "点"
+        },
+        "abbrevNumbers": {
+          "none": "无",
+          "partial": "0, 1, 9",
+          "all": "0 - 9"
+        },
+        "tooltips": {
+          "itemSpace": "QTC 要素之间的停顿时长 (标准间距为 7 个点)",
+          "abbrevNumbers": "使用摩尔斯数字缩略形式发送数字",
+          "chronological": "按照报文时间顺序发送 QTC",
+          "abbrevTimes": "使用数字缩略形式发送时间信息"
+        },
+        "status": {
+          "on": "开启",
+          "off": "关闭"
+        },
+        "buttons": {
+          "start": "开始训练"
+        }
+      },
+      "training": {
+        "table": {
+          "grNum": "组号/数量",
+          "time": "时间",
+          "callsign": "呼号",
+          "serial": "序号"
+        },
+        "labels": {
+          "charSpeed": "字符速度：",
+          "completion": "完成状态：",
+          "score": "训练分数："
+        },
+        "units": {
+          "wpm": "字/分"
+        },
+        "buttons": {
+          "play": "播放",
+          "pause": "暂停",
+          "restart": "重播",
+          "start": "开始",
+          "next": "下一条",
+          "check": "检查",
+          "retry": "重试",
+          "back": "返回"
+        },
+        "tooltips": {
+          "repeat": "按句号键重播",
+          "start": "按回车键开始",
+          "next": "按回车键进入下一条 QTC",
+          "check": "按回车键检查结果",
+          "retry": "按回车键重新开始"
+        }
+      }
+    },
+    "leaderboard": {
+      "sections": {
+        "word": "单词训练",
+        "callsign": "呼号训练",
+        "qtc": "QTC 训练"
+      },
+      "table": {
+        "rank": "排名",
+        "score": "分数",
+        "date": "日期",
+        "speed": "速度"
+      }
+    }
+  },
+
+  "activity": {
+    "summary": {
+      "info1": "在",
+      "info2": "年总共完成了 <num>{{count}}</num> 次{{type}}训练，累计训练时长为 <num>{{duration}}</num>",
+      "types": {
+        "basics": "基础",
+        "advanced": "进阶"
+      }
+    },
+    "views": {
+      "overview": "总览",
+      "basics": "基础训练",
+      "advanced": "进阶训练"
+    },
+    "basicsDatasets": {
+      "koch-lcwo": "Koch-LCWO",
+      "letters": "英文字母",
+      "numbers": "数字",
+      "punctuation": "标点符号"
+    },
+    "advancedTypes": {
+      "word": "单词训练",
+      "callsign": "呼号训练",
+      "qtc": "QTC训练"
+    },
+    "heatmap": {
+      "months": ["一月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月"],
+      "weekdays": ["周一", "", "周三", "", "周五", "", "周日"],
+      "less": "低频",
+      "more": "高频",
+      "todayTrainingCount": "今日训练次数：",
+      "trainingCount": "训练次数："
+    },
+    "stats": {
+      "trainingType": "训练类型：",
+      "trainingDataset": "训练数据集：",
+      "basics": "基础训练",
+      "advanced": "进阶训练",
+      "lessonProgress": "课程进度：",
+      "totalCount": "累计训练次数：",
+      "totalTime": "累计训练时长：",
+      "averageAccuracy": "平均准确率：",
+      "bestScore": "最佳训练分数：",
+      "maxSpeed": "最高字符速度：",
+      "trainingDays": "训练天数：",
+      "bestStreak": "最长连训天数：",
+      "currentStreak": "当前连训天数：",
+      "lastSession": "最近训练日期："
+    }
+  },
+
+  "about": {
+    "title": {
+      "copyright": "{{info}} 许可证",
+      "version": "版本 {{version}}"
+    },
+    "purpose": {
+      "header": "目标",
+      "description": "摩尔斯电码的听抄和发报练习",
+      "value": "提高解码速度和准确性"
+    },
+    "contact": {
+      "header": "联系",
+      "description": "联系开发者进行问题反馈"
+    },
+    "acknowledgements": {
+      "header": "致谢",
+      "description": "灵感来源于开源社区和项目",
+      "value": "部分功能设计参考自"
+    }
+  },
+
+  "settings": {
+    "language": {
+      "header": "语言",
+      "description": "选择界面所使用的语言"
+    },
+    "theme": {
+      "header": "主题",
+      "description": "选择程序的外观主题",
+      "light": "浅色",
+      "dark": "深色"
+    },
+    "opacity": {
+      "header": "透明度",
+      "description": "调整窗口的透明度"
+    },
+    "volume": {
+      "header": "音量",
+      "description": "调整音频的播放音量"
+    }
+  },
+
+  "dataManagement": {
+    "buttons": {
+      "import": "导入数据",
+      "export": "导出数据",
+      "modify": "修改数据",
+      "clear": "清空数据"
+    },
+    "types": {
+      "basics": "基础训练",
+      "advanced": "进阶训练"
+    },
+    "basicsDatasets": {
+      "koch-lcwo": "Koch-LCWO",
+      "letters": "英文字母",
+      "numbers": "数字",
+      "punctuation": "标点符号"
+    },
+    "advancedTypes": {
+      "word": "单词训练",
+      "callsign": "呼号训练",
+      "qtc": "QTC训练"
+    },
+    "recordLabel": "训练 #{{number}}",
+    "modifyDialog": {
+      "title": "{{type}}数据",
+      "types": {
+        "basics": "基础训练",
+        "advanced": "进阶训练"
+      },
+      "labels": {
+        "selectDataset": "选择训练集：",
+        "selectLesson": "选择课程：",
+        "selectRecord": "选择记录：",
+        "selectType": "选择类型：",
+        "timestamp": "时间戳：",
+        "accuracy": "准确率 (%)：",
+        "duration": "时长 (秒)：",
+        "score": "分数：",
+        "speed": "速度 (字/分)："
+      },
+      "buttons": {
+        "modify": "修改",
+        "delete": "删除",
+        "close": "关闭"
+      }
+    },
+    "clearDialog": {
+      "title": "确认清空数据",
+      "content": "确定要清空所有训练数据吗？此操作无法撤销！",
+      "buttons": {
+        "yes": "确定",
+        "no": "取消"
+      }
+    },
+    "dialogs": {
+      "exportTitle": "导出训练数据",
+      "importTitle": "导入训练数据",
+      "jsonFiles": "JSON 文件"
+    }
+  }
+}

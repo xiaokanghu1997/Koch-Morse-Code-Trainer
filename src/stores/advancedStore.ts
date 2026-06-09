@@ -10,13 +10,13 @@ interface AdvancedState {
   // ==================== 状态 ====================
 
   /** 单词训练记录 */
-  Word: AdvancedRecord[];
+  word: AdvancedRecord[];
 
   /** 呼号训练记录 */
-  Callsign: AdvancedRecord[];
+  callsign: AdvancedRecord[];
 
   /** QTC训练记录 */
-  QTC: AdvancedRecord[];
+  qtc: AdvancedRecord[];
 
   // ==================== 操作方法 ====================
   submitRecord: (trainingType: AdvancedType, record: AdvancedRecord) => void;
@@ -29,9 +29,9 @@ export const useAdvancedStore = create<AdvancedState>()(
   persist(
     (set) => ({
       // ==================== 初始状态 ====================
-      Word: [],
-      Callsign: [],
-      QTC: [],
+      word: [],
+      callsign: [],
+      qtc: [],
 
       // ==================== 操作方法 ====================
       /** 提交训练记录 */
@@ -51,9 +51,9 @@ export const useAdvancedStore = create<AdvancedState>()(
     {
       name: "morse-advanced-store",
       partialize: (state) => ({
-        Word: state.Word,
-        Callsign: state.Callsign,
-        QTC: state.QTC,
+        word: state.word,
+        callsign: state.callsign,
+        qtc: state.qtc,
       }),
     }
   )

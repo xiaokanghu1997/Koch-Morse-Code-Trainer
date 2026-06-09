@@ -1,5 +1,6 @@
 import { Text, makeStyles, tokens } from "@fluentui/react-components";
 import { RibbonStarFilled } from "@fluentui/react-icons";
+import { useTranslation } from "react-i18next";
 import { useAdvancedStore } from "../../stores/advancedStore";
 import { formatTimestamp } from "../../services/statisticalToolset";
 import type { AdvancedRecord, AdvancedType } from "../../lib/types";
@@ -69,6 +70,7 @@ const useStyles = makeStyles({
     padding: "0px",
     display: "block",
     textAlign: "center",
+    marginTop: "-2px",
   },
   tableText: {
     fontSize: "12.5px",
@@ -86,7 +88,7 @@ const useStyles = makeStyles({
 });
 
 // 板块组件的 props 类型
-interface ScoreSectionProps {
+interface LeaderboardSectionProps {
   title: string;
   records: AdvancedRecord[];
 }
@@ -99,8 +101,9 @@ const RANK_COLORS = [
 ];
 
 // 单个板块的组件
-const ScoreSection = ({ title, records }: ScoreSectionProps) => {
+const LeaderboardSection = ({ title, records }: LeaderboardSectionProps) => {
   const styles = useStyles();
+  const { t } = useTranslation();
 
   const sorted = [...records]
     .sort((a, b) => b.score - a.score)
@@ -126,10 +129,26 @@ const ScoreSection = ({ title, records }: ScoreSectionProps) => {
         </colgroup>
         <thead>
           <tr>
-            <th><Text className={styles.tableHeader}>Rank</Text></th>
-            <th><Text className={styles.tableHeader}>Score</Text></th>
-            <th><Text className={styles.tableHeader}>Date</Text></th>
-            <th><Text className={styles.tableHeader}>Speed</Text></th>
+            <th>
+              <Text className={styles.tableHeader}>
+                {t("advanced.leaderboard.table.rank")}
+              </Text>
+            </th>
+            <th>
+              <Text className={styles.tableHeader}>
+                {t("advanced.leaderboard.table.score")}
+              </Text>
+            </th>
+            <th>
+              <Text className={styles.tableHeader}>
+                {t("advanced.leaderboard.table.date")}
+              </Text>
+            </th>
+            <th>
+              <Text className={styles.tableHeader}>
+                {t("advanced.leaderboard.table.speed")}
+              </Text>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -175,26 +194,28 @@ const ScoreSection = ({ title, records }: ScoreSectionProps) => {
 };
 
 // 定义板块信息的常量数组
-const SECTIONS: { type: AdvancedType; title: string }[] = [
-  { type: "Word",     title: "Word Training" },
-  { type: "Callsign", title: "Callsign Training" },
-  { type: "QTC",      title: "QTC Training" },
+const SECTIONS: { type: AdvancedType; titleKey: string }[] = [
+  { type: "word",     titleKey: "advanced.leaderboard.sections.word" },
+  { type: "callsign", titleKey: "advanced.leaderboard.sections.callsign" },
+  { type: "qtc",      titleKey: "advanced.leaderboard.sections.qtc" },
 ];
 
-export const ScorePage = () => {
+export const LeaderboardPage = () => {
   const styles = useStyles();
-  const { Word, Callsign, QTC } = useAdvancedStore();
+  const { t } = useTranslation();
+
+  const { word, callsign, qtc } = useAdvancedStore();
 
   const recordMap: Record<AdvancedType, AdvancedRecord[]> = {
-    Word,
-    Callsign,
-    QTC,
+    word,
+    callsign,
+    qtc,
   };
 
   return (
     <div className={styles.container}>
-      {SECTIONS.map(({ type, title }) => (
-        <ScoreSection key={type} title={title} records={recordMap[type]} />
+      {SECTIONS.map(({ type, titleKey }) => (
+        <LeaderboardSection key={type} title={t(titleKey)} records={recordMap[type]} />
       ))}
     </div>
   );

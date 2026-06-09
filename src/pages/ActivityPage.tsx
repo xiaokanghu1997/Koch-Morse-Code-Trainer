@@ -19,11 +19,13 @@ import {
   bundleIcon,
 } from "@fluentui/react-icons";
 import { CalendarHeatmap } from "../components/CalendarHeatmap";
+import type { CalendarHeatmapTexts } from "../lib/types";
 import { useState, useMemo } from "react";
+import { useTranslation, Trans } from "react-i18next";
 import {
   getAllYears,
   getYearOverviewStats,
-  getDailyRecordCounts,
+  getCalendarHeatmapData,
   getOverviewStats,
   getBasicsStats,
   getAdvancedStats,
@@ -153,8 +155,15 @@ const useStyles = makeStyles({
     },
   },
   tooltip: {
-    backgroundColor: tokens.colorNeutralBackground4Hover,
+    backgroundColor: tokens.colorNeutralBackground3Hover,
     boxShadow: tokens.shadow2,
+  },
+  // 第二行
+  chartContainer: {
+    flex: 1,
+    display: "flex",
+    alignItems: "center",
+    height: "72px",
   },
   // 第三行
   statsContainer: {
@@ -165,31 +174,25 @@ const useStyles = makeStyles({
   },
   statsOverview: {
     display: "grid",
-    gridTemplateColumns: "170px 1fr 1fr",
     gap: "2px",
     marginTop: "-2px",
     marginLeft: "32px",
     overflow: "hidden",
-    width: "410px",
     alignContent: "space-between",
   },
   statsBasics: {
     display: "grid",
-    gridTemplateColumns: "140px 1fr 1fr 1fr 1fr",
     gap: "2px",
     marginTop: "-2px",
     overflow: "hidden",
-    width: "520px",
     alignContent: "space-between",
   },
   statsAdvanced: {
     display: "grid",
-    gridTemplateColumns: "160px 1fr 1fr 1fr",
     gap: "2px",
     marginTop: "-2px",
     marginLeft: "32px",
     overflow: "hidden",
-    width: "490px",
     alignContent: "space-between",
   },
   verticalDivider: {
@@ -224,17 +227,19 @@ export const ActivityPage = () => {
   // 使用样式
   const styles = useStyles();
 
-  // 获取主题设置
-  const theme = useSettingsStore((state) => state.theme);
+  // 使用 i18n 获取翻译函数
+  const { t } = useTranslation();
+  // 从设置存储中获取当前语言
+  const { language } = useSettingsStore();
 
   // 当前数据显示状态
   const [activeView, setActiveView] = useState<"overview" | "basics" | "advanced">("overview");
 
   // 获取训练记录数据
   const basicsData = useBasicsStore((state) => state.datasets);
-  const advancedWord = useAdvancedStore((state) => state.Word);
-  const advancedCallsign = useAdvancedStore((state) => state.Callsign);
-  const advnacedQTC = useAdvancedStore((state) => state.QTC);
+  const advancedWord = useAdvancedStore((state) => state.word);
+  const advancedCallsign = useAdvancedStore((state) => state.callsign);
+  const advancedQTC = useAdvancedStore((state) => state.qtc);
 
   const allBasicsRecords = useMemo(() => {
     return Object.values(basicsData).flatMap(dataset =>
@@ -242,8 +247,8 @@ export const ActivityPage = () => {
     );
   }, [basicsData]);
   const allAdvancedRecords = useMemo(() => {
-    return [...advancedWord, ...advancedCallsign, ...advnacedQTC];
-  }, [advancedWord, advancedCallsign, advnacedQTC]);
+    return [...advancedWord, ...advancedCallsign, ...advancedQTC];
+  }, [advancedWord, advancedCallsign, advancedQTC]);
 
   // 获取所有年份
   const allYears = useMemo(() => {
@@ -257,43 +262,49 @@ export const ActivityPage = () => {
     allYears[allYears.length - 1]?.toString() || "2025"
   );
 
-  // 顶部统计数据
+  // 根据当前视图筛选记录
+  const currentViewRecords = useMemo(() => {
+    return activeView === "overview"
+      ? [...allBasicsRecords, ...allAdvancedRecords]
+      : activeView === "basics"
+      ? allBasicsRecords
+      : allAdvancedRecords;
+  }, [activeView, allBasicsRecords, allAdvancedRecords]);
+
+  // 顶部统计信息
+  const trainingType =
+    activeView === "basics"
+      ? t("activity.summary.types.basics")
+      : activeView === "advanced"
+      ? t("activity.summary.types.advanced")
+      : "";
+
   const yearStats = useMemo(() => {
-    const records = 
-      activeView === "overview" ? [...allBasicsRecords, ...allAdvancedRecords] :
-      activeView === "basics" ? allBasicsRecords :
-      allAdvancedRecords;
-    const stats = getYearOverviewStats(records, parseInt(selectedYear));
+    const stats = getYearOverviewStats(currentViewRecords, parseInt(selectedYear));
     return {
       totalRecordCount: stats.totalRecordCount,
       totalDuration: formatDuration(stats.totalDuration),
     };
-  }, [activeView, allBasicsRecords, allAdvancedRecords, selectedYear]);
+  }, [currentViewRecords, selectedYear]);
 
   // 日历热力数据
-  const calendarData = useMemo(() => {
-    const records =
-      activeView === "overview" ? [...allBasicsRecords, ...allAdvancedRecords] :
-      activeView === "basics" ? allBasicsRecords :
-      allAdvancedRecords;
-    return getDailyRecordCounts(records, parseInt(selectedYear));
-  }, [activeView, allBasicsRecords, allAdvancedRecords, selectedYear]);
+  const heapmapData = useMemo(() => {
+    return getCalendarHeatmapData(currentViewRecords, parseInt(selectedYear));
+  }, [currentViewRecords, selectedYear]);
 
-  // 今日训练次数
-  const todayCount = useMemo(() => {
-    const today = new Date().toISOString().split("T")[0];
-    const todayData = calendarData.find((date) => date[0] === today);
-    return todayData ? todayData[1] : 0;
-  }, [calendarData]);
+  // 热力图文本
+  const heatmapTexts = t("activity.heatmap", {
+    returnObjects: true,
+  }) as CalendarHeatmapTexts;
 
   // 底部统计数据
   const overviewStats = useMemo(() => 
     getOverviewStats(
       basicsData,
-      { Word: advancedWord, Callsign: advancedCallsign, QTC: advnacedQTC },
+      { word: advancedWord, callsign: advancedCallsign, qtc: advancedQTC },
       parseInt(selectedYear)
     ),
-    [basicsData, advancedWord, advancedCallsign, advnacedQTC, selectedYear]
+    [basicsData, advancedWord, advancedCallsign, advancedQTC, selectedYear]
   );
   const basicsStats = useMemo(() => 
     getBasicsStats(basicsData, parseInt(selectedYear)),
@@ -301,19 +312,52 @@ export const ActivityPage = () => {
   );
   const advancedStats = useMemo(() => 
     getAdvancedStats(
-      { Word: advancedWord, Callsign: advancedCallsign, QTC: advnacedQTC },
+      { word: advancedWord, callsign: advancedCallsign, qtc: advancedQTC },
       parseInt(selectedYear)
     ),
-    [advancedWord, advancedCallsign, advnacedQTC, selectedYear]
+    [advancedWord, advancedCallsign, advancedQTC, selectedYear]
   );
   const activityStats = useMemo(() => {
-    const records = 
-      activeView === "overview" ? [...allBasicsRecords, ...allAdvancedRecords] :
-      activeView === "basics" ? allBasicsRecords :
-      allAdvancedRecords;
-    return getActivityStats(records, parseInt(selectedYear));
-    }, [activeView, allBasicsRecords, allAdvancedRecords, selectedYear]
+    return getActivityStats(currentViewRecords, parseInt(selectedYear));
+    }, [currentViewRecords, selectedYear]
   );
+
+  // 布局信息
+  const dividerMarginLeft = useMemo(() => {
+    if (language === "English") {
+      if (activeView === "overview") return "-30px";
+      if (activeView === "basics") return "5px";
+      return "-25px";
+    } else {
+      if (activeView === "overview") return "-45px";
+      if (activeView === "basics") return "-12px";
+      return "-25px";      
+    }
+  }, [activeView]);
+
+  const activityStatsWidth = useMemo(() => {
+    if (language === "English") {
+      if (activeView === "overview") return "240px";
+      if (activeView === "basics") return "190px";
+      return "245px";
+    } else {
+      if (activeView === "overview") return "245px";
+      if (activeView === "basics") return "195px";
+      return "230px";      
+    }
+  }, [activeView]);
+
+  const activityStatsGridTemplate = useMemo(() => {
+    if (language === "English") {
+      if (activeView === "overview") return "140px 1fr";
+      if (activeView === "basics") return "110px 1fr";
+      return "120px 1fr";
+    } else {
+      if (activeView === "overview") return "140px 1fr";
+      if (activeView === "basics") return "120px 1fr";
+      return "125px 1fr";      
+    }
+  }, [activeView]);
 
   // 渲染
   return (
@@ -321,7 +365,7 @@ export const ActivityPage = () => {
       {/* 第一行：文本和下拉选择 */}
       <div className={styles.headerRow}>
         <div className={styles.infoContainer}>
-          <Text className={styles.describeText}>In</Text>
+          <Text className={styles.describeText}>{t("activity.summary.info1")}</Text>
           <Dropdown
             id="year-dropdown"
             className={styles.dropdown}
@@ -352,19 +396,17 @@ export const ActivityPage = () => {
             ))}
           </Dropdown>
           <Text className={styles.describeText}>
-            ,{" "}
-            <span className={styles.infoText}>
-              {yearStats.totalRecordCount}
-            </span>{" "}training sessions were completed with a total duration of{" "}
-            <span className={styles.infoText}>
-              {yearStats.totalDuration}
-            </span>
+            <Trans
+              i18nKey="activity.summary.info2"
+              values={{ count: yearStats.totalRecordCount, type: trainingType, duration: yearStats.totalDuration }}
+              components={{ num: <span className={styles.infoText} /> }}
+            />
           </Text>
         </div>
         <div className={styles.buttonContainer}>
           <Tooltip
             content={{
-              children: "Overview",
+              children: t("activity.views.overview"),
               className: styles.tooltip,
             }}
             relationship="label"
@@ -380,7 +422,7 @@ export const ActivityPage = () => {
           </Tooltip>
           <Tooltip
             content={{
-              children: "Basics",
+              children: t("activity.views.basics"),
               className: styles.tooltip,
             }}
             relationship="label"
@@ -396,7 +438,7 @@ export const ActivityPage = () => {
           </Tooltip>
           <Tooltip
             content={{
-              children: "Advanced",
+              children: t("activity.views.advanced"),
               className: styles.tooltip,
             }}
             relationship="label"
@@ -414,77 +456,96 @@ export const ActivityPage = () => {
       </div>
 
       {/* 第二行：图表区域 */}
-      <CalendarHeatmap
-        calendarData={calendarData}
-        selectedYear={selectedYear}
-        theme={theme}
-        todayCount={todayCount}
-      />
+      <div className={styles.chartContainer}>
+        <CalendarHeatmap
+          days={heapmapData.days}
+          todayCount={heapmapData.todayCount}
+          texts={heatmapTexts}
+        />
+      </div>
       {/* 第三行：底部文本 */}
       <div className={styles.statsContainer}>
         {/* 左侧表格信息 */}
         {activeView === "overview" && (
-          <div className={styles.statsOverview}>
-            <div className={styles.statsCell}><Text>Training type:</Text></div>
-            <div className={styles.statsCell}><Text>Basics</Text></div>
-            <div className={styles.statsCell}><Text>Advanced</Text></div>
-            <div className={styles.statsCell}><Text>Total training count:</Text></div>
+          <div 
+            className={styles.statsOverview}
+            style={{ 
+              width: language === "English" ? "410px" : "390px",
+              gridTemplateColumns: language === "English" ? "170px 1fr 1fr" : "145px 1fr 1fr" 
+            }}
+          >
+            <div className={styles.statsCell}><Text>{t("activity.stats.trainingType")}</Text></div>
+            <div className={styles.statsCell}><Text>{t("activity.stats.basics")}</Text></div>
+            <div className={styles.statsCell}><Text>{t("activity.stats.advanced")}</Text></div>
+            <div className={styles.statsCell}><Text>{t("activity.stats.totalCount")}</Text></div>
             <div className={styles.statsCell}><Text>{overviewStats.basics.totalRecordCount}</Text></div>
             <div className={styles.statsCell}><Text>{overviewStats.advanced.totalRecordCount}</Text></div>
-            <div className={styles.statsCell}><Text>Total training time:</Text></div>
+            <div className={styles.statsCell}><Text>{t("activity.stats.totalTime")}</Text></div>
             <div className={styles.statsCell}><Text>{overviewStats.basics.totalDuration}</Text></div>
             <div className={styles.statsCell}><Text>{overviewStats.advanced.totalDuration}</Text></div>
-            <div className={styles.statsCell}><Text>Average accuracy:</Text></div>
+            <div className={styles.statsCell}><Text>{t("activity.stats.averageAccuracy")}</Text></div>
             <div className={styles.statsCell}><Text>{overviewStats.basics.averageAccuracy}</Text></div>
             <div className={styles.statsCell}><Text>{overviewStats.advanced.averageAccuracy}</Text></div>
-            <div className={styles.statsCell}><Text>Best training score:</Text></div>
+            <div className={styles.statsCell}><Text>{t("activity.stats.bestScore")}</Text></div>
             <div className={styles.statsCell}><Text>{overviewStats.basics.bestScore}</Text></div>
             <div className={styles.statsCell}><Text>{overviewStats.advanced.bestScore}</Text></div>
           </div>
         )}
         {activeView === "basics" && (
-          <div className={styles.statsBasics}>
-            <div className={styles.statsCell}><Text>Training dataset:</Text></div>
+          <div 
+            className={styles.statsBasics}
+            style={{ 
+              width: language === "English" ? "520px" : "500px",
+              gridTemplateColumns: language === "English" ? "140px 1fr 1fr 1fr 1fr" : "120px 1fr 1fr 1fr 1fr" 
+            }}
+          >
+            <div className={styles.statsCell}><Text>{t("activity.stats.trainingDataset")}</Text></div>
             {basicsStats.map((d, i) => (
-              <div key={i} className={styles.statsCell}><Text>{d.datasetName}</Text></div>
+              <div key={i} className={styles.statsCell}><Text>{t(`activity.basicsDatasets.${d.datasetName}`)}</Text></div>
             ))}
-            <div className={styles.statsCell}><Text>Lesson progress:</Text></div>
+            <div className={styles.statsCell}><Text>{t("activity.stats.lessonProgress")}</Text></div>
             {basicsStats.map((d, i) => (
               <div key={i} className={styles.statsCell}><Text>{d.lessonProgress}</Text></div>
             ))}
-            <div className={styles.statsCell}><Text>Total training count:</Text></div>
+            <div className={styles.statsCell}><Text>{t("activity.stats.totalCount")}</Text></div>
             {basicsStats.map((d, i) => (
               <div key={i} className={styles.statsCell}><Text>{d.totalRecordCount}</Text></div>
             ))}
-            <div className={styles.statsCell}><Text>Total training time:</Text></div>
+            <div className={styles.statsCell}><Text>{t("activity.stats.totalTime")}</Text></div>
             {basicsStats.map((d, i) => (
               <div key={i} className={styles.statsCell}><Text>{d.totalDuration}</Text></div>
             ))}
-            <div className={styles.statsCell}><Text>Average accuracy:</Text></div>
+            <div className={styles.statsCell}><Text>{t("activity.stats.averageAccuracy")}</Text></div>
             {basicsStats.map((d, i) => (
               <div key={i} className={styles.statsCell}><Text>{d.averageAccuracy}</Text></div>
             ))}
           </div>
         )}
         {activeView === "advanced" && (
-          <div className={styles.statsAdvanced}>
-            <div className={styles.statsCell}><Text>Training type:</Text></div>
+          <div 
+            className={styles.statsAdvanced}
+            style={{ 
+              width: language === "English" ? "490px" : "435px",
+              gridTemplateColumns: language === "English" ? "160px 1fr 1fr 1fr" : "125px 1fr 1fr 1fr" 
+            }}
+          >
+            <div className={styles.statsCell}><Text>{t("activity.stats.trainingType")}</Text></div>
             {advancedStats.map((d, i) => (
-              <div key={i} className={styles.statsCell}><Text>{d.trainingType}</Text></div>
+              <div key={i} className={styles.statsCell}><Text>{t(`activity.advancedTypes.${d.trainingType}`)}</Text></div>
             ))}
-            <div className={styles.statsCell}><Text>Total training count:</Text></div>
+            <div className={styles.statsCell}><Text>{t("activity.stats.totalCount")}</Text></div>
             {advancedStats.map((d, i) => (
               <div key={i} className={styles.statsCell}><Text>{d.totalRecordCount}</Text></div>
             ))}
-            <div className={styles.statsCell}><Text>Total training time:</Text></div>
+            <div className={styles.statsCell}><Text>{t("activity.stats.totalTime")}</Text></div>
             {advancedStats.map((d, i) => (
               <div key={i} className={styles.statsCell}><Text>{d.totalDuration}</Text></div>
             ))}
-            <div className={styles.statsCell}><Text>Best training score:</Text></div>
+            <div className={styles.statsCell}><Text>{t("activity.stats.bestScore")}</Text></div>
             {advancedStats.map((d, i) => (
               <div key={i} className={styles.statsCell}><Text>{d.bestScore}</Text></div>
             ))}
-            <div className={styles.statsCell}><Text>Max character speed:</Text></div>
+            <div className={styles.statsCell}><Text>{t("activity.stats.maxSpeed")}</Text></div>
             {advancedStats.map((d, i) => (
               <div key={i} className={styles.statsCell}><Text>{d.maxSpeed}</Text></div>
             ))}
@@ -494,35 +555,21 @@ export const ActivityPage = () => {
         {/* 中间分割线 */}
         <div 
           className={styles.verticalDivider}
-          style={{ 
-            marginLeft: 
-              activeView === "overview" ? "-30px" : 
-              activeView === "basics" ? "4px" : 
-              "-20px"
-          }}
+          style={{ marginLeft: dividerMarginLeft }}
         />
 
         {/* 右侧活动统计信息 */}
         <div 
           className={styles.statsActivity}
-          style={{
-            width:
-              activeView === "overview" ? "250px" :
-              activeView === "basics"   ? "190px" :
-              "245px",
-            gridTemplateColumns:
-              activeView === "overview" ? "140px 1fr" :
-              activeView === "basics"   ? "110px 1fr" :
-              "120px 1fr",
-          }}
+          style={{ width: activityStatsWidth, gridTemplateColumns: activityStatsGridTemplate }}
         >
-          <div className={styles.statsCell}><Text>Active days:</Text></div>
+          <div className={styles.statsCell}><Text>{t("activity.stats.trainingDays")}</Text></div>
           <div className={styles.statsCell}><Text>{activityStats.activeDays}</Text></div>
-          <div className={styles.statsCell}><Text>Best streak:</Text></div>
+          <div className={styles.statsCell}><Text>{t("activity.stats.bestStreak")}</Text></div>
           <div className={styles.statsCell}><Text>{activityStats.bestStreak}</Text></div>
-          <div className={styles.statsCell}><Text>Current streak:</Text></div>
+          <div className={styles.statsCell}><Text>{t("activity.stats.currentStreak")}</Text></div>
           <div className={styles.statsCell}><Text>{activityStats.currentStreak}</Text></div>
-          <div className={styles.statsCell}><Text>Last active day:</Text></div>
+          <div className={styles.statsCell}><Text>{t("activity.stats.lastSession")}</Text></div>
           <div className={styles.statsCell}><Text>{activityStats.lastSessionDate}</Text></div>
         </div>
       </div>

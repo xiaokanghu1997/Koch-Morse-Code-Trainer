@@ -6,7 +6,7 @@
  * - Numbers: 10个数字
  * - Punctuation: 标点符号
  */
-export type DatasetName = "Koch-LCWO" | "Letters" | "Numbers" | "Punctuation";
+export type DatasetName = "koch-lcwo" | "letters" | "numbers" | "punctuation";
 
 /**
  * 练习模式类型
@@ -15,7 +15,7 @@ export type DatasetName = "Koch-LCWO" | "Letters" | "Numbers" | "Punctuation";
  * - Gradual: 渐进式（新字符1.5倍权重）
  * - Weighted: 难度加权（根据摩尔斯码长度）
  */
-export type PracticeMode = "Uniform" | "New focus" | "Gradual" | "Weighted";
+export type PracticeMode = "uniform" | "newFocus" | "gradual" | "weighted";
 
 /**
  * 进阶训练类型
@@ -23,7 +23,7 @@ export type PracticeMode = "Uniform" | "New focus" | "Gradual" | "Weighted";
  * - Callsign: 呼号训练
  * - QTC: QTC训练
  */
-export type AdvancedType = "Word" | "Callsign" | "QTC";
+export type AdvancedType = "word" | "callsign" | "qtc";
 
 /**
  * 播放状态
@@ -301,6 +301,54 @@ export interface TimeStatsResult {
 
   /** 详细数据 */
   details: TimeStats[];
+}
+
+/**
+ * 日历热力图数据项
+ * 包含日期、值、月份、月内日期、周索引、周内日期索引
+ */
+export interface CalendarDayItem {
+  /** 日期字符串，格式为 YYYY-MM-DD */
+  date: string;
+
+  /** 值，用于热力图的颜色映射 */
+  value: number;
+
+  /** 月份索引，0 表示一月，11 表示十二月 */
+  month: number;
+
+  /** 月内日期，1-31 */
+  dayOfMonth: number;
+
+  /** 周索引，0 表示第一周 */
+  weekIndex: number;
+  
+  /** 周内日期索引，0 表示周一，6 表示周日 */
+  weekdayIndex: number;
+}
+
+/**
+ * 图表文本内容结构
+ * 包含月份标签、星期标签、热力图提示文本等
+ */
+export interface CalendarHeatmapTexts {
+  /** 月份标签 */
+  months: string[];
+  
+  /** 星期标签 */
+  weekdays: string[];
+
+  /** 热力图提示文本：少 */
+  less: string;
+
+  /** 热力图提示文本：多 */
+  more: string;
+
+  /** 今日训练次数文本 */
+  todayTrainingCount: string;
+
+  /** 训练次数文本 */
+  trainingCount: string;
 }
 
 // =================== 进阶训练配置接口 ====================

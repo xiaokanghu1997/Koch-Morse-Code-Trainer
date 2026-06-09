@@ -24,11 +24,13 @@ import {
   calculateScore 
 } from "../services/statisticalToolset";
 import { useState, useEffect, useMemo, useRef, useLayoutEffect } from "react";
+import { useTranslation } from "react-i18next";
 import type { AudioConfig, AccuracyResult, TrainingResult } from "../lib/types";
 import { useTiming } from "../hooks/useTiming";
 import { useTextGenerator } from "../hooks/useTextGenerator";
 import { useMorsePlayer } from "../hooks/useMorsePlayer";
 import { useAdvancedStore } from "../stores/advancedStore";
+import { useSettingsStore } from "../stores/settingsStore";
 
 // 样式定义
 const useStyles = makeStyles({
@@ -50,9 +52,6 @@ const useStyles = makeStyles({
   speedSection: {
     display: "flex",
     alignItems: "center",
-  },
-  speedText: {
-    width: "230px",
   },
   scoreText: {
     width: "150px",
@@ -78,7 +77,7 @@ const useStyles = makeStyles({
     gap: "8px",
   },
   tooltip: {
-    backgroundColor: tokens.colorNeutralBackground2Hover,
+    backgroundColor: tokens.colorNeutralBackground4Hover,
     boxShadow: tokens.shadow2,
     maxWidth: "280px",
     whiteSpace: "normal",
@@ -91,7 +90,7 @@ const useStyles = makeStyles({
     boxShadow: tokens.shadow2,
     transform: "translateY(1.2px)",
     "& input": {
-      fontFamily: tokens.fontFamilyMonospace,
+      fontFamily: '"Consolas", "Courier New", "Courier", "Segoe UI", sans-serif',
       fontSize: "14px",
     },
     ":hover": {
@@ -160,10 +159,6 @@ const useStyles = makeStyles({
       backgroundColor: tokens.colorNeutralBackground4,
       color: tokens.colorNeutralForegroundDisabled,
     },
-  },
-  buttonWidth: {
-    width: "90px",
-    minWidth: "90px",
   },
   buttonText: {
     paddingBottom: "1.4px",
@@ -237,7 +232,7 @@ const useStyles = makeStyles({
   tableHeader: {
     fontSize: "12.5px",
     fontWeight: tokens.fontWeightSemibold,
-    fontFamily: tokens.fontFamilyMonospace,
+    fontFamily: '"Consolas", "Courier New", "Courier", "Segoe UI", sans-serif',
     lineHeight: "normal",
     padding: "0px",
     display: "block",
@@ -316,6 +311,11 @@ export const GenericTraining = ({
 }: GenericTrainingProps) => {
   // 使用样式
   const styles = useStyles();
+
+  // 使用 i18n 获取翻译函数
+  const { t } = useTranslation();
+  // 获取当前语言设置
+  const { language } = useSettingsStore();  
 
   // 进阶训练记录提交
   const submitAdvancedRecord = useAdvancedStore((state) => state.submitRecord);
@@ -516,8 +516,29 @@ export const GenericTraining = ({
       start: inputarea.selectionStart ?? 0,
       end: inputarea.selectionEnd ?? 0,
     };
+    // 排除非法字符
+    const filtered = data.value.replace(/[^\x20-\x7E\r\n\t]/g, "");
     // 转换为大写
-    setInputText(data.value.toUpperCase());
+    setInputText(filtered.toUpperCase());
+  };
+
+  // 输入框非法输入过滤
+  const isValidInput = (text: string) => {
+    return /^[\x20-\x7E\r\n\t]+$/.test(text);
+  };
+  const trainingInputProps = {
+    onBeforeInput: (e: React.FormEvent<HTMLInputElement>) => {
+      const event = e.nativeEvent as InputEvent;
+      if (event.data && !isValidInput(event.data)) {
+        e.preventDefault();
+      }
+    },
+    onPaste: (e: React.ClipboardEvent<HTMLInputElement>) => {
+      const text = e.clipboardData.getData("text");
+      if (!isValidInput(text)) {
+        e.preventDefault();
+      }
+    },
   };
 
   // 开始训练
@@ -576,7 +597,7 @@ export const GenericTraining = ({
         const allResults = [...results, newResult];
         const maxSpeed = Math.max(...allResults.map(r => r.wpm));
         const totalScore = allResults.reduce((sum, r) => sum + r.score, 0);
-        const trainingType = (config as any).dataset ? "Word" : "Callsign";
+        const trainingType = (config as any).dataset ? "word" : "callsign";
         submitAdvancedRecord(trainingType, {
           timestamp: trainingStartTime,
           duration: duration,
@@ -673,10 +694,10 @@ export const GenericTraining = ({
       }
     };
     // 添加事件监听
-    window.addEventListener("keydown", handleKeyDown);
+    addEventListener("keydown", handleKeyDown);
     // 清理函数：组件卸载时移除监听
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
+      removeEventListener("keydown", handleKeyDown);
     };
   }, [
     trainingPhase, 
@@ -785,15 +806,36 @@ export const GenericTraining = ({
           isShort ? styles.tableHeightShort : styles.tableHeight
         )}>
           <colgroup>
-            <col style={{ width: "44.25%" }} />
-            <col style={{ width: "44.25%" }} />
-            <col style={{ width: "11.50%" }} /> 
+            <col style={{ width: language === "English" ? "44.25%" : "43.00%" }} />
+            <col style={{ width: language === "English" ? "44.25%" : "43.00%" }} />
+            <col style={{ width: language === "English" ? "11.50%" : "14.00%" }} /> 
           </colgroup>
           <thead>
             <tr>
-              <th><Text className={styles.tableHeader}>Sent</Text></th>
-              <th><Text className={styles.tableHeader}>Received</Text></th>
-              <th><Text className={styles.tableHeader}>WPM</Text></th>
+              <th>
+                <Text 
+                  className={styles.tableHeader}
+                  style={{ marginTop: language === "English" ? "0px" : "-2px" }}
+                >
+                  {t("advanced.generic.training.table.sent")}
+                </Text>
+              </th>
+              <th>
+                <Text 
+                  className={styles.tableHeader}
+                  style={{ marginTop: language === "English" ? "0px" : "-2px" }}
+                >
+                  {t("advanced.generic.training.table.received")}
+                </Text>
+              </th>
+              <th>
+                <Text 
+                  className={styles.tableHeader}
+                  style={{ marginTop: language === "English" ? "0px" : "-2px" }}
+                >
+                  {t("advanced.generic.training.table.wpm")}
+                </Text>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -824,23 +866,23 @@ export const GenericTraining = ({
       {/* 信息展示 */}
       <div className={styles.inforSection}>
         <div className={styles.speedSection}>
-          <Text className={styles.speedText}>
-            Current character speed:{" "}
+          <Text style={{ width: language === "English" ? "240px" : "210px" }}>
+            {t("advanced.generic.training.labels.currentSpeed")}
             <span className={styles.valueText}>
               {shouldShowResults ? audioConfig.charSpeed : "--"}
             </span>
-            {" "}WPM
+            {" "}{t("advanced.generic.training.units.wpm")}
           </Text>
-          <Text className={styles.speedText}>
-            Maximum character speed:{" "}
+          <Text style={{ width: language === "English" ? "240px" : "210px" }}>
+            {t("advanced.generic.training.labels.maxSpeed")}
             <span className={styles.valueText}>
               {shouldShowResults ? Math.max(...results.map(r => r.wpm), audioConfig.charSpeed) : "--"}
             </span>
-            {" "}WPM
+            {" "}{t("advanced.generic.training.units.wpm")}
           </Text>
         </div>
         <Text className={styles.scoreText}>
-          Training score:{" "}
+          {t("advanced.generic.training.labels.score")}
           <span className={styles.valueText}>
             {shouldShowResults 
               ? (config.fixedCharSpeed ? "--" : Math.round(totalScore))
@@ -864,6 +906,7 @@ export const GenericTraining = ({
             onChange={handleInputChange}
             autoComplete="off"
             maxLength={inputMaxLength}
+            {...trainingInputProps}
           />
           <Tooltip
             content={{
@@ -874,7 +917,8 @@ export const GenericTraining = ({
             positioning="above-start"
           >
             <Button 
-              className={mergeClasses(styles.button, styles.buttonWidth)}
+              className={styles.button}
+              style={{ width: language === "English" ? "90px" : "100px" }}
               icon={
                 trainingPhase === "notStarted" 
                   ? <Fire20Regular /> 
@@ -885,10 +929,10 @@ export const GenericTraining = ({
               onClick={handleButtonClick}>
               <Text className={styles.buttonText}>
                 {trainingPhase === "notStarted"
-                  ? "Start"
+                  ? t("advanced.generic.training.buttons.start")
                   : trainingPhase === "training"
-                  ? "OK"
-                  : "Retry"}
+                  ? t("advanced.generic.training.buttons.ok")
+                  : t("advanced.generic.training.buttons.retry")}
               </Text>
             </Button>
           </Tooltip>
@@ -972,12 +1016,13 @@ export const GenericTraining = ({
         {/* 返回 */}
         <div className={styles.returnSection}>
           <Button
-            className={mergeClasses(styles.button, styles.buttonWidth)}
+            className={styles.button}
+            style={{ width: language === "English" ? "90px" : "100px" }}
             icon={<ArrowCircleLeft20Regular />} 
             onClick={onBack}
           >
             <Text className={styles.buttonText}>
-              Back
+              {t("advanced.generic.training.buttons.back")}
             </Text>
           </Button>
         </div>

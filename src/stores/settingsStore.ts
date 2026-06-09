@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import i18n from "../utils/i18n";
 
 /**
  * 设置状态接口
@@ -63,7 +64,10 @@ export const useSettingsStore = create<SettingsState>()(
       setTheme: (theme) => set({ theme }),
 
       /** 设置语言 */
-      setLanguage: (language) => set({ language }),
+      setLanguage: (language) => {
+        set({ language });
+        i18n.changeLanguage(language === "English" ? "en" : "zh");
+      },
 
       /** 设置窗口透明度 */
       setOpacity: (opacity) => set({ opacity: Math.max(10, Math.min(100, opacity)) }),
@@ -85,3 +89,7 @@ export const useSettingsStore = create<SettingsState>()(
     }
   )
 );
+
+// 启动时把持久化的语言设置应用到 i18n
+const savedLanguage = useSettingsStore.getState().language;
+i18n.changeLanguage(savedLanguage === "English" ? "en" : "zh");

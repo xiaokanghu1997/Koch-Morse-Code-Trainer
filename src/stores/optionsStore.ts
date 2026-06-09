@@ -12,8 +12,8 @@ const INITIAL_CONFIG: OptionsConfig = {
   tone: 600,
 
   // 生成参数
-  datasetName: "Koch-LCWO",
-  practiceMode: "Gradual",
+  datasetName: "koch-lcwo",
+  practiceMode: "gradual",
   groupLength: 5,
   randomGroupLength: false,
   groupSpace: 1,

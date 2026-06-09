@@ -33,11 +33,11 @@ function App() {
     const handleContextMenu = (e: MouseEvent) => {
       e.preventDefault();
     };
-    window.addEventListener("contextmenu", handleContextMenu);
+    addEventListener("contextmenu", handleContextMenu);
 
     // 清理函数，防止多次 mount 导致重复监听
     return () => {
-      window.removeEventListener("contextmenu", handleContextMenu);
+      removeEventListener("contextmenu", handleContextMenu);
     };
 */
   }, []);

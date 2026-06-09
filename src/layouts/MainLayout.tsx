@@ -23,6 +23,7 @@ import {
   Settings20Regular,
   bundleIcon,
 } from "@fluentui/react-icons";
+import { useTranslation } from "react-i18next";
 
 const useStyles = makeStyles({
   root:  {
@@ -70,6 +71,7 @@ const useStyles = makeStyles({
     },
   },
   tooltip: {
+    fontSize: tokens.fontSizeBase200,
     backgroundColor: tokens.colorNeutralBackground1Hover,
     boxShadow: tokens.shadow2,
   },
@@ -85,6 +87,7 @@ export const MainLayout = () => {
   const styles = useStyles();
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
 
   // 获取当前选中的值（现在直接返回路径）
   const getSelectedValue = () => {
@@ -108,7 +111,7 @@ export const MainLayout = () => {
             <NavDrawerBody className={styles.navBody}>
               <Tooltip
                 content={{
-                  children: "Basics",
+                  children: t("mainlayout.basics"),
                   className: styles.tooltip,
                 }}
                 relationship="label"
@@ -118,7 +121,7 @@ export const MainLayout = () => {
               </Tooltip>
               <Tooltip
                 content={{
-                  children: "Advanced",
+                  children: t("mainlayout.advanced"),
                   className: styles.tooltip,
                 }}
                 relationship="label"
@@ -128,7 +131,7 @@ export const MainLayout = () => {
               </Tooltip>
               <Tooltip
                 content={{
-                  children: "Activity",
+                  children: t("mainlayout.activity"),
                   className: styles.tooltip,
                 }}
                 relationship="label"
@@ -141,7 +144,7 @@ export const MainLayout = () => {
             <NavDrawerFooter className={styles.navBody}>
               <Tooltip
                 content={{
-                  children: "About",
+                  children: t("mainlayout.about"),
                   className: styles.tooltip,
                 }}
                 relationship="label"
@@ -151,7 +154,7 @@ export const MainLayout = () => {
               </Tooltip>
               <Tooltip
                 content={{
-                  children: "Settings",
+                  children: t("mainlayout.settings"),
                   className: styles.tooltip,
                 }}
                 relationship="label"

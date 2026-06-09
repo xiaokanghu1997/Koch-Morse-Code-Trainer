@@ -1,7 +1,7 @@
 {
   "name": "koch-morse-code-trainer",
   "private": true,
-  "version": "2.0.0-alpha.7",
+  "version": "2.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -14,23 +14,32 @@
   "dependencies": {
     "@fluentui/react-components": "^9.72.9",
     "@fluentui/react-icons": "^2.0.316",
+    "@react-spring/web": "^10.1.0",
     "@tauri-apps/api": "^2.9.1",
     "@tauri-apps/plugin-dialog": "^2.6.0",
     "@tauri-apps/plugin-fs": "^2.4.5",
     "@tauri-apps/plugin-log": "^2.8.0",
-    "echarts": "^6.0.0",
+    "d3-scale": "^4.0.2",
+    "d3-shape": "^3.2.0",
+    "i18next": "^26.2.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-i18next": "^17.0.8",
     "react-router-dom": "^7.12.0",
     "tone": "^15.1.22",
     "zustand": "^5.0.10"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",
+    "@types/d3-scale": "^4.0.9",
+    "@types/d3-shape": "^3.1.8",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
     "typescript": "~5.8.3",
     "vite": "^7.0.4"
+  },
+  "allowScripts": {
+    "esbuild@0.27.2": true
   }
 }

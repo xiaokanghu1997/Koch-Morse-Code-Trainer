@@ -15,9 +15,9 @@ interface ExportedData {
 
   /** 进阶训练数据 */
   advanced: {
-    Word: any[];
-    Callsign: any[];
-    QTC: any[];
+    word: any[];
+    callsign: any[];
+    qtc: any[];
   };
 }
 
@@ -40,9 +40,9 @@ class RecordManager {
         datasets: basicsStore.datasets,
       },
       advanced: {
-        Word: advancedStore.Word,
-        Callsign: advancedStore.Callsign,
-        QTC: advancedStore.QTC,
+        word: advancedStore.word,
+        callsign: advancedStore.callsign,
+        qtc: advancedStore.qtc,
       },
     };
     
@@ -73,9 +73,9 @@ class RecordManager {
       
       // 验证进阶训练数据结构
       if (
-        !Array.isArray(importedData.advanced.Word) ||
-        !Array.isArray(importedData.advanced.Callsign) ||
-        !Array.isArray(importedData.advanced.QTC)
+        !Array.isArray(importedData.advanced.word) ||
+        !Array.isArray(importedData.advanced.callsign) ||
+        !Array.isArray(importedData.advanced.qtc)
       ) {
         log.error("Invalid advanced data structure", "RecordManager");
         return false;
@@ -83,16 +83,16 @@ class RecordManager {
 
       // 导入基础训练数据
       useBasicsStore.setState({
-        currentDatasetName: importedData.basics.currentDatasetName || "Koch-LCWO",
+        currentDatasetName: importedData.basics.currentDatasetName || "koch-lcwo",
         currentLessonNumber: importedData.basics.currentLessonNumber || 1,
         datasets: importedData.basics.datasets,
       });
 
       // 导入进阶训练数据
       useAdvancedStore.setState({
-        Word: importedData.advanced.Word,
-        Callsign: importedData.advanced.Callsign,
-        QTC: importedData.advanced.QTC,
+        word: importedData.advanced.word,
+        callsign: importedData.advanced.callsign,
+        qtc: importedData.advanced.qtc,
       });
 
       log.info("Training data imported", "RecordManager");
@@ -108,14 +108,14 @@ class RecordManager {
    */
   clearAllData(): void {
     useBasicsStore.setState({
-      currentDatasetName: "Koch-LCWO",
+      currentDatasetName: "koch-lcwo",
       currentLessonNumber: 1,
       datasets: {},
     });
     useAdvancedStore.setState({
-      Word: [],
-      Callsign: [],
-      QTC: [],
+      word: [],
+      callsign: [],
+      qtc: [],
     });
     log.info("All training data cleared", "RecordManager");
   }
@@ -173,7 +173,7 @@ class RecordManager {
    * @return 是否修改成功
    */
   modifyAdvancedRecord(
-    trainingType: "Word" | "Callsign" | "QTC",
+    trainingType: "word" | "callsign" | "qtc",
     recordIndex: number,
     updatedRecord: { timestamp: number; duration: number; charSpeed: number; score: number }
   ): boolean {
@@ -269,7 +269,7 @@ class RecordManager {
    * @return 是否删除成功
    */
   deleteAdvancedRecord(
-    trainingType: "Word" | "Callsign" | "QTC",
+    trainingType: "word" | "callsign" | "qtc",
     recordIndex: number
   ): boolean {
     const advancedStore = useAdvancedStore.getState();

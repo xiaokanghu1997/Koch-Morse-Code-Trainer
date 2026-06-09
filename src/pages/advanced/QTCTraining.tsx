@@ -19,6 +19,7 @@ import {
   ArrowCircleLeft20Regular,
 } from "@fluentui/react-icons";
 import { useState, useEffect, useMemo, useRef, useLayoutEffect } from "react";
+import { useTranslation } from "react-i18next";
 import type { AudioConfig, AccuracyResult, QTCTrainingConfig } from "../../lib/types";
 import { getRandomQTC } from "../../services/contentGenerator";
 import { useTiming } from "../../hooks/useTiming";
@@ -26,6 +27,7 @@ import { useTextGenerator } from "../../hooks/useTextGenerator";
 import { useMorsePlayer } from "../../hooks/useMorsePlayer";
 import { calculateAccuracy, calculateScore } from "../../services/statisticalToolset";
 import { useAdvancedStore } from "../../stores/advancedStore";
+import { useSettingsStore } from "../../stores/settingsStore";
 
 // 样式定义
 const useStyles = makeStyles({
@@ -66,7 +68,7 @@ const useStyles = makeStyles({
     backgroundColor: tokens.colorNeutralBackground3Pressed,
     border: `1px solid ${tokens.colorNeutralStroke2}`,
     borderRadius: tokens.borderRadiusSmall,
-    fontFamily: tokens.fontFamilyMonospace,
+    fontFamily: '"Consolas", "Courier New", "Courier", "Segoe UI", sans-serif',
     fontWeight: tokens.fontWeightSemibold,
     fontSize: "14px",
     textAlign: "center",
@@ -252,7 +254,7 @@ const useStyles = makeStyles({
     paddingBottom: "1.4px",
   },
   tooltip: {
-    backgroundColor: tokens.colorNeutralBackground2Hover,
+    backgroundColor: tokens.colorNeutralBackground4Hover,
     boxShadow: tokens.shadow2,
     maxWidth: "280px",
     whiteSpace: "normal",
@@ -271,6 +273,11 @@ interface QTCTrainingProps {
 export const QTCTraining = ({ config, onBack }: QTCTrainingProps) => {
   // 使用样式
   const styles = useStyles();
+
+  // 使用 i18n 获取翻译函数
+  const { t } = useTranslation();
+  // 获取当前语言设置
+  const { language } = useSettingsStore();
 
   // 进阶训练记录提交
   const submitAdvancedRecord = useAdvancedStore((state) => state.submitRecord);
@@ -375,7 +382,6 @@ export const QTCTraining = ({ config, onBack }: QTCTrainingProps) => {
   }, [textGen.text, currentIndex, replayCounts]);
 
   // 音频总时长（优先级回退）
-  
   const displayTotalDuration = useMemo(() => {
     // 优先使用播放器的总时长（更准确），其次使用生成器的时长
     if (player.playbackState.totalDuration > 0) {
@@ -614,7 +620,7 @@ export const QTCTraining = ({ config, onBack }: QTCTrainingProps) => {
         const endTime = Date.now();
         const duration = (endTime - trainingStartTime) / 1000; // 转换为秒
         const totalScore = finalScores.reduce((sum, score) => sum + score, 0);
-        submitAdvancedRecord("QTC", {
+        submitAdvancedRecord("qtc", {
           timestamp: trainingStartTime,
           duration: duration,
           charSpeed: config.charSpeed,
@@ -727,10 +733,10 @@ export const QTCTraining = ({ config, onBack }: QTCTrainingProps) => {
       }
     };
     // 添加事件监听
-    window.addEventListener("keydown", handleKeyDown);
+    addEventListener("keydown", handleKeyDown);
     // 清理函数：组件卸载时移除监听
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
+      removeEventListener("keydown", handleKeyDown);
     };
   }, [
     trainingPhase,
@@ -808,6 +814,25 @@ export const QTCTraining = ({ config, onBack }: QTCTrainingProps) => {
     }
   }, [grNumInputText, timeInputTexts, callsignInputTexts, serialInputTexts]);
 
+  // 输入框非法输入过滤
+  const isValidInput = (text: string) => {
+    return /^[\x21-\x7E]+$/.test(text);
+  };
+  const qtcInputProps = {
+    onBeforeInput: (e: React.FormEvent<HTMLInputElement>) => {
+      const event = e.nativeEvent as InputEvent;
+      if (event.data && !isValidInput(event.data)) {
+        e.preventDefault();
+      }
+    },
+    onPaste: (e: React.ClipboardEvent<HTMLInputElement>) => {
+      const text = e.clipboardData.getData("text");
+      if (!isValidInput(text)) {
+        e.preventDefault();
+      }
+    },
+  };
+
   // 输入处理函数
   const handleGrNumChange = (e: React.ChangeEvent<HTMLInputElement>, data: { value: string }) => {
     const inputElement = e.target as HTMLInputElement;
@@ -816,7 +841,7 @@ export const QTCTraining = ({ config, onBack }: QTCTrainingProps) => {
       start: inputElement.selectionStart ?? 0,
       end: inputElement.selectionEnd ?? 0,
     };
-    setGrNumInputText(data.value.replace(/\s/g, '').toUpperCase());
+    setGrNumInputText(data.value.replace(/[^\x21-\x7E]/g, "").toUpperCase());
   };
   const handleTimeChange = (index: number) => (e: React.ChangeEvent<HTMLInputElement>, data: { value: string }) => {
     const inputElement = e.target as HTMLInputElement;
@@ -826,7 +851,7 @@ export const QTCTraining = ({ config, onBack }: QTCTrainingProps) => {
       end: inputElement.selectionEnd ?? 0,
     };
     const newTimeTexts = [...timeInputTexts];
-    newTimeTexts[index] = data.value.replace(/\s/g, '').toUpperCase();
+    newTimeTexts[index] = data.value.replace(/[^\x21-\x7E]/g, "").toUpperCase();
     setTimeInputTexts(newTimeTexts);
   };
   const handleCallsignChange = (index: number) => (e: React.ChangeEvent<HTMLInputElement>, data: { value: string }) => {
@@ -837,7 +862,7 @@ export const QTCTraining = ({ config, onBack }: QTCTrainingProps) => {
       end: inputElement.selectionEnd ?? 0,
     };
     const newCallsignTexts = [...callsignInputTexts];
-    newCallsignTexts[index] = data.value.replace(/\s/g, '').toUpperCase();
+    newCallsignTexts[index] = data.value.replace(/[^\x21-\x7E]/g, "").toUpperCase();
     setCallsignInputTexts(newCallsignTexts);
   };
   const handleSerialChange = (index: number) => (e: React.ChangeEvent<HTMLInputElement>, data: { value: string }) => {
@@ -848,7 +873,7 @@ export const QTCTraining = ({ config, onBack }: QTCTrainingProps) => {
       end: inputElement.selectionEnd ?? 0,
     };
     const newSerialTexts = [...serialInputTexts];
-    newSerialTexts[index] = data.value.replace(/\s/g, '').toUpperCase();
+    newSerialTexts[index] = data.value.replace(/[^\x21-\x7E]/g, "").toUpperCase();
     setSerialInputTexts(newSerialTexts);
   };
 
@@ -921,10 +946,18 @@ export const QTCTraining = ({ config, onBack }: QTCTrainingProps) => {
         {/* 训练内容区域 */}
         <div className={styles.trainingColumn}>
           <div className={styles.headerRow}>
-            <div className={mergeClasses(styles.headerCell, styles.columnGrNum)}>Gr/Num</div>
-            <div className={mergeClasses(styles.headerCell, styles.columnTime)}>Time</div>
-            <div className={mergeClasses(styles.headerCell, styles.columnCallsign)}>Callsign</div>
-            <div className={mergeClasses(styles.headerCell, styles.columnSerial)}>Serial</div>
+            <div className={mergeClasses(styles.headerCell, styles.columnGrNum)}>
+              {t("advanced.qtc.training.table.grNum")}
+            </div>
+            <div className={mergeClasses(styles.headerCell, styles.columnTime)}>
+              {t("advanced.qtc.training.table.time")}
+            </div>
+            <div className={mergeClasses(styles.headerCell, styles.columnCallsign)}>
+              {t("advanced.qtc.training.table.callsign")}
+            </div>
+            <div className={mergeClasses(styles.headerCell, styles.columnSerial)}>
+              {t("advanced.qtc.training.table.serial")}
+            </div>
           </div>
           <div className={styles.contentRow}>
             {/* 第1列：1个input */}
@@ -947,6 +980,7 @@ export const QTCTraining = ({ config, onBack }: QTCTrainingProps) => {
                   onBlur={handleGrNumBlur}
                   maxLength={14}
                   autoComplete="off"
+                  {...qtcInputProps}
                 />
               )}
             </div>
@@ -972,6 +1006,7 @@ export const QTCTraining = ({ config, onBack }: QTCTrainingProps) => {
                     onBlur={handleTimeBlur(i)}
                     maxLength={10}
                     autoComplete="off"
+                    {...qtcInputProps}
                   />
                 )
               ))}
@@ -998,6 +1033,7 @@ export const QTCTraining = ({ config, onBack }: QTCTrainingProps) => {
                     onBlur={handleCallsignBlur(i)}
                     maxLength={28}
                     autoComplete="off" 
+                    {...qtcInputProps}
                   />
                 )
               ))}
@@ -1024,6 +1060,7 @@ export const QTCTraining = ({ config, onBack }: QTCTrainingProps) => {
                     onBlur={handleSerialBlur(i)}
                     maxLength={8}
                     autoComplete="off"
+                    {...qtcInputProps}
                   />
                 )
               ))}
@@ -1036,11 +1073,11 @@ export const QTCTraining = ({ config, onBack }: QTCTrainingProps) => {
           {/* 上侧：信息展示 */}
           <div className={styles.topSection}>
             <div className={styles.infoRow}>
-              <Text>Character speed:</Text>
-              <Text>{config.charSpeed} WPM</Text>
+              <Text>{t("advanced.qtc.training.labels.charSpeed")}</Text>
+              <Text>{config.charSpeed} {t("advanced.qtc.training.units.wpm")}</Text>
             </div>
             <div className={styles.infoRow}>
-              <Text>Completion status:</Text>
+              <Text>{t("advanced.qtc.training.labels.completion")}</Text>
               <Text>
                 {trainingPhase === "completed"
                   ? `${correctQtcCount}/10`
@@ -1048,7 +1085,7 @@ export const QTCTraining = ({ config, onBack }: QTCTrainingProps) => {
               </Text>
             </div>
             <div className={styles.infoRow}>
-              <Text>Score:</Text>
+              <Text>{t("advanced.qtc.training.labels.score")}</Text>
               <Text>
                 {trainingPhase === "completed"
                   ? Math.round(totalScore)
@@ -1113,12 +1150,14 @@ export const QTCTraining = ({ config, onBack }: QTCTrainingProps) => {
                 }
               >
                 <Text className={styles.buttonText}>
-                  {player.isPlaying ? "Pause" : "Play"}
+                  {player.isPlaying 
+                  ? t("advanced.qtc.training.buttons.pause") 
+                  : t("advanced.qtc.training.buttons.play")}
                 </Text>
               </Button>
               <Tooltip
                 content={{
-                  children: "Press period (.) to repeat",
+                  children: t("advanced.qtc.training.tooltips.repeat"),
                   className: styles.tooltip,
                 }}
                 relationship="label"
@@ -1135,7 +1174,7 @@ export const QTCTraining = ({ config, onBack }: QTCTrainingProps) => {
                   }
                 >
                   <Text className={styles.buttonText}>
-                    Restart
+                    {t("advanced.qtc.training.buttons.restart")}
                   </Text>
                 </Button>
               </Tooltip>
@@ -1145,10 +1184,10 @@ export const QTCTraining = ({ config, onBack }: QTCTrainingProps) => {
               <Tooltip
                 content={{
                   children: 
-                    trainingPhase === "notStarted" ? "Press Enter to start" :
-                    trainingPhase === "training" ? "Press Enter to next QTC" :
-                    trainingPhase === "checking" ? "Press Enter to check" :
-                    "Press Enter to retry",
+                    trainingPhase === "notStarted" ? t("advanced.qtc.training.tooltips.start") :
+                    trainingPhase === "training" ? t("advanced.qtc.training.tooltips.next") :
+                    trainingPhase === "checking" ? t("advanced.qtc.training.tooltips.check") :
+                    t("advanced.qtc.training.tooltips.retry"),
                   className: styles.tooltip,
                 }}
                 relationship="label"
@@ -1167,10 +1206,10 @@ export const QTCTraining = ({ config, onBack }: QTCTrainingProps) => {
                 >
                   <Text className={styles.buttonText}>
                     {
-                      trainingPhase === "notStarted" ? "Start" :
-                      trainingPhase === "training" ? "Next" :
-                      trainingPhase === "checking" ? "Check" :
-                      "Retry"
+                      trainingPhase === "notStarted" ? t("advanced.qtc.training.buttons.start") :
+                      trainingPhase === "training" ? t("advanced.qtc.training.buttons.next") :
+                      trainingPhase === "checking" ? t("advanced.qtc.training.buttons.check") :
+                      t("advanced.qtc.training.buttons.retry")
                     }
                   </Text>
                 </Button>
@@ -1182,12 +1221,12 @@ export const QTCTraining = ({ config, onBack }: QTCTrainingProps) => {
           <div className={styles.bottomSection}>
             <Button
               className={styles.button}
-              style={{ width: "90px", minWidth: "90px" }}
+              style={{ width: language === "English" ? "90px" : "100px" }}
               icon={<ArrowCircleLeft20Regular />} 
               onClick={onBack}
             >
               <Text className={styles.buttonText}>
-                Back
+                {t("advanced.qtc.training.buttons.back")}
               </Text>
             </Button>
           </div>

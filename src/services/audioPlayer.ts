@@ -257,7 +257,7 @@ export class AudioPlayer {
   private startProgressTracking(): void {
     this.stopProgressTracking();
     
-    this.progressInterval = window.setInterval(() => {
+    this.progressInterval = setInterval(() => {
       this.updateProgress();
     }, this.PROGRESS_UPDATE_INTERVAL);
   }

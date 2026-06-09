@@ -58,7 +58,7 @@ export const useBasicsStore = create<BasicsState>()(
   persist(
     (set, get) => ({
       // ==================== 初始状态 ====================
-      currentDatasetName: "Koch-LCWO",
+      currentDatasetName: "koch-lcwo",
       currentLessonNumber: 1,
       datasets: {},
 
@@ -180,7 +180,7 @@ export const useBasicsStore = create<BasicsState>()(
             return;
           }
           set({
-            currentDatasetName: importedData.currentDatasetName || "Koch-LCWO",
+            currentDatasetName: importedData.currentDatasetName || "koch-lcwo",
             currentLessonNumber: importedData.currentLessonNumber || 1,
             datasets: importedData.datasets,
           });
@@ -197,7 +197,7 @@ export const useBasicsStore = create<BasicsState>()(
       /** 清空所有训练数据 */
       clearAllData: () => {
         set({
-          currentDatasetName: "Koch-LCWO",
+          currentDatasetName: "koch-lcwo",
           currentLessonNumber: 1,
           datasets: {},
         });

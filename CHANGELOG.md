@@ -4,6 +4,20 @@
 
 ---
 
+## [2.0.0] - 2026-06-09
+
+### 改进
+- 🔧 完善中文界面
+- 🔧 调整并优化界面布局
+- 🔧 重构统计图表和日历热力图
+- 🔧 限制所有输入框中输入合法内容
+- 🔧 完善基础训练配置页面的预览按钮功能
+
+### 修复
+- 🐛 修复基础训练配置页面音频时间不一致问题
+
+---
+
 ## [2.0.0-alpha.7] - 2026-05-22
 
 ### 改进
@@ -189,3 +203,24 @@
   - 基于 LCWO 标准的摩尔斯电码音频生成
   - 正弦波音调 + 淡入淡出效果
   - 自动生成练习音频和文本文件
+
+
+[2.0.0]: https://github.com/xiaokanghu1997/Koch-Morse-Code-Trainer/releases/tag/v2.0.0
+[2.0.0-alpha.7]: https://github.com/xiaokanghu1997/Koch-Morse-Code-Trainer/releases/tag/v2.0.0-alpha.7
+[2.0.0-alpha.6]: https://github.com/xiaokanghu1997/Koch-Morse-Code-Trainer/releases/tag/v2.0.0-alpha.6
+[2.0.0-alpha.5]: https://github.com/xiaokanghu1997/Koch-Morse-Code-Trainer/releases/tag/v2.0.0-alpha.5
+[2.0.0-alpha.4]: https://github.com/xiaokanghu1997/Koch-Morse-Code-Trainer/releases/tag/v2.0.0-alpha.4
+[2.0.0-alpha.3]: https://github.com/xiaokanghu1997/Koch-Morse-Code-Trainer/releases/tag/v2.0.0-alpha.3
+[2.0.0-alpha.2]: https://github.com/xiaokanghu1997/Koch-Morse-Code-Trainer/releases/tag/v2.0.0-alpha.2
+[2.0.0-alpha.1]: https://github.com/xiaokanghu1997/Koch-Morse-Code-Trainer/releases/tag/v2.0.0-alpha.1
+[1.7.0]: https://github.com/xiaokanghu1997/Koch-Morse-Code-Trainer/releases/tag/v1.7.0
+[1.6.0]: https://github.com/xiaokanghu1997/Koch-Morse-Code-Trainer/releases/tag/v1.6.0
+[1.5.0]: https://github.com/xiaokanghu1997/Koch-Morse-Code-Trainer/releases/tag/v1.5.0
+[1.4.0]: https://github.com/xiaokanghu1997/Koch-Morse-Code-Trainer/releases/tag/v1.4.0
+[1.3.1]: https://github.com/xiaokanghu1997/Koch-Morse-Code-Trainer/releases/tag/v1.3.1
+[1.3.0]: https://github.com/xiaokanghu1997/Koch-Morse-Code-Trainer/releases/tag/v1.3.0
+[1.2.0]: https://github.com/xiaokanghu1997/Koch-Morse-Code-Trainer/releases/tag/v1.2.0
+[1.1.0]: https://github.com/xiaokanghu1997/Koch-Morse-Code-Trainer/releases/tag/v1.1.0
+[1.0.0]: https://github.com/xiaokanghu1997/Koch-Morse-Code-Trainer/releases/tag/v1.0.0
+[0.2.0]: https://github.com/xiaokanghu1997/Koch-Morse-Code-Trainer/releases/tag/v0.2.0
+[0.1.0]: https://github.com/xiaokanghu1997/Koch-Morse-Code-Trainer/releases/tag/v0.1.0

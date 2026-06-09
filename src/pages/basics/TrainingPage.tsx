@@ -21,6 +21,7 @@ import {
   ChevronCircleRight20Regular,
 } from "@fluentui/react-icons";
 import { useState, useEffect, useRef, useMemo, useLayoutEffect } from "react";
+import { useTranslation, Trans } from "react-i18next";
 import { AccuracyResult } from "../../lib/types";
 import { AudioWaveform } from "../../components/AudioWaveform";
 import { HighlightedText } from "../../components/HighlightedText";
@@ -31,6 +32,7 @@ import { useMorsePlayer } from "../../hooks/useMorsePlayer";
 import { calculateAccuracy } from "../../services/statisticalToolset";
 import { useBasicsStore } from "../../stores/basicsStore";
 import { useOptionsStore } from "../../stores/optionsStore";
+import { useSettingsStore } from "../../stores/settingsStore";
 
 // 样式定义
 const useStyles = makeStyles({
@@ -63,7 +65,6 @@ const useStyles = makeStyles({
   lessonSelector: {
     display: "flex",
     alignItems: "center",
-    gap: "8px",
   },
   dropdown: {
     minWidth: "100px",
@@ -133,12 +134,10 @@ const useStyles = makeStyles({
   charactersRow: {
     display: "flex",
     alignItems: "center",
-    gap: "8px",
   },
   characterLabels: {
     display: "flex",
     alignItems: "center",
-    gap: "4.8px",
   },
   clickableChar: {
     fontFamily: tokens.fontFamilyMonospace,
@@ -151,7 +150,7 @@ const useStyles = makeStyles({
     userSelect: "none",  // 防止文本被选中
     ":hover": {
       color: tokens.colorBrandForeground1,
-      transform: "scale(1.12)",
+      transform: "scale(1.14)",
     },
   },
   // 第三、四行：音频播放控制
@@ -163,14 +162,12 @@ const useStyles = makeStyles({
   audioLabel: {
     display: "flex",
     alignItems: "center",
-    gap: "8px",
   },
   currentChar: {
     fontFamily: tokens.fontFamilyMonospace,
     fontWeight: tokens.fontWeightSemibold,
     fontSize: tokens.fontSizeBase400,
     textAlign: "center",
-    transform: "translateY(0.8px)",
   },
   audioControls: {
     display: "flex",
@@ -258,7 +255,7 @@ const useStyles = makeStyles({
     boxShadow: tokens.shadow2,
     "& textarea": {
       minHeight: "0px",
-      fontFamily: tokens.fontFamilyMonospace,
+      fontFamily: '"Consolas", "Courier New", "Courier", "Segoe UI", sans-serif',
       fontSize: "15px",
       lineHeight: "16px",
       padding: "6px 8px",
@@ -333,17 +330,14 @@ const useStyles = makeStyles({
   },
 });
 
-// 结果评价文本
-const resultMessage = {
-  "excellent": "Excellent performance with outstanding accuracy!",
-  "good": "Good performance meeting basic requirements!",
-  "close": "Close to passing but needs more practice!",
-  "again": "Needs much more practice to improve!",
-};
-
 export const TrainingPage = () => {
   // 使用样式
   const styles = useStyles();
+
+  // 使用 i18n 获取翻译函数
+  const { t } = useTranslation();
+  // 获取当前语言设置
+  const { language } = useSettingsStore();
 
   // 获取配置
   const { savedConfig } = useOptionsStore();
@@ -424,11 +418,11 @@ export const TrainingPage = () => {
   
   const resultMessageText = useMemo(() => {
     if (!checkedResult) return "";
-    if (checkedResult.accuracy >= 95) return resultMessage.excellent;
-    if (checkedResult.accuracy >= 90) return resultMessage.good;
-    if (checkedResult.accuracy >= 80) return resultMessage.close;
-    return resultMessage.again;
-  }, [checkedResult]);
+    if (checkedResult.accuracy >= 95) return t("basics.training.result.excellent");
+    if (checkedResult.accuracy >= 90) return t("basics.training.result.good");
+    if (checkedResult.accuracy >= 80) return t("basics.training.result.close");
+    return t("basics.training.result.again");
+  }, [checkedResult, language]);
 
   // 同步生成器配置到训练存储
   useEffect(() => {
@@ -706,15 +700,34 @@ export const TrainingPage = () => {
   // 输入框内容变化
   const handleTextareaChange = (ev: React.FormEvent<HTMLTextAreaElement>, data: { value: string }) => {
     const textarea = ev.target as HTMLTextAreaElement;
-    
     // 保存光标位置到 ref
     cursorPositionRef.current = {
       start: textarea.selectionStart,
       end: textarea.selectionEnd,
     };
-    
+    // 排除非法字符
+    const filtered = data.value.replace(/[^\x20-\x7E\r\n\t]/g, "");
     // 转换为大写
-    setInputText(data.value.toUpperCase());
+    setInputText(filtered.toUpperCase());
+  };
+
+  // 输入框非法输入过滤
+  const isValidPracticeText = (text: string) => {
+    return /^[\x20-\x7E\r\n\t]+$/.test(text);
+  };
+  const practiceTextInputProps = {
+    onBeforeInput: (e: React.FormEvent<HTMLTextAreaElement>) => {
+      const event = e.nativeEvent as InputEvent;
+      if (event.data && !isValidPracticeText(event.data)) {
+        e.preventDefault();
+      }
+    },
+    onPaste: (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      const text = e.clipboardData.getData("text");
+      if (!isValidPracticeText(text)) {
+        e.preventDefault();
+      }
+    },
   };
 
   // 结果检查
@@ -838,16 +851,17 @@ export const TrainingPage = () => {
       {/* 第一行：课程进度和选择 */}
       <div className={styles.headerRow}>
         <Text className={styles.progressText}>
-          You are currently on lesson{" "}
-          <span className={styles.lessonNumber}>
-            {formattedProgress.current}
-          </span> of{" "}
-          <span className={styles.lessonNumber}>
-            {formattedProgress.total}
-          </span> total lessons
+          <Trans
+            i18nKey="basics.training.progress"
+            values={formattedProgress}
+            components={{ num: <span className={styles.lessonNumber} /> }}
+          />
         </Text>
-        <div className={styles.lessonSelector}>
-          <Text>Change to lesson: </Text>
+        <div 
+          className={styles.lessonSelector}
+          style={{ gap: language === "English" ? "8px" : "0px" }}
+        >
+          <Text>{t("basics.training.currentLesson")}</Text>
           <Dropdown
             id="train-lesson-dropdown"
             className={styles.dropdown}
@@ -881,9 +895,15 @@ export const TrainingPage = () => {
       </div>
 
       {/* 第二行：当前课程字符 */}
-      <div className={styles.charactersRow}>
-        <Text>Current lesson characters:</Text>
-        <div className={styles.characterLabels}>
+      <div 
+        className={styles.charactersRow}
+        style={{ gap: language === "English" ? "8px" : "0px" }}
+      >
+        <Text>{t("basics.training.currentChars")}</Text>
+        <div 
+          className={styles.characterLabels}
+          style={{ gap: language === "English" ? "5.5px" : "6.2px" }}
+        >
           {currentLesson.characters.map((char, index) => (
             <Text
               key={index}
@@ -898,8 +918,11 @@ export const TrainingPage = () => {
 
       {/* 第三行：字符音频播放控制 */}
       <div className={styles.audioControlRow}>
-        <div className={styles.audioLabel}>
-          <Text>The sound of character:</Text>
+        <div 
+          className={styles.audioLabel}
+          style={{ gap: language === "English" ? "8px" : "0px" }}
+        >
+          <Text>{t("basics.training.charSound")}</Text>
           <Text className={styles.currentChar}>
             {currentPlayingChar}
           </Text>
@@ -942,7 +965,9 @@ export const TrainingPage = () => {
             }
           >
             <Text className={styles.buttonText}>
-              {charPlayer.isPlaying ? "Pause" : "Play"}
+              {charPlayer.isPlaying 
+                ? t("basics.training.buttons.pause") 
+                : t("basics.training.buttons.play")}
             </Text>
           </Button>
           <Button
@@ -954,16 +979,14 @@ export const TrainingPage = () => {
               charPlayer.playbackState.totalDuration === 0
             }
           >
-            <Text className={styles.buttonText}>
-              Restart
-            </Text>
+            <Text className={styles.buttonText}>{t("basics.training.buttons.restart")}</Text>
           </Button>
         </div>
       </div>
 
       {/* 第四行：练习文本音频播放控制 */}
       <div className={styles.audioControlRow}>
-        <Text>Practice text: </Text>
+        <Text>{t("basics.training.practiceText")}</Text>
         <div className={styles.audioControls}>
           <Slider
             id="text-audio-slider"
@@ -1008,10 +1031,10 @@ export const TrainingPage = () => {
           >
             <Text className={styles.buttonText}>
               {textTiming.phase === "delay" 
-                ? "Cancel" 
+                ? t("basics.training.buttons.cancel")
                 : textPlayer.isPlaying 
-                  ? "Pause" 
-                  : "Play"}
+                  ? t("basics.training.buttons.pause")
+                  : t("basics.training.buttons.play")}
             </Text>
           </Button>
           <Button
@@ -1023,9 +1046,7 @@ export const TrainingPage = () => {
               textPlayer.playbackState.totalDuration === 0
             }
           >
-            <Text className={styles.buttonText}>
-              Restart
-            </Text>
+            <Text className={styles.buttonText}>{t("basics.training.buttons.restart")}</Text>
           </Button>
         </div>
       </div>
@@ -1048,10 +1069,11 @@ export const TrainingPage = () => {
             id="practice-textarea"
             className={styles.textArea}
             appearance="filled-darker"
-            placeholder="Enter your practice text here ..."
+            placeholder={t("basics.training.placeholder")}
             value={inputText}
             onChange={handleTextareaChange}
             disabled={checkedResult !== null}
+            {...practiceTextInputProps}
           />
 
           {/* 结果显示 */}
@@ -1075,7 +1097,7 @@ export const TrainingPage = () => {
               <MessageBarBody>
                 <span className={styles.messageBarBody}>
                   <span>
-                    Accuracy: <strong>{checkedResult.accuracy.toFixed(2)}%</strong>
+                    {t("basics.training.result.accuracy")} <strong>{checkedResult.accuracy.toFixed(2)}%</strong>
                   </span>
                   {resultMessageText}
                 </span>
@@ -1097,7 +1119,9 @@ export const TrainingPage = () => {
           }}
         >
           <Text className={styles.buttonText}>
-            {checkedResult ? "Next Training" : "Check Result"}
+            {checkedResult 
+              ? t("basics.training.buttons.nextTraining") 
+              : t("basics.training.buttons.checkResult")}
           </Text>
         </Button>
       </div>

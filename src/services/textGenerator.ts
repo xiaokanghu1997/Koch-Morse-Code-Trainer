@@ -73,19 +73,19 @@ export class TextGenerator {
     const n = chars.length;
 
     switch (mode) {
-      case "Uniform":
+      case "uniform":
         // 均匀分布：所有字符权重相同
         return new Array(n).fill(1.0);
 
-      case "New focus":
+      case "newFocus":
         // 新字符重点：最后一个字符2倍权重
         return [...new Array(n - 1).fill(1.0), 2.0];
 
-      case "Gradual":
+      case "gradual":
         // 渐进式：最后一个字符1.5倍权重
         return [...new Array(n - 1).fill(1.0), 1.5];
 
-      case "Weighted":
+      case "weighted":
         // 难度加权：根据摩尔斯码长度
         return MorseEncoder.getDifficultyWeights(charSet);
 

@@ -1,5 +1,6 @@
 import { 
   Text,
+  Tooltip,
   Dropdown,
   Option,
   SpinButton,
@@ -14,8 +15,10 @@ import {
   Fire20Regular,
 } from "@fluentui/react-icons";
 import { useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import type { QTCTrainingConfig } from "../../lib/types";
 import { clampNumber, generateRange } from "../../services/statisticalToolset";
+import { useSettingsStore } from "../../stores/settingsStore";
 
 // 样式定义
 const useStyles = makeStyles({
@@ -51,7 +54,6 @@ const useStyles = makeStyles({
     flex: 1,
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
-    gap: "40px",
   },
   configColumn: {
     flex: 1,
@@ -180,7 +182,6 @@ const useStyles = makeStyles({
     marginTop: "-6px",
   },
   button: {
-    width: "140px",
     height: "32px",
     border: "none",
     transform: "translateY(1.2px)",
@@ -197,6 +198,12 @@ const useStyles = makeStyles({
   buttonText: {
     paddingBottom: "1.4px",
   },
+  tooltip: {
+    backgroundColor: tokens.colorNeutralBackground4Hover,
+    boxShadow: tokens.shadow2,
+    maxWidth: "380px",
+    whiteSpace: "normal",
+  },
 });
 
 // Props 接口
@@ -206,14 +213,19 @@ interface QTCWelcomeProps {
 
 // 缩写数字集常量定义
 const ABBERVNUM = [
-  { value: 0, label: "None" },
-  { value: 1, label: "0, 1, 9" },
-  { value: 2, label: "0 - 9" },
+  { value: 0, label: "abbrevNumbers.none" },
+  { value: 1, label: "abbrevNumbers.partial" },
+  { value: 2, label: "abbrevNumbers.all" },
 ] as const;
 
 export const QTCWelcome = ({ onStart }: QTCWelcomeProps) => {
   // 使用样式
   const styles = useStyles();
+
+  // 使用 i18n 获取翻译函数
+  const { t } = useTranslation();
+  // 获取当前语言设置
+  const { language } = useSettingsStore();
 
   // 本地状态（参数设置）
   const [charSpeed, setCharSpeed] = useState(20);
@@ -230,11 +242,66 @@ export const QTCWelcome = ({ onStart }: QTCWelcomeProps) => {
   // 获取当前选中的显示文本
   const selectedAbbrevNumLabel = ABBERVNUM.find(
     option => option.value === abbrevNumbers
-  )?.label ?? "None";
+  )?.label ?? "abbrevNumbers.none";
 
   // Start 按钮点击
   const handleStart = () => {
     onStart({ charSpeed, tone, itemSpace, abbrevNumbers, chronological, abbrevTimes });
+  };
+
+  // 处理 SpinButton 输入的函数
+  const handleSpin = (min: number, max: number) => (_: any, data: any) => {
+    const rawText = String(data.value ?? data.displayValue ?? "");
+    const cleaned = rawText.replace(/\D/g, "");
+    if (cleaned === "") {
+      setItemSpace(1);
+      return;
+    }
+    const raw = Number(cleaned);
+    const clamped = clampNumber(raw, min, max);
+    setItemSpace(clamped);
+  };
+
+  // 数字输入限制（适用于 SpinButton）
+  const numericSpinProps = {
+    onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => {
+      const allowedKeys = [
+        "Backspace",
+        "Delete",
+        "ArrowLeft",
+        "ArrowRight",
+        "ArrowUp",
+        "ArrowDown",
+      ];
+      if (
+        !/^\d$/.test(e.key) &&
+        !allowedKeys.includes(e.key)
+      ) {
+        e.preventDefault();
+      }
+    },
+
+    onBeforeInput: (e: React.FormEvent<HTMLInputElement>) => {
+      const event = e.nativeEvent as InputEvent;
+      if (
+        event.data &&
+        !/^\d+$/.test(event.data)
+      ) {
+        e.preventDefault();
+      }
+    },
+
+    onInput: (e: React.FormEvent<HTMLInputElement>) => {
+      const input = e.currentTarget;
+      input.value = input.value.replace(/\D/g, "");
+    },
+
+    onPaste: (e: React.ClipboardEvent<HTMLInputElement>) => {
+      const text = e.clipboardData.getData("text");
+      if (!/^\d+$/.test(text)) {
+        e.preventDefault();
+      }
+    },
   };
 
   return (
@@ -243,27 +310,33 @@ export const QTCWelcome = ({ onStart }: QTCWelcomeProps) => {
       <div className={styles.introSection}>
         <div className={styles.titleRow}>
           <Text className={styles.title}>
-            QTC Training
+            {t("advanced.qtc.welcome.title")}
           </Text>
           <Text className={styles.description}>
-            (For practicing QTC copying)
+            {t("advanced.qtc.welcome.subtitle")}
           </Text>
         </div>
-        <Text className={styles.description}>
-          Each session includes 1 group of QTCs. Each group contains 10 QTC and begins with a Group/Number header.
-          Press Start to begin. Confirm the header, then copy each QTC, pressing Enter to proceed. Use Space to switch between fields.
-          After the final QTC, review your entries and press Validate. Only fully correct QTCs will count.
+        <Text 
+          className={styles.description}
+          style={{ marginRight: language === "English" ? "0px" : "-4px" }}
+        >
+          {t("advanced.qtc.welcome.description")}
         </Text>
       </div>
 
       {/* 配置区域 */}
-      <div className={styles.configSection}>
+      <div 
+        className={styles.configSection}
+        style={{
+          gap: language === "English" ? "45px" : "60px",
+        }}
+      >
         {/* 左侧音频参数配置 */}
         <div className={styles.configColumn}>
           {/* 字符速率 */}
           <div className={styles.configItem}>
             <div className={styles.configLabel}>
-              <Text>Character speed:</Text>
+              <Text>{t("advanced.qtc.welcome.labels.charSpeed")}</Text>
             </div>
             <div className={styles.configControl}>
               <Dropdown
@@ -294,14 +367,14 @@ export const QTCWelcome = ({ onStart }: QTCWelcomeProps) => {
                   </Option>
                 ))}
               </Dropdown>
-              <Text>WPM</Text>
+              <Text>{t("advanced.qtc.welcome.units.wpm")}</Text>
             </div>
           </div>
 
           {/* 音调频率 */}
           <div className={styles.configItem}>
             <div className={styles.configLabel}>
-              <Text>Tone:</Text>
+              <Text>{t("advanced.qtc.welcome.labels.tone")}</Text>
             </div>
             <div className={styles.configControl}>
               <Dropdown
@@ -332,14 +405,23 @@ export const QTCWelcome = ({ onStart }: QTCWelcomeProps) => {
                   </Option>
                 ))}
               </Dropdown>
-              <Text>Hz</Text>
+              <Text>{t("advanced.qtc.welcome.units.hz")}</Text>
             </div>
           </div>
 
           {/* 要素间隔 */}
           <div className={styles.configItem}>
             <div className={styles.configLabel}>
-              <Text>Item space:</Text>
+              <Tooltip
+                content={{
+                  children: t("advanced.qtc.welcome.tooltips.itemSpace"),
+                  className: styles.tooltip,
+                }}
+                relationship="label"
+                positioning="below-start"
+              >
+                <Text>{t("advanced.qtc.welcome.labels.itemSpace")}</Text>
+              </Tooltip>
             </div>
             <div className={styles.configControl}>
               <SpinButton
@@ -348,13 +430,10 @@ export const QTCWelcome = ({ onStart }: QTCWelcomeProps) => {
                 min={1}
                 max={10}
                 value={itemSpace}
-                onChange={(_, data) => {
-                  const raw = Number(data.value);
-                  const clamped = clampNumber(raw, 1, 10);
-                  setItemSpace(clamped);
-                }}
+                onChange={handleSpin(1, 10)}
+                {...numericSpinProps}
               />
-              <Text>× 7 dits</Text>
+              <Text>× 7 {t("advanced.qtc.welcome.units.dits")}</Text>
             </div>
           </div>
         </div>
@@ -364,7 +443,16 @@ export const QTCWelcome = ({ onStart }: QTCWelcomeProps) => {
           {/* 缩略数字 */}
           <div className={styles.configItem}>
             <div className={styles.configLabel}>
-              <Text>Abbreviated numbers:</Text>
+              <Tooltip
+                content={{
+                  children: t("advanced.qtc.welcome.tooltips.abbrevNumbers"),
+                  className: styles.tooltip,
+                }}
+                relationship="label"
+                positioning="below-start"
+              >
+                <Text>{t("advanced.qtc.welcome.labels.abbrevNumbers")}</Text>
+              </Tooltip>
             </div>
             <div className={styles.configControl}>
               <Dropdown
@@ -377,7 +465,7 @@ export const QTCWelcome = ({ onStart }: QTCWelcomeProps) => {
                   className: styles.dropdownListbox,
                   style: { minWidth: "85px", maxWidth: "85px" }
                 }}
-                value={selectedAbbrevNumLabel}
+                value={t(`advanced.qtc.welcome.${selectedAbbrevNumLabel}`)}
                 selectedOptions={[abbrevNumbers.toString()]}
                 onOptionSelect={(_, data) => {
                   setAbbrevNumbers(Number(data.optionValue));
@@ -390,7 +478,7 @@ export const QTCWelcome = ({ onStart }: QTCWelcomeProps) => {
                     className={styles.dropdownOption}
                     checkIcon={null}
                   >
-                    {option.label}
+                    {t(`advanced.qtc.welcome.${option.label}`)}
                   </Option>
                 ))}
               </Dropdown>
@@ -400,13 +488,24 @@ export const QTCWelcome = ({ onStart }: QTCWelcomeProps) => {
           {/* 是否按时间排序 */}
           <div className={styles.configItem}>
             <div className={styles.configLabel}>
-              <Text>Chronological order:</Text>
+              <Tooltip
+                content={{
+                  children: t("advanced.qtc.welcome.tooltips.chronological"),
+                  className: styles.tooltip,
+                }}
+                relationship="label"
+                positioning="below-start"
+              >
+                <Text>{t("advanced.qtc.welcome.labels.chronological")}</Text>
+              </Tooltip>
             </div>
             <div className={styles.configControl}>
               <Checkbox 
                 id={"chronological-checkbox"}
                 className={styles.checkbox}
-                label={chronological ? "On" : "Off"}
+                label={chronological 
+                        ? t("advanced.qtc.welcome.status.on") 
+                        : t("advanced.qtc.welcome.status.off")}
                 checked={chronological}
                 onChange={(_, data) => 
                   setChronological(data.checked === true)
@@ -424,13 +523,24 @@ export const QTCWelcome = ({ onStart }: QTCWelcomeProps) => {
             }}
           >
             <div className={styles.configLabel}>
-              <Text>Abbreviated times:</Text>
+              <Tooltip
+                content={{
+                  children: t("advanced.qtc.welcome.tooltips.abbrevTimes"),
+                  className: styles.tooltip,
+                }}
+                relationship="label"
+                positioning="below-start"
+              >
+                <Text>{t("advanced.qtc.welcome.labels.abbrevTimes")}</Text>
+              </Tooltip>
             </div>
             <div className={styles.configControl}>
               <Checkbox 
                 id={"abbrevtimes-checkbox"}
                 className={styles.checkbox}
-                label={abbrevTimes ? "On" : "Off"}
+                label={abbrevTimes 
+                        ? t("advanced.qtc.welcome.status.on") 
+                        : t("advanced.qtc.welcome.status.off")}
                 checked={abbrevTimes}
                 onChange={(_, data) => 
                   setAbbrevTimes(data.checked === true)
@@ -444,12 +554,13 @@ export const QTCWelcome = ({ onStart }: QTCWelcomeProps) => {
       {/* 按钮区域 */}
       <div className={styles.actionSection}>
         <Button 
-          className={styles.button} 
+          className={styles.button}
+          style={{ width: language === "English" ? "140px" : "120px" }}
           icon={<Fire20Regular />}
           onClick={handleStart}
         >
           <Text className={styles.buttonText}>
-            Start Training
+            {t("advanced.qtc.welcome.buttons.start")}
           </Text>
         </Button>
       </div>

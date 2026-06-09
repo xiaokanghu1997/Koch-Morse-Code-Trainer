@@ -1,0 +1,497 @@
+{
+  "mainlayout": {
+    "basics": "Basics",
+    "advanced": "Advanced",
+    "activity": "Activity",
+    "about": "About",
+    "settings": "Settings"
+  },
+
+  "basics": {
+    "tabs": {
+      "training": "Training",
+      "statistics": "Statistics",
+      "options": "Options"
+    },
+    "training": {
+      "progress": "You are currently on lesson <num>{{current}}</num> of <num>{{total}}</num> total lessons",
+      "currentLesson": "Change to lesson:",
+      "currentChars": "Current characters:",
+      "charSound": "The sound of character:",
+      "practiceText": "Practice text:",
+      "placeholder": "Enter your practice text here ...",
+      "buttons": {
+        "play": "Play",
+        "pause": "Pause",
+        "cancel": "Cancel",
+        "restart": "Restart",
+        "checkResult": "Check Result",
+        "nextTraining": "Next Training"
+      },
+      "result": {
+        "accuracy": "Accuracy: ",
+        "excellent": "Excellent performance with outstanding accuracy!",
+        "good": "Good performance meeting basic requirements!",
+        "close": "Close to passing but needs more practice!",
+        "again": "Needs much more practice to improve!"
+      }
+    },
+    "statistics": {
+      "selectDataset": "Select dataset:",
+      "datasetName": {
+        "koch-lcwo": "Koch-LCWO",
+        "letters": "Letters",
+        "numbers": "Numbers",
+        "punctuation": "Punctuation"
+      },
+      "selectLesson": "Select lesson:",
+      "statisticBy": "Statistic by:",
+      "allLessons": "All",
+      "statTypes": {
+        "default": "Default",
+        "hour": "Hour",
+        "day": "Day",
+        "month": "Month",
+        "year": "Year"
+      },
+      "chart": {
+        "accuracy": "Accuracy",
+        "averageAccuracy": "Average Accuracy: ",
+        "accuracyThreshold": "Accuracy Threshold",
+        "trainingCount": "Training Sessions",
+        "trainingDuration": "Training Time",
+        "trainingAccuracy": "Training Accuracy (%)",
+        "lessonId": "Lesson ID",
+        "lessonPrefix": "Lesson ",
+        "durationUnit": " (m)"
+      }
+    },
+    "options": {
+      "labels": {
+        "trainingDataset": "Training dataset:",
+        "practiceMode": "Practice mode:",
+        "groupLength": "Group length:",
+        "fixed": "fixed",
+        "random": "2-7 random",
+        "groupSpace": "Group space:",
+        "groupCount": "Group count:",
+        "waveform": "Waveform diagram:",
+        "charSpeed": "Character speed:",
+        "effSpeed": "Effective speed:",
+        "tone": "Tone:",
+        "startDelay": "Start delay:",
+        "prefixSuffix": "Prefix / Suffix:"
+      },
+      "units": {
+        "dits": "dits",
+        "wpm": "WPM",
+        "hz": "Hz",
+        "seconds": "s"
+      },
+      "status": {
+        "on": "On",
+        "off": "Off"
+      },
+      "datasets": {
+        "koch-lcwo": "Koch-LCWO",
+        "letters": "Letters",
+        "numbers": "Numbers",
+        "punctuation": "Punctuation"
+      },
+      "modes": {
+        "uniform": "Uniform",
+        "newFocus": "New focus",
+        "gradual": "Gradual",
+        "weighted": "Weighted"
+      },
+      "tooltips": {
+        "trainingDataset": "Select the character set used to generate training material",
+        "practiceMode": "Control how characters are distributed in the training material",
+        "groupLength": "Number of characters in each practice group (1-10)",
+        "groupSpace": "Pause duration between groups (standard spacing is 7 dits)",
+        "groupCount": "Number of character groups to generate (1-30)",
+        "waveform": "Display visual waveform diagram during audio playback",
+        "charSpeed": "Speed of Morse code elements (dots and dashes)",
+        "effSpeed": "Overall transmission speed using Farnsworth timing method",
+        "tone": "Frequency of the audio tone",
+        "startDelay": "Countdown delay before audio playback starts (0-30 seconds)",
+        "prefixSuffix": "Add standard Morse practice signals before and after training"
+      },
+      "buttons": {
+        "preview": "Preview",
+        "pause": "Pause",
+        "resume": "Resume",
+        "retry": "Retry",
+        "cancel": "Cancel",
+        "confirm": "Confirm"
+      },
+      "messages": {
+        "success": {
+          "title": "Training material setup successfully",
+          "content": "{{dataset}} | {{mode}} | {{groupCount}} groups | {{charInfo}} chars"
+        },
+        "error": {
+          "title": "Training material setup failed",
+          "unknown": "Unknown error occurred"
+        }
+      }
+    }
+  },
+
+  "advanced": {
+    "tabs": {
+      "word": "Word",
+      "callsign": "Callsign",
+      "qtc": "QTC",
+      "leaderboard": "Leaderboard"
+    },
+    "word": {
+      "welcome": {
+        "title": "Word Training",
+        "subtitle": "(For practicing single word copying)",
+        "description": "Each session consists of 25 words. You can set the initial character speed, which adjusts dynamically based on your performance: +1 WPM for each correct copy and -1 WPM for each mistake.",
+        "labels": {
+          "dataset": "Dataset:",
+          "skipAfter5s": "Skip automatically after 5 seconds:"
+        },
+        "datasets": {
+          "abbreviations": "CW abbreviations",
+          "qcodes": "Q-codes",
+          "commonWords": "Common English words"
+        },
+        "tooltips": {
+          "skipAfter5s": "Automatically plays the next word 5 seconds after playback ends"
+        },
+        "status": {
+          "on": "On",
+          "off": "Off"
+        }
+      },
+      "training": {
+        "inputPlaceholder": "Input word here...",
+        "tooltips": {
+          "start": "Press enter to start",
+          "next": "Press enter to confirm and move to next word",
+          "retry": "Press enter to retry",
+          "repeat": "Press period (.) to repeat"
+        }
+      }
+    },
+    "callsign": {
+      "welcome": {
+        "title": "Callsign Training",
+        "subtitle": "(For practicing callsign copying)",
+        "description": "Each session includes 25 callsigns. You can set the initial character speed, which adjusts dynamically based on your performance: +1 WPM for each correct copy and -1 WPM for each mistake.",
+        "labels": {
+          "filter": "Callsign filter:",
+          "blindMode": "Blind mode:"
+        },
+        "filters": {
+          "shortOnly": "Short callsigns only",
+          "noSlashed": "Filter slashed callsigns",
+          "all": "No filter"
+        },
+        "tooltips": {
+          "blindMode": "Results are shown only after all callsigns have been completed"
+        },
+        "status": {
+          "on": "On",
+          "off": "Off"
+        }
+      },
+      "training": {
+        "inputPlaceholder": "Input callsign here...",
+        "tooltips": {
+          "start": "Press enter to start",
+          "next": "Press enter to confirm and move to next callsign",
+          "retry": "Press enter to retry",
+          "repeat": "Press period (.) to repeat"
+        }
+      }
+    },
+    "generic": {
+      "welcome": {
+        "labels": {
+          "charSpeed": "Character speed:",
+          "minCharSpeed": "Minimum character speed:",
+          "fixedSpeed": "Fixed character speed:",
+          "tone": "Tone:",
+          "randomTone": "500-900 Hz random"
+        },
+        "units": {
+          "wpm": "WPM",
+          "hz": "Hz"
+        },
+        "status": {
+          "on": "On",
+          "off": "Off"
+        },
+        "tooltips": {
+          "fixedSpeed": "When enabled, the score will not be counted"
+        },
+        "buttons": {
+          "start": "Start Training"
+        }
+      },
+      "training": {
+        "labels": {
+          "currentSpeed": "Current character speed: ",
+          "maxSpeed": "Maximum character speed: ",
+          "score": "Training score: "
+        },
+        "units": {
+          "wpm": "WPM"
+        },
+        "buttons": {
+          "start": "Start",
+          "ok": "OK",
+          "retry": "Retry",
+          "back": "Back"
+        },
+        "table": {
+          "sent": "Sent",
+          "received": "Received",
+          "wpm": "WPM"
+        }
+      }
+    },
+    "qtc": {
+      "welcome": {
+        "title": "QTC Training",
+        "subtitle": "(For practicing QTC copying)",
+        "description": "Each session contains a group of 10 QTCs, preceded by a Group/Number heading. Press Start to begin, confirm the header, and copy each QTC in turn. Press Enter to continue to the next QTC, and use Space to move between fields. After finishing the last QTC, review your entries and press Validate. Only completely correct QTCs will be counted.",
+        "labels": {
+          "charSpeed": "Character speed:",
+          "tone": "Tone:",
+          "itemSpace": "Item space:",
+          "abbrevNumbers": "Abbreviated numbers:",
+          "chronological": "Chronological order:",
+          "abbrevTimes": "Abbreviated times:"
+        },
+        "units": {
+          "wpm": "WPM",
+          "hz": "Hz",
+          "dits": "dits"
+        },
+        "abbrevNumbers": {
+          "none": "None",
+          "partial": "0, 1, 9",
+          "all": "0 - 9"
+        },
+        "tooltips": {
+          "itemSpace": "Pause duration between QTC items (standard spacing is 7 dits)",
+          "abbrevNumbers": "Use Morse numeral abbreviations when sending numbers",
+          "chronological": "Send QTCs in chronological order",
+          "abbrevTimes": "Use Morse numeral abbreviations in time fields"
+        },
+        "status": {
+          "on": "On",
+          "off": "Off"
+        },
+        "buttons": {
+          "start": "Start Training"
+        }
+      },
+      "training": {
+        "table": {
+          "grNum": "Gr/Num",
+          "time": "Time",
+          "callsign": "Callsign",
+          "serial": "Serial"
+        },
+        "labels": {
+          "charSpeed": "Character speed:",
+          "completion": "Completion status:",
+          "score": "Score:"
+        },
+        "units": {
+          "wpm": "WPM"
+        },
+        "buttons": {
+          "play": "Play",
+          "pause": "Pause",
+          "restart": "Restart",
+          "start": "Start",
+          "next": "Next",
+          "check": "Check",
+          "retry": "Retry",
+          "back": "Back"
+        },
+        "tooltips": {
+          "repeat": "Press period (.) to repeat",
+          "start": "Press Enter to start",
+          "next": "Press Enter to next QTC",
+          "check": "Press Enter to check",
+          "retry": "Press Enter to retry"
+        }
+      }
+    },
+    "leaderboard": {
+      "sections": {
+        "word": "Word Training",
+        "callsign": "Callsign Training",
+        "qtc": "QTC Training"
+      },
+      "table": {
+        "rank": "Rank",
+        "score": "Score",
+        "date": "Date",
+        "speed": "Speed"
+      }
+    }
+  },
+
+  "activity": {
+    "summary": {
+      "info1": "In",
+      "info2": ", <num>{{count}}</num> {{type}} training sessions were completed in <num>{{duration}}</num>",
+      "types": {
+        "basics": "basic",
+        "advanced": "advanced"
+      }
+    },
+    "views": {
+      "overview": "Overview",
+      "basics": "Basics",
+      "advanced": "Advanced"
+    },
+    "basicsDatasets": {
+      "koch-lcwo": "Koch-LCWO",
+      "letters": "Letters",
+      "numbers": "Numbers",
+      "punctuation": "Punctuation"
+    },
+    "advancedTypes": {
+      "word": "Word",
+      "callsign": "Callsign",
+      "qtc": "QTC"
+    },
+    "heatmap": {
+      "months": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+      "weekdays": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+      "less": "Less",
+      "more": "More",
+      "todayTrainingCount": "Today's training sessions:",
+      "trainingCount": "Training Sessions:"
+    },
+    "stats": {
+      "trainingType": "Training type:",
+      "trainingDataset": "Training dataset:",
+      "basics": "Basics",
+      "advanced": "Advanced",
+      "lessonProgress": "Lesson progress:",
+      "totalCount": "Total sessions:",
+      "totalTime": "Total training time:",
+      "averageAccuracy": "Average accuracy:",
+      "bestScore": "Best training score:",
+      "maxSpeed": "Max character speed:",
+      "trainingDays": "Training days:",
+      "bestStreak": "Best streak:",
+      "currentStreak": "Current streak:",
+      "lastSession": "Last session:"
+    }
+  },
+
+  "about": {
+    "title": {
+      "copyright": "{{info}} License",
+      "version": "Version {{version}}"
+    },
+    "purpose": {
+      "header": "Purpose",
+      "description": "Morse code copying and sending practice",
+      "value": "Improve decoding speed and accuracy"
+    },
+    "contact": {
+      "header": "Contact",
+      "description": "Contact the developer for feedback"
+    },
+    "acknowledgements": {
+      "header": "Acknowledgements",
+      "description": "Inspired by the open-source community",
+      "value": "Some features are inspired by"
+    }
+  },
+
+  "settings": {
+    "language": {
+      "header": "Language",
+      "description": "Select the display language for the application"
+    },
+    "theme": {
+      "header": "Theme",
+      "description": "Choose the appearance theme for the application",
+      "light": "Light",
+      "dark": "Dark"
+    },
+    "opacity": {
+      "header": "Transparency",
+      "description": "Adjust the opacity of the application window"
+    },
+    "volume": {
+      "header": "Volume",
+      "description": "Adjust the audio playback volume"
+    }
+  },
+
+  "dataManagement": {
+    "buttons": {
+      "import": "Import Data",
+      "export": "Export Data",
+      "modify": "Modify Data",
+      "clear": "Clear Data"
+    },
+    "types": {
+      "basics": "Basics",
+      "advanced": "Advanced"
+    },
+    "basicsDatasets": {
+      "koch-lcwo": "Koch-LCWO",
+      "letters": "Letters",
+      "numbers": "Numbers",
+      "punctuation": "Punctuation"
+    },
+    "advancedTypes": {
+      "word": "Word",
+      "callsign": "Callsign",
+      "qtc": "QTC"
+    },
+    "recordLabel": "Record #{{number}}",
+    "modifyDialog": {
+      "title": "{{type}} Records",
+      "types": {
+        "basics": "Basic",
+        "advanced": "Advanced"
+      },
+      "labels": {
+        "selectDataset": "Select dataset:",
+        "selectLesson": "Select lesson:",
+        "selectRecord": "Select record:",
+        "selectType": "Select type:",
+        "timestamp": "Timestamp:",
+        "accuracy": "Accuracy (%):",
+        "duration": "Duration (s):",
+        "score": "Score:",
+        "speed": "Speed (WPM):"
+      },
+      "buttons": {
+        "modify": "Modify",
+        "delete": "Delete",
+        "close": "Close"
+      }
+    },
+    "clearDialog": {
+      "title": "Confirm Clear Data",
+      "content": "Are you sure you want to clear all training data? This action cannot be undone.",
+      "buttons": {
+        "yes": "Yes",
+        "no": "No"
+      }
+    },
+    "dialogs": {
+      "exportTitle": "Export Training Data",
+      "importTitle": "Import Training Data",
+      "jsonFiles": "JSON Files"
+    }
+  }
+}

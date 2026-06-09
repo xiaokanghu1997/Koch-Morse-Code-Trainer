@@ -14,7 +14,9 @@ import {
   Fire20Regular,
 } from "@fluentui/react-icons";
 import { ReactNode, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { generateRange } from "../services/statisticalToolset";
+import { useSettingsStore } from "../stores/settingsStore";
 
 const useStyles = makeStyles({
   container: {
@@ -48,7 +50,6 @@ const useStyles = makeStyles({
   configSection: {
     flex: 1,
     display: "grid",
-    gap: "40px",
   },
   configColumn: {
     flex: 1,
@@ -160,7 +161,6 @@ const useStyles = makeStyles({
     marginTop: "-6px",
   },
   button: {
-    width: "140px",
     height: "32px",
     border: "none",
     transform: "translateY(1.2px)",
@@ -178,9 +178,9 @@ const useStyles = makeStyles({
     paddingBottom: "1.4px",
   },
   tooltip: {
-    backgroundColor: tokens.colorNeutralBackground2Hover,
+    backgroundColor: tokens.colorNeutralBackground4Hover,
     boxShadow: tokens.shadow2,
-    maxWidth: "280px",
+    maxWidth: "300px",
     whiteSpace: "normal",
   },
 });
@@ -206,9 +206,10 @@ interface GenericWelcomeProps {
   onToneChange: (tone: number) => void;
   onRandomToneChange: (random: boolean) => void;
   
-  // 右侧自定义配置区域及宽度
+  // 自定义配置区域及宽度
   rightConfigPanel: ReactNode;
   rightColumnWidth?: number;
+  configSectionGap?: number;
   
   // 开始按钮
   onStart: () => void;
@@ -231,10 +232,16 @@ export const GenericWelcome = ({
   onRandomToneChange,
   rightConfigPanel,
   rightColumnWidth = 0.9,
+  configSectionGap = 40,
   onStart,
 }: GenericWelcomeProps) => {
   // 使用样式
   const styles = useStyles();
+
+  // 使用 i18n 获取翻译函数
+  const { t } = useTranslation();
+  // 获取当前语言设置
+  const { language } = useSettingsStore();  
 
   // 生成选项列表
   const charSpeedOptions = useMemo(() => generateRange(5, 100, 1), []);
@@ -272,7 +279,10 @@ export const GenericWelcome = ({
             {subtitle}
           </Text>
         </div>
-        <Text className={styles.description}>
+        <Text 
+          className={styles.description}
+          style={{ marginRight: "-4px" }}
+        >
           {description}
         </Text>
       </div>
@@ -280,7 +290,10 @@ export const GenericWelcome = ({
       {/* 配置区域 */}
       <div 
         className={styles.configSection}
-        style={{ gridTemplateColumns: `1fr ${rightColumnWidth}fr` }}
+        style={{ 
+          gridTemplateColumns: `1fr ${rightColumnWidth}fr`,
+          gap: `${configSectionGap}px`
+        }}
       >
         {/* 左侧配置列 - 速度和音调 */}
         <div className={styles.configColumn}>
@@ -293,7 +306,7 @@ export const GenericWelcome = ({
             }}
           >
             <div className={styles.configLabel}>
-              <Text>Character speed:</Text>
+              <Text>{t("advanced.generic.welcome.labels.charSpeed")}</Text>
             </div>
             <div className={styles.configControl}>
               <Dropdown
@@ -325,7 +338,7 @@ export const GenericWelcome = ({
                   </Option>
                 ))}
               </Dropdown>
-              <Text>WPM</Text>
+              <Text>{t("advanced.generic.welcome.units.wpm")}</Text>
             </div>
           </div>
 
@@ -338,7 +351,7 @@ export const GenericWelcome = ({
             }}
           >
             <div className={styles.configLabel}>
-              <Text>Minimum character speed:</Text>
+              <Text>{t("advanced.generic.welcome.labels.minCharSpeed")}</Text>
             </div>
             <div className={styles.configControl}>
               <Dropdown
@@ -369,7 +382,7 @@ export const GenericWelcome = ({
                   </Option>
                 ))}
               </Dropdown>
-              <Text>WPM</Text>
+              <Text>{t("advanced.generic.welcome.units.wpm")}</Text>
             </div>
           </div>
 
@@ -378,20 +391,22 @@ export const GenericWelcome = ({
             <div className={styles.configLabel}>
               <Tooltip
                 content={{
-                  children: "If checked, the score will not be counted",
+                  children: t("advanced.generic.welcome.tooltips.fixedSpeed"),
                   className: styles.tooltip,
                 }}
                 relationship="label"
                 positioning="below-start"
               >
-                <Text>Fixed character speed:</Text>
+                <Text>{t("advanced.generic.welcome.labels.fixedSpeed")}</Text>
               </Tooltip>
             </div>
             <div className={styles.configControl}>
               <Checkbox 
                 id={`${idPrefix}-fixed-speed-checkbox`}
                 className={styles.checkbox}
-                label={fixedCharSpeed ? "On" : "Off"}
+                label={fixedCharSpeed 
+                        ? t("advanced.generic.welcome.status.on") 
+                        : t("advanced.generic.welcome.status.off")}
                 checked={fixedCharSpeed}
                 onChange={(_, data) => handleFixedCharSpeedChange(data.checked === true)}
               />
@@ -401,7 +416,7 @@ export const GenericWelcome = ({
           {/* 音调 */}
           <div className={styles.configItem}>
             <div className={styles.configLabel}>
-              <Text>Tone:</Text>
+              <Text>{t("advanced.generic.welcome.labels.tone")}</Text>
             </div>
             <div 
               className={styles.configControl}
@@ -435,12 +450,12 @@ export const GenericWelcome = ({
                   </Option>
                 ))}
               </Dropdown>
-              <Text>Hz</Text>
+              <Text>{t("advanced.generic.welcome.units.hz")}</Text>
             </div>
             <Checkbox
               id={`${idPrefix}-random-tone-checkbox`}
               className={styles.checkbox}
-              label="500-900 Hz random"
+              label={t("advanced.generic.welcome.labels.randomTone")}
               checked={randomTone}
               onChange={(_, data) => 
                 onRandomToneChange(data.checked === true)
@@ -458,12 +473,13 @@ export const GenericWelcome = ({
       {/* 按钮区域 */}
       <div className={styles.actionSection}>
         <Button 
-          className={styles.button} 
+          className={styles.button}
+          style={{ width: language === "English" ? "140px" : "120px" }}
           icon={<Fire20Regular />}
           onClick={onStart}
         >
           <Text className={styles.buttonText}>
-            Start Training
+            {t("advanced.generic.welcome.buttons.start")}
           </Text>
         </Button>
       </div>

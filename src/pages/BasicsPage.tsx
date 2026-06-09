@@ -15,9 +15,11 @@ import {
   bundleIcon,
 } from "@fluentui/react-icons";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { TrainingPage } from "./basics/TrainingPage";
 import { StatisticsPage } from "./basics/StatisticsPage";
 import { OptionsPage } from "./basics/OptionsPage";
+import { useSettingsStore } from "../stores/settingsStore";
 
 // 样式定义
 const useStyles = makeStyles({
@@ -38,7 +40,6 @@ const useStyles = makeStyles({
     backgroundColor: "transparent",
   },
   tab: {
-    width: "120px",
     height: "32px",
     padding: "0px",
     backgroundColor: "transparent",
@@ -83,14 +84,21 @@ const useStyles = makeStyles({
       color: `${tokens.colorNeutralForeground3} !important`,
       fontWeight: `${tokens.fontWeightRegular} !important`,
     },
-    "& .fui-Tab__content": {
-      marginBottom: "2.5px",
-    },
     "::before": {
       display: "none",
     },
     "::after": {
       display: "none",
+    },
+  },
+  tabContentOffsetEn: {
+    "& .fui-Tab__content": {
+      marginBottom: "2.5px",
+    },
+  },
+  tabContentOffsetZh: {
+    "& .fui-Tab__content": {
+      marginBottom: "1.5px",
     },
   },
   tabContent: {
@@ -124,7 +132,10 @@ type TabValue = "training" | "statistics" | "options";
 export const BasicsPage = () => {
   // 使用样式
   const styles = useStyles();
-
+  // 使用 i18n 获取翻译函数
+  const { t } = useTranslation();
+  // 从设置存储中获取当前语言
+  const { language } = useSettingsStore();
   // 状态定义
   const [selectedTab, setSelectedTab] = useState<TabValue>("training");
 
@@ -138,25 +149,37 @@ export const BasicsPage = () => {
           onTabSelect={(_, data) => setSelectedTab(data.value as TabValue)}
         >
           <Tab
-            className={styles.tab}
+            className={mergeClasses(
+              styles.tab,
+              language === "English" ? styles.tabContentOffsetEn : styles.tabContentOffsetZh
+            )}
+            style={{ width: language === "English" ? "120px" : "100px" }}
             icon={<TrainingIcon />}
             value="training"
           >
-            Training
+            {t("basics.tabs.training")}
           </Tab>
           <Tab
-            className={styles.tab}
+            className={mergeClasses(
+              styles.tab,
+              language === "English" ? styles.tabContentOffsetEn : styles.tabContentOffsetZh
+            )}
+            style={{ width: language === "English" ? "120px" : "100px" }}
             icon={<StatisticsIcon />}
             value="statistics"
           >
-            Statistics
+            {t("basics.tabs.statistics")}
           </Tab>
           <Tab
-            className={styles.tab}
+            className={mergeClasses(
+              styles.tab,
+              language === "English" ? styles.tabContentOffsetEn : styles.tabContentOffsetZh
+            )}
+            style={{ width: language === "English" ? "120px" : "100px" }}
             icon={<OptionsIcon />}
             value="options"
           >
-            Options
+            {t("basics.tabs.options")}
           </Tab>
         </TabList>
       </div>

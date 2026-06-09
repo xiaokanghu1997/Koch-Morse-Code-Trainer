@@ -15,6 +15,7 @@ import {
   Speaker224Regular
 } from "@fluentui/react-icons";
 import { invoke } from "@tauri-apps/api/core";
+import { useTranslation } from "react-i18next";
 import { log } from "../utils/logger";
 import { useSettingsStore } from "../stores/settingsStore";
 
@@ -182,6 +183,9 @@ export const SettingsPage = () => {
   // 使用样式
   const styles = useStyles();
 
+  // 使用 i18n 获取翻译函数
+  const { t } = useTranslation();
+
   // 从 SettingsStore 获取设置状态和操作方法
   const {
     language,
@@ -210,10 +214,8 @@ export const SettingsPage = () => {
       <Card className={styles.card}>
         <Globe24Regular className={styles.icon} />
         <div className={styles.content}>
-          <Text className={styles.header}>Display Language</Text>
-          <Text className={styles.description}>
-            Select the display language of the application
-          </Text>
+          <Text className={styles.header}>{t("settings.language.header")}</Text>
+          <Text className={styles.description}>{t("settings.language.description")}</Text>
         </div>
         <Dropdown 
           id="language-dropdown"
@@ -250,10 +252,8 @@ export const SettingsPage = () => {
       <Card className={styles.card}>
         <Color24Regular className={styles.icon} />
         <div className={styles.content}>
-          <Text className={styles.header}>Application Theme</Text>
-          <Text className={styles.description}>
-            Select which application theme to display
-          </Text>
+          <Text className={styles.header}>{t("settings.theme.header")}</Text>
+          <Text className={styles.description}>{t("settings.theme.description")}</Text>
         </div>
         <Dropdown 
           id="theme-dropdown"
@@ -261,7 +261,7 @@ export const SettingsPage = () => {
           expandIcon={<ChevronDown16Regular />}
           listbox={{ className: styles.dropdownListbox }}
           positioning="below-start"
-          value={theme}
+          value={t(`settings.theme.${theme.toLowerCase()}`)}
           selectedOptions={[theme]}
           onOptionSelect={(_, data) => {
             setTheme(data.optionValue as "Light" | "Dark");
@@ -273,7 +273,7 @@ export const SettingsPage = () => {
             className={styles.dropdownOption}
             checkIcon={null}
           >
-            Light
+            {t("settings.theme.light")}
           </Option>
           <Option 
             key="dark" 
@@ -281,7 +281,7 @@ export const SettingsPage = () => {
             className={styles.dropdownOption}
             checkIcon={null}
           >
-            Dark
+            {t("settings.theme.dark")}
           </Option>
         </Dropdown>
       </Card>
@@ -290,10 +290,8 @@ export const SettingsPage = () => {
       <Card className={styles.card}>
         <TransparencySquare24Regular className={styles.icon} />
         <div className={styles.content}>
-          <Text className={styles.header}>Window Opacity</Text>
-          <Text className={styles.description}>
-            Adjust the transparency of the application window
-          </Text>
+          <Text className={styles.header}>{t("settings.opacity.header")}</Text>
+          <Text className={styles.description}>{t("settings.opacity.description")}</Text>
         </div>
         <div className={styles.controlContainer}>
           <Slider
@@ -312,10 +310,8 @@ export const SettingsPage = () => {
       <Card className={styles.card}>
         <Speaker224Regular className={styles.icon} />
         <div className={styles.content}>
-          <Text className={styles.header}>Audio Volume</Text>
-          <Text className={styles.description}>
-            Adjust the audio output volume
-          </Text>
+          <Text className={styles.header}>{t("settings.volume.header")}</Text>
+          <Text className={styles.description}>{t("settings.volume.description")}</Text>
         </div>
         <div className={styles.controlContainer}>
           <Slider

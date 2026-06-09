@@ -13,26 +13,26 @@ export const CHARACTER_SET: Record<DatasetName, string> = {
    * 来源: Learn CW Online (lcwo.net)
    * 特点: 优先学习常用字母，逐步引入数字和符号
    */
-  "Koch-LCWO": "KMURESNAPTLWI.JZ=FOY,VG5/Q92H38B?47C1D60X",
+  "koch-lcwo": "KMURESNAPTLWI.JZ=FOY,VG5/Q92H38B?47C1D60X",
   
   /**
    * Letters: 26个英文字母（按使用频率排序）
    * 基于: 英语字母频率分析
    * 特点: 高频字母优先（E, T, I, A, N...）
    */
-  "Letters": "ETIANMSURWDKGOHVFLPJBXCQYZ",
+  "letters": "ETIANMSURWDKGOHVFLPJBXCQYZ",
   
   /**
    * Numbers: 10个数字（按自然顺序）
    * 特点: 从1到0，符合日常习惯
    */
-  "Numbers": "1234567890",
+  "numbers": "1234567890",
   
   /**
    * Punctuation: 标点符号（按常用程度）
    * 特点: 句号、逗号等优先
    */
-  "Punctuation": ".,?/=+-()@:;'\"!",
+  "punctuation": ".,?/=+-()@:;'\"!",
 } as const;
 
 // ==================== 摩尔斯码映射表 ====================

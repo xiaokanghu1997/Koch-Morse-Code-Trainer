@@ -1,12 +1,15 @@
 import { 
   Text,
+  Tooltip,
   Checkbox,
   makeStyles,
   tokens,
 } from "@fluentui/react-components";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { WordTrainingConfig } from "../../lib/types";
 import { GenericWelcome } from "../../components/GenericWelcome";
+import { useSettingsStore } from "../../stores/settingsStore";
 
 // 样式定义
 const useStyles = makeStyles({
@@ -57,6 +60,12 @@ const useStyles = makeStyles({
     },
     marginRight: "-8px",
   },
+  tooltip: {
+    backgroundColor: tokens.colorNeutralBackground4Hover,
+    boxShadow: tokens.shadow2,
+    maxWidth: "380px",
+    whiteSpace: "normal",
+  },
 });
 
 // Props 接口
@@ -74,6 +83,11 @@ const DATASETS = {
 export const WordWelcome = ({ onStart }: WordWelcomeProps) => {
   // 使用样式
   const styles = useStyles();
+
+  // 使用 i18n 获取翻译函数
+  const { t } = useTranslation();
+  // 获取当前语言设置
+  const { language } = useSettingsStore();
 
   // 通用配置状态
   const [charSpeed, setCharSpeed] = useState(20);
@@ -101,27 +115,27 @@ export const WordWelcome = ({ onStart }: WordWelcomeProps) => {
       {/* 单词数据集 */}
       <div className={styles.datasetContainer}>
         <div className={styles.datasetLabel}>
-          <Text>Dataset:</Text>
+          <Text>{t("advanced.word.welcome.labels.dataset")}</Text>
         </div>
         <div className={styles.datasetControl}>
           <Checkbox
             id="word-dataset-abbre-checkbox"
             className={styles.checkbox}
-            label="CW abbreviations"
+            label={t("advanced.word.welcome.datasets.abbreviations")}
             checked={dataset.includes(DATASETS.ABBRES)}
             onChange={(_, data) => handleDatasetChange(DATASETS.ABBRES, data.checked === true)}
           />
           <Checkbox
             id="word-dataset-qcode-checkbox"
             className={styles.checkbox}
-            label="Q-codes"
+            label={t("advanced.word.welcome.datasets.qcodes")}
             checked={dataset.includes(DATASETS.QCODES)}
             onChange={(_, data) => handleDatasetChange(DATASETS.QCODES, data.checked === true)}
           />
           <Checkbox
             id="word-dataset-word-checkbox"
             className={styles.checkbox}
-            label="Common English words"
+            label={t("advanced.word.welcome.datasets.commonWords")}
             checked={dataset.includes(DATASETS.WORDS)}
             onChange={(_, data) => handleDatasetChange(DATASETS.WORDS, data.checked === true)}
           />
@@ -131,13 +145,24 @@ export const WordWelcome = ({ onStart }: WordWelcomeProps) => {
       {/* 自动跳过 */}
       <div className={styles.configItem}>
         <div className={styles.configLabel}>
-          <Text>Skip automatically after 5 seconds:</Text>
+          <Tooltip
+            content={{
+              children: t("advanced.word.welcome.tooltips.skipAfter5s"),
+              className: styles.tooltip,
+            }}
+            relationship="label"
+            positioning={language === "English" ? "below-end" : "below-start"}
+          >
+            <Text>{t("advanced.word.welcome.labels.skipAfter5s")}</Text>
+          </Tooltip>
         </div>
         <div className={styles.configControl}>
           <Checkbox
             id="word-skip-checkbox"
             className={styles.checkbox}
-            label={skip ? "On" : "Off"}
+            label={skip 
+                    ? t("advanced.word.welcome.status.on") 
+                    : t("advanced.word.welcome.status.off")}
             checked={skip}
             onChange={(_, data) => 
               setSkip(data.checked === true)
@@ -150,9 +175,9 @@ export const WordWelcome = ({ onStart }: WordWelcomeProps) => {
 
   return (
     <GenericWelcome
-      title="Word Training"
-      subtitle="(For practicing single word copying)"
-      description="Each session consists of 25 words. You can set the initial character speed, which adjusts dynamically based on your performance: +1 WPM for each correct copy and -1 WPM for each mistake."
+      title={t("advanced.word.welcome.title")}
+      subtitle={t("advanced.word.welcome.subtitle")}
+      description={t("advanced.word.welcome.description")}
       idPrefix="word"
       charSpeed={charSpeed}
       minCharSpeed={minCharSpeed}
@@ -165,7 +190,8 @@ export const WordWelcome = ({ onStart }: WordWelcomeProps) => {
       onToneChange={setTone}
       onRandomToneChange={setRandomTone}
       rightConfigPanel={rightConfigPanel}
-      rightColumnWidth={0.9}
+      rightColumnWidth={language === "English" ? 0.9 : 0.75}
+      configSectionGap={language === "English" ? 40 : 60}
       onStart={() => onStart({ 
         charSpeed, 
         minCharSpeed, 

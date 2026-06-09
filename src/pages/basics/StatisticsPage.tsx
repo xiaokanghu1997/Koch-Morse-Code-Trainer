@@ -8,6 +8,7 @@ import {
 } from "@fluentui/react-components";
 import { ChevronDown16Regular } from "@fluentui/react-icons";
 import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { TimeStatType } from "../../lib/types";
 import { StatisticsChart } from "../../components/StatisticsChart";
 import { useLessonManager } from "../../hooks/useLessonManager";
@@ -24,6 +25,8 @@ const useStyles = makeStyles({
     height: "100%",
     width: "100%",
     padding: "12px 15px",
+    boxSizing: "border-box",
+    overflow: "hidden",
     gap: "6px",
   },
   // 第一行
@@ -36,7 +39,6 @@ const useStyles = makeStyles({
   selectContainer: {
     display: "flex",
     alignItems: "center",
-    gap: "8px",
   },
   describeText: {
     fontSize: tokens.fontSizeBase300,
@@ -125,40 +127,26 @@ const useStyles = makeStyles({
       backgroundColor: tokens.colorBrandForeground1,
     },
   },
+  // 第二行
+  chartRow: {
+    flex: 1,
+    minHeight: 0,
+    overflow: "hidden",
+    display: "flex",
+  },
 });
 
 const statTypeOptions = ["Default", "Hour", "Day", "Month", "Year"];
-
-// 工具函数：计算图例位置
-const calculateLegendPosition = (avgAccuracy: number) => {
-  if (avgAccuracy === 100) {
-    return { legendLoc2: "348px", legendLoc3: "512px" };
-  } else if (avgAccuracy >= 10 && avgAccuracy < 100) {
-    return { legendLoc2: "340.5px", legendLoc3: "504.5px" };
-  } else {
-    return { legendLoc2: "333px", legendLoc3: "497px" };
-  }
-};
-
-// 工具函数：计算右侧Y轴最大值
-const calculateYRightMax = (maxValue: number): number => {
-  if (maxValue < 20) {
-    return 20;
-  } else if (maxValue >= 20 && maxValue < 40) {
-    return 40;
-  } else if (maxValue >= 40 && maxValue < 60) {
-    return 60;
-  } else {
-    return 80;
-  }
-};
 
 export const StatisticsPage = () => {
   // 使用样式
   const styles = useStyles();
 
-  // 获取主题设置
-  const theme = useSettingsStore((state) => state.theme);
+  // 使用 i18n 获取翻译函数
+  const { t } = useTranslation();
+
+  // 获取设置内容
+  const { language } = useSettingsStore();
 
   // 获取当前数据集
   const currentDatasetName = useOptionsStore((state) => state.savedConfig.datasetName);
@@ -177,7 +165,12 @@ export const StatisticsPage = () => {
   }, [datasets]);
 
   // 初始化 selectedDataset 时使用第一个有记录的数据集
-  const [selectedDataset, setSelectedDataset] = useState<string>(currentDatasetName);
+  const [selectedDataset, setSelectedDataset] = useState<string>(() => {
+    if (availableDatasets.includes(currentDatasetName)) {
+      return currentDatasetName;
+    } 
+    return availableDatasets[0] || currentDatasetName;
+  });
 
   // 初始化 selectedLesson
   const [selectedLesson, setSelectedLesson] = useState<number>(0);
@@ -187,6 +180,12 @@ export const StatisticsPage = () => {
 
   // 获取课程列表
   const { lessons, totalLessonNumber } = useLessonManager(selectedDataset, selectedLesson);
+
+  // 获取数据集显示名称
+  const getDatasetLabel = (name: string) => {
+    const key = `basics.statistics.datasetName.${name.toLowerCase()}`;
+    return t(key, { defaultValue: name }); // 找不到翻译时回退到原名
+  };
 
   // 筛选出有记录的课程，并添加 All 选项
   const availableLessons = useMemo(() => {
@@ -201,7 +200,7 @@ export const StatisticsPage = () => {
     });
     // 添加 "All" 选项
     return [
-      { lessonNumber: 0, characters: [], displayText: "All" },
+      { lessonNumber: 0, characters: [], displayText: t("basics.statistics.allLessons") },
       ...lessonsWithRecords,
     ];
   }, [datasets, selectedDataset, lessons]);
@@ -219,79 +218,90 @@ export const StatisticsPage = () => {
 
   // 根据选项准备图表数据
   const chartData = useMemo(() => {
+    // 图例内容
+    const legendLabels = [
+      t("basics.statistics.chart.accuracy"),
+      t("basics.statistics.chart.averageAccuracy"),
+      t("basics.statistics.chart.accuracyThreshold")
+    ];
+
     // 情况1：选择了所有课程
     if (selectedLesson === 0) {
       const result = getLessonStatsForDataset(datasets, selectedDataset);
+      const maxLessonNumber = result.lessons.length > 0 ? Math.max(...result.lessons.map(l => l.lessonNumber)) : 1;
+
+      const maxLessonNumbers = Array.from({ length: maxLessonNumber }, (_, i) => i + 1);
       const allLessonNumbers = Array.from({ length: totalLessonNumber }, (_, i) => i + 1);
+
+      const lessonDataMap = new Map(result.lessons.map(l => [l.lessonNumber, l]));
+      const xValues = maxLessonNumbers.map(n => n.toString());
+      const yLeftValues = maxLessonNumbers.map(n => {
+        const lessonData = lessonDataMap.get(n);
+        return lessonData ? lessonData.averageAccuracy : null;
+      });
+      const yRightValues = maxLessonNumbers.map(n => {
+        const lessonData = lessonDataMap.get(n);
+        return lessonData ? lessonData.recordCount : null;
+      });
 
       const lessonDisplayTexts = allLessonNumbers.map(lessonNumber => {
         const lesson = lessons.find(l => l.lessonNumber === lessonNumber);
         return lesson?.displayText || lessonNumber.toString().padStart(2, "0");
       });
 
-      const maxRecordCount = Math.max(...result.lessons.map(l => l.recordCount));
-      const yRightMax = calculateYRightMax(maxRecordCount);
-      const { legendLoc2, legendLoc3 } = calculateLegendPosition(result.datasetAverageAccuracy);
-
       return {
         chartType: true,
-        xLabel: "Lesson ID",
+        xLabel: t("basics.statistics.chart.lessonId"),
         xTickValues: allLessonNumbers.map(n => n.toString().padStart(2, "0")),
-        xValues: result.lessons.map(l => l.lessonNumber.toString()),
-        yLeftValues: result.lessons.map(l => l.averageAccuracy.toFixed(2)),
-        yRightLabel: "Training Count",
+        xValues: xValues,
+        yLeftLabel: t("basics.statistics.chart.trainingAccuracy"),
+        yLeftValues: yLeftValues,
+        yRightLabel: t("basics.statistics.chart.trainingCount"),
         yRightUnit: "",
-        yRightMax: yRightMax,
-        yRightValues: result.lessons.map(l => l.recordCount.toString()),
-        averageAccuracy: result.datasetAverageAccuracy.toFixed(2),
-        legendLoc2: legendLoc2,
-        legendLoc3: legendLoc3,
+        yRightValues: yRightValues,
+        averageAccuracy: result.datasetAverageAccuracy,
+        legendLabels: legendLabels,
+        lessonDisplayFlag: t("basics.statistics.chart.lessonId"),
+        lessonDisplayTitle: t("basics.statistics.chart.lessonPrefix"),
         lessonDisplayTexts: lessonDisplayTexts,
       };
-    }
-
-    // 情况2：选择了具体课程
-    const dataset = datasets[selectedDataset];
-    const lessonRecords = dataset?.[selectedLesson] || [];
-    const timeStatsResult = getTimeStats(
-      lessonRecords,
-      selectedStatType.toLowerCase() as TimeStatType
-    );
-
-    let yRightLabel = "";
-    let yRightUnit = "";
-    let yRightMax = 10;
-    let yRightValues = [];
-
-    if (selectedStatType === "Default") {
-      yRightLabel = "Training Duration";
-      yRightUnit = " (m)";
-      yRightValues = timeStatsResult.totalDurations.map(d => d.toFixed(2));
-      yRightMax = 10;
     } else {
-      yRightLabel = "Training Count";
-      yRightUnit = "";
-      yRightValues = timeStatsResult.recordCounts.map(c => c.toString());
-      const maxRecordCount = Math.max(...timeStatsResult.recordCounts);
-      yRightMax = calculateYRightMax(maxRecordCount);
+      // 情况2：选择了具体课程
+      const dataset = datasets[selectedDataset];
+      const lessonRecords = dataset?.[selectedLesson] || [];
+      const timeStatsResult = getTimeStats(
+        lessonRecords,
+        selectedStatType.toLowerCase() as TimeStatType
+      );
+
+      let yRightLabel = "";
+      let yRightUnit = "";
+      let yRightValues = [];
+
+      if (selectedStatType === "Default") {
+        yRightLabel = t("basics.statistics.chart.trainingDuration");
+        yRightUnit = t("basics.statistics.chart.durationUnit");
+        yRightValues = timeStatsResult.totalDurations;
+      } else {
+        yRightLabel = t("basics.statistics.chart.trainingCount");
+        yRightUnit = "";
+        yRightValues = timeStatsResult.recordCounts;
+      }
+
+      return {
+        chartType: false,
+        xLabel: "",
+        xTickValues: timeStatsResult.timeLabels,
+        xValues: timeStatsResult.timeTickLabels,
+        yLeftLabel: t("basics.statistics.chart.trainingAccuracy"),
+        yLeftValues: timeStatsResult.averageAccuracies,
+        yRightLabel: yRightLabel,
+        yRightUnit: yRightUnit,
+        yRightValues: yRightValues,
+        averageAccuracy: timeStatsResult.overallAverageAccuracy,
+        legendLabels: legendLabels,
+      };
     }
-
-    const { legendLoc2, legendLoc3 } = calculateLegendPosition(timeStatsResult.overallAverageAccuracy);
-
-    return {
-      chartType: false,
-      xLabel: "",
-      xTickValues: timeStatsResult.timeLabels,
-      xValues: timeStatsResult.timeTickLabels,
-      yLeftValues: timeStatsResult.averageAccuracies.map(a => a.toFixed(2)),
-      yRightLabel: yRightLabel,
-      yRightUnit: yRightUnit,
-      yRightMax: yRightMax,
-      yRightValues: yRightValues,
-      averageAccuracy: timeStatsResult.overallAverageAccuracy.toFixed(2),
-      legendLoc2: legendLoc2,
-      legendLoc3: legendLoc3,
-    };
   }, [
     datasets,
     selectedDataset,
@@ -305,10 +315,11 @@ export const StatisticsPage = () => {
     <div className={styles.container}>
       {/* 第一行：文本和下拉选择 */}
       <div className={styles.headerRow}>
-        <div className={styles.selectContainer}>
-          <Text className={styles.describeText}>
-            Select dataset:
-          </Text>
+        <div 
+          className={styles.selectContainer}
+          style={{ gap: language === "English" ? "8px" : "0px" }}
+        >
+          <Text className={styles.describeText}>{t("basics.statistics.selectDataset")}</Text>
           <Dropdown
             id="dataset-dropdown"
             className={mergeClasses(styles.dropdownBase, styles.dropdownDataset)}
@@ -320,7 +331,7 @@ export const StatisticsPage = () => {
                 availableDatasets.length >= 5 && styles.dropdownListboxWithHeight
               ) 
             }}
-            value={selectedDataset}
+            value={getDatasetLabel(selectedDataset)}
             selectedOptions={[selectedDataset]}
             onOptionSelect={(_, data) => {
               if (data.optionValue) {
@@ -336,15 +347,16 @@ export const StatisticsPage = () => {
                 className={styles.dropdownOption}
                 checkIcon={null}
               >
-                {dataset}
+                {getDatasetLabel(dataset)}
               </Option>
             ))}
           </Dropdown>
         </div>
-        <div className={styles.selectContainer}>
-          <Text className={styles.describeText}>
-            Select lesson:
-          </Text>
+        <div 
+          className={styles.selectContainer}
+          style={{ gap: language === "English" ? "8px" : "0px" }}
+        >
+          <Text className={styles.describeText}>{t("basics.statistics.selectLesson")}</Text>
           <Dropdown
             id="lesson-dropdown"
             className={mergeClasses(styles.dropdownBase, styles.dropdownLesson)}
@@ -377,10 +389,11 @@ export const StatisticsPage = () => {
           </Dropdown>
         </div>
         {selectedLesson !== 0 && (
-          <div className={styles.selectContainer}>
-            <Text className={styles.describeText}>
-              Statistic by:
-            </Text>
+          <div 
+            className={styles.selectContainer}
+            style={{ gap: language === "English" ? "8px" : "0px" }}
+          >
+            <Text className={styles.describeText}>{t("basics.statistics.statisticBy")}</Text>
             <Dropdown
               id="stattype-dropdown"
               className={mergeClasses(styles.dropdownBase, styles.dropdownStatType)}
@@ -392,7 +405,7 @@ export const StatisticsPage = () => {
                   statTypeOptions.length >= 5 && styles.dropdownListboxWithHeight
                 ) 
               }}
-              value={selectedStatType}
+              value={t(`basics.statistics.statTypes.${selectedStatType.toLowerCase()}`)}
               selectedOptions={[selectedStatType]}
               onOptionSelect={(_, data) => {
                 if (data.optionValue) {
@@ -407,7 +420,7 @@ export const StatisticsPage = () => {
                   className={styles.dropdownOption}
                   checkIcon={null}
                 >
-                  {statType}
+                  {t(`basics.statistics.statTypes.${statType.toLowerCase()}`)}
                 </Option>
               ))}
             </Dropdown>
@@ -416,10 +429,9 @@ export const StatisticsPage = () => {
       </div>
 
       {/* 第二行：图表区域 */}
-      <StatisticsChart
-        chartData={chartData}
-        theme={theme}
-      />
+      <div className={styles.chartRow}>
+        <StatisticsChart chartData={chartData} />
+      </div>
     </div>
   );
 };

@@ -68,7 +68,7 @@ export const useTiming = (): UseTimingReturn => {
   /** 清除定时器 */
   const clearTimer = useCallback(() => {
     if (timerRef.current !== null) {
-      window.clearInterval(timerRef.current);
+      clearInterval(timerRef.current);
       timerRef.current = null;
     }
   }, []);
@@ -79,7 +79,7 @@ export const useTiming = (): UseTimingReturn => {
     setPhase("delay");
     setCountdown(seconds);
 
-    timerRef.current = window.setInterval(() => {
+    timerRef.current = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
           clearTimer();
@@ -97,9 +97,9 @@ export const useTiming = (): UseTimingReturn => {
     setPhase("playing");
     setTotalDuration(duration);
     setCurrentTime(0);
-    setCountdown(Math.ceil(duration));
+    setCountdown(duration);
 
-    timerRef.current = window.setInterval(() => {
+    timerRef.current = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
           clearTimer();
@@ -131,7 +131,7 @@ export const useTiming = (): UseTimingReturn => {
     if (phase !== "playing") return;
     clearTimer();
     // 继续倒计时
-    timerRef.current = window.setInterval(() => {
+    timerRef.current = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
           clearTimer();

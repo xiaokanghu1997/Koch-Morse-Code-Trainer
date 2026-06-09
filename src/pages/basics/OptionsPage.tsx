@@ -21,16 +21,19 @@ import {
   PlayCircle20Regular, 
   PauseCircle20Regular, 
   ArrowUndo16Regular,
+  ArrowRepeatAll20Regular,
   CheckmarkCircle20Regular,
   CheckmarkCircle20Filled,
   DismissCircle16Filled,
   Dismiss20Regular,
 } from "@fluentui/react-icons";
 import { useState, useEffect, useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useTiming } from "../../hooks/useTiming";
 import { useTextGenerator } from "../../hooks/useTextGenerator";
 import { useMorsePlayer } from "../../hooks/useMorsePlayer";
 import { useOptionsStore } from "../../stores/optionsStore";
+import { useSettingsStore } from "../../stores/settingsStore";
 import type { OptionsConfig } from "../../lib/types";
 import { clampNumber, roundToNearest } from "../../services/statisticalToolset";
 import { log } from "../../utils/logger";
@@ -153,6 +156,12 @@ const useStyles = makeStyles({
     "& input::selection": {
       backgroundColor: tokens.colorCompoundBrandBackground,
     },
+    "& button[disabled]": {
+      pointerEvents: "none",
+    },
+    "& button[aria-disabled='true']": {
+      pointerEvents: "none",
+    },
   },
   checkbox: {
     height: "32px",
@@ -182,7 +191,7 @@ const useStyles = makeStyles({
     maxWidth: "160px",
     transform: "translateY(1px)",
     "& .fui-Slider__thumb": {
-      backgroundColor: tokens.colorNeutralBackground3Selected,
+      backgroundColor: tokens.colorNeutralBackground4Selected,
       boxShadow: tokens.shadow2,
     },
     "& .fui-Slider__thumb::before": {
@@ -204,14 +213,14 @@ const useStyles = makeStyles({
   sliderValueText: {
     fontSize: tokens.fontSizeBase300,
     color: tokens.colorNeutralForeground1,
-    width: "55px",
-    minWidth: "55px",
-    maxWidth: "55px",
+    width: "65px",
+    minWidth: "65px",
+    maxWidth: "65px",
     textAlign: "right",
     flexShrink: 0,
   },
   tooltip: {
-    backgroundColor: tokens.colorNeutralBackground2Hover,
+    backgroundColor: tokens.colorNeutralBackground4Hover,
     boxShadow: tokens.shadow2,
     maxWidth: "360px",
     whiteSpace: "normal",
@@ -269,29 +278,19 @@ const useStyles = makeStyles({
   },
 });
 
-// Tooltips 提示文本
-const tips = {
-  datasetName: "Select the character set used to generate practice material",
-  practiceMode: "Choose how characters are distributed during training",
-  groupLength: "Number of characters in each practice group",
-  groupSpace: "Multiple of standard word space (7 dit) to separate groups",
-  groupCount: "Number of character groups to generate",
-  waveform: "Show the audio waveform during playback",
-  charSpeed: "Morse element speed in words per minute",
-  effSpeed: "Overall transmission speed using Farnsworth timing",
-  tone: "Audio tone frequency of the Morse signal",
-  startDelay: "Waiting time before playback starts",
-  prefixSuffix: "Add standard practice markers before and after each practice",
-};
-
 // 下拉框选项
-const datasetOptions = ["Koch-LCWO", "Letters", "Numbers", "Punctuation"] as const;
-const practiceModeOptions = ["Uniform", "New focus", "Gradual", "Weighted"] as const;
+const datasetOptions = ["koch-lcwo", "letters", "numbers", "punctuation"] as const;
+const practiceModeOptions = ["uniform", "newFocus", "gradual", "weighted"] as const;
 
 // 生成器页面组件
 export const OptionsPage = () => {
   // 使用样式
   const styles = useStyles();
+
+  // 使用 i18n 获取翻译函数
+  const { t } = useTranslation();
+  // 获取当前语言设置
+  const { language } = useSettingsStore();
 
   // 消息栏状态
   type MessageType = "success" | "error" | null;
@@ -332,9 +331,22 @@ export const OptionsPage = () => {
     if (textGen.text && textGen.duration > 0) {
       // 文本生成后预加载到播放器
       player.preload(textGen.text, currentConfig);
-      timing.setTotalDuration(textGen.duration);
     }
   }, [textGen.text]);
+
+  // 音频总时长（优先级回退）
+  const displayTotalDuration = useMemo(() => {
+    // 优先使用播放器的总时长（更准确），其次使用生成器的时长
+    if (player.playbackState.totalDuration > 0) {
+      return player.playbackState.totalDuration;
+    }
+    return textGen.duration;
+  }, [player.playbackState.totalDuration, textGen.duration]);
+
+  // 音频时长同步
+  useEffect(() => {
+    timing.setTotalDuration(displayTotalDuration);
+  }, [displayTotalDuration]);
 
   // 监听播放状态
   useEffect(() => {
@@ -361,28 +373,38 @@ export const OptionsPage = () => {
       timing.stop();
       return;
     }
-    
     if (player.isPlaying) {
       // 如果正在播放，暂停播放
       player.pause();
       timing.pause();
-    } else if (player.isPaused) {
+      return;
+    } 
+    if (player.playbackState.totalDuration > 0 &&
+        player.playbackState.currentTime >= displayTotalDuration - 0.01) {
+      // 如果已播放完成，重新开始
+      player.stop();
+      timing.stop();
+      timing.updateCurrentTime(0);
+      textGen.generate(currentConfig);
+      return;
+    }
+    if (player.isPaused) {
       // 如果已暂停，继续播放
       player.resume();
       timing.resume();
-    } else {
-      // 如果空闲，开始播放
-      if (currentConfig.startDelay > 0) {
-        // 有启动延迟，先等待
-        timing.startDelay(currentConfig.startDelay, async () => {
-          await player.play();
-          timing.startPlaying(textGen.duration);
-        });
-      } else {
-        // 无启动延迟，直接播放
+      return;
+    }
+    // 如果空闲，开始播放
+    if (currentConfig.startDelay > 0) {
+      // 有启动延迟，先等待
+      timing.startDelay(currentConfig.startDelay, async () => {
         await player.play();
-        timing.startPlaying(textGen.duration);
-      }
+        timing.startPlaying(displayTotalDuration);
+      });
+    } else {
+      // 无启动延迟，直接播放
+      await player.play();
+      timing.startPlaying(displayTotalDuration);
     }
   };
 
@@ -401,18 +423,23 @@ export const OptionsPage = () => {
         // 随机模式：显示范围
         const minChars = currentConfig.groupCount * 2;
         const maxChars = currentConfig.groupCount * 7;
-        charInfo = `${minChars}-${maxChars} chars`;
+        charInfo = `${minChars}-${maxChars}`;
       } else {
         // 固定模式：显示精确数量
         const totalChars = currentConfig.groupCount * currentConfig.groupLength;
-        charInfo = `${totalChars} chars`;
+        charInfo = `${totalChars}`;
       }
 
       // 显示成功消息
       setMessage({
         type: "success",
-        title: "Training material setup successfully",
-        content: `${currentConfig.datasetName} | ${currentConfig.practiceMode} | ${currentConfig.groupCount} groups | ${charInfo}`,
+        title: t("basics.options.messages.success.title"),
+        content: t("basics.options.messages.success.content", {
+          dataset: t(`basics.options.datasets.${currentConfig.datasetName}`),
+          mode: t(`basics.options.modes.${currentConfig.practiceMode}`),
+          groupCount: currentConfig.groupCount,
+          charInfo: charInfo
+        }),
       });
       log.info("Training material setup successfully", "OptionsPage", currentConfig);
 
@@ -422,8 +449,8 @@ export const OptionsPage = () => {
       // 显示错误消息
       setMessage({
         type: "error",
-        title: "Training material setup failed",
-        content: error instanceof Error ? error.message : "Unknown error occurred",
+        title: t("basics.options.messages.error.title"),
+        content: error instanceof Error ? error.message : t("basics.options.messages.error.unknown"),
       });
       log.error("Error setting up training material", "OptionsPage", error);
     }
@@ -435,9 +462,17 @@ export const OptionsPage = () => {
     max: number, 
     field: keyof OptionsConfig
   ) => (_: any, data: any) => {
-    const raw = Number(data. value ??  data. displayValue);
+    const rawText = String(data.value ?? data.displayValue ?? "");
+    const cleaned = rawText.replace(/\D/g, "");
+    if (cleaned === "") {
+      updateConfig({ [field]: min });
+      return;
+    }
+    const raw = Number(cleaned);
     const clamped = clampNumber(raw, min, max);
-    updateConfig({ [field]: clamped });
+    if (currentConfig[field] !== clamped) {
+      updateConfig({ [field]: clamped });
+    }
   };
 
   // 音调拖拽控制
@@ -466,11 +501,7 @@ export const OptionsPage = () => {
     setIsDragging(false);
     // 拖拽结束时，应用最终值
     if (tempToneValue !== null) {
-      const finalValue = clampNumber(
-        roundToNearest(tempToneValue, 5),
-        300,
-        1500
-      );
+      const finalValue = clampNumber(roundToNearest(tempToneValue, 5), 300, 1500);
       updateConfig({ tone: finalValue });
     }
     setTempToneValue(null);
@@ -495,18 +526,67 @@ export const OptionsPage = () => {
   // 预览按钮图标及文本
   const previewButtonConfig = useMemo(() => {
     if (timing.phase === "delay") {
-      return { icon: <ArrowUndo16Regular />, text: "Cancel" };
+      return { icon: <ArrowUndo16Regular />, text: t("basics.options.buttons.cancel") };
     }
     if (player.isPlaying) {
-      return { icon: <PauseCircle20Regular />, text: "Pause" };
+      return { icon: <PauseCircle20Regular />, text: t("basics.options.buttons.pause") };
     }
-    return { icon: <PlayCircle20Regular />, text: "Preview" };
-  }, [timing.phase, player.isPlaying]);
+    if (player.playbackState.totalDuration > 0 &&
+        player.playbackState.currentTime >= displayTotalDuration - 0.01) {
+      return { icon: <ArrowRepeatAll20Regular />, text: t("basics.options.buttons.retry") };
+    } 
+    if (player.isPaused) {
+      return { icon: <PlayCircle20Regular />, text: t("basics.options.buttons.resume") };
+    }
+    return { icon: <PlayCircle20Regular />, text: t("basics.options.buttons.preview") };
+  }, [timing.phase, player.isPlaying, player.isPaused, player.playbackState]);
 
   // 其他
   const displayToneValue = useMemo(() => {
     return isDragging && tempToneValue !== null ? tempToneValue : currentConfig.tone;
   }, [isDragging, tempToneValue, currentConfig.tone]);
+
+  // 数字输入限制（适用于 SpinButton）
+  const numericSpinProps = {
+    onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => {
+      const allowedKeys = [
+        "Backspace",
+        "Delete",
+        "ArrowLeft",
+        "ArrowRight",
+        "ArrowUp",
+        "ArrowDown",
+      ];
+      if (
+        !/^\d$/.test(e.key) &&
+        !allowedKeys.includes(e.key)
+      ) {
+        e.preventDefault();
+      }
+    },
+
+    onBeforeInput: (e: React.FormEvent<HTMLInputElement>) => {
+      const event = e.nativeEvent as InputEvent;
+      if (
+        event.data &&
+        !/^\d+$/.test(event.data)
+      ) {
+        e.preventDefault();
+      }
+    },
+
+    onInput: (e: React.FormEvent<HTMLInputElement>) => {
+      const input = e.currentTarget;
+      input.value = input.value.replace(/\D/g, "");
+    },
+
+    onPaste: (e: React.ClipboardEvent<HTMLInputElement>) => {
+      const text = e.clipboardData.getData("text");
+      if (!/^\d+$/.test(text)) {
+        e.preventDefault();
+      }
+    },
+  };
 
   // 渲染
   return (
@@ -519,13 +599,13 @@ export const OptionsPage = () => {
             <div className={styles.textContent}>
               <Tooltip
                 content={{
-                  children: tips.datasetName,
+                  children: t("basics.options.tooltips.trainingDataset"),
                   className: styles.tooltip,
                 }}
                 relationship="label"
                 positioning="below-start"
               >
-                <Text>Training dataset:</Text>
+                <Text>{t("basics.options.labels.trainingDataset")}</Text>
               </Tooltip>
             </div>
             <Dropdown 
@@ -538,7 +618,7 @@ export const OptionsPage = () => {
                   datasetOptions.length >= 5 && styles.dropdownListboxWithHeight
                 )
               }}
-              value={currentConfig.datasetName}
+              value={t(`basics.options.datasets.${currentConfig.datasetName}`)}
               selectedOptions={[currentConfig.datasetName]}
               onOptionSelect={(_, data) => 
                 updateConfig({ datasetName: data.optionValue as OptionsConfig["datasetName"] })
@@ -551,7 +631,7 @@ export const OptionsPage = () => {
                   className={styles.dropdownOption} 
                   checkIcon={null}
                 >
-                  {dataset}
+                  {t(`basics.options.datasets.${dataset}`)}
                 </Option>
               ))}
             </Dropdown>
@@ -562,13 +642,13 @@ export const OptionsPage = () => {
             <div className={styles.textContent}>
               <Tooltip
                 content={{
-                  children: tips.practiceMode,
+                  children: t("basics.options.tooltips.practiceMode"),
                   className: styles.tooltip,
                 }}
                 relationship="label"
                 positioning="below-start"
               >
-                <Text>Practice mode:</Text>
+                <Text>{t("basics.options.labels.practiceMode")}</Text>
               </Tooltip>
             </div>
             <Dropdown 
@@ -581,7 +661,7 @@ export const OptionsPage = () => {
                   practiceModeOptions.length >= 5 && styles.dropdownListboxWithHeight
                 )
               }}
-              value={currentConfig.practiceMode}
+              value={t(`basics.options.modes.${currentConfig.practiceMode}`)}
               selectedOptions={[currentConfig.practiceMode]}
               onOptionSelect={(_, data) => 
                 updateConfig({ practiceMode: data.optionValue as OptionsConfig["practiceMode"] })
@@ -594,7 +674,7 @@ export const OptionsPage = () => {
                   className={styles.dropdownOption} 
                   checkIcon={null}
                 >
-                  {mode}
+                  {t(`basics.options.modes.${mode}`)}
                 </Option>
               ))}
             </Dropdown>
@@ -605,13 +685,13 @@ export const OptionsPage = () => {
             <div className={styles.textContent}>
               <Tooltip
                 content={{
-                  children: tips.groupLength,
+                  children: t("basics.options.tooltips.groupLength"),
                   className: styles.tooltip,
                 }}
                 relationship="label"
                 positioning="below-start"
               >
-                <Text>Group length:</Text>
+                <Text>{t("basics.options.labels.groupLength")}</Text>
               </Tooltip>
             </div>
             <div
@@ -628,13 +708,14 @@ export const OptionsPage = () => {
                 max={10}
                 value={currentConfig.groupLength}
                 onChange={handleSpin(1, 10, "groupLength")}
+                {...numericSpinProps}
               />
-              <Text>fixed</Text>
+              <Text>{t("basics.options.labels.fixed")}</Text>
             </div>
             <Checkbox
               id="random-group-length-checkbox"
               className={styles.checkbox}
-              label="2-7 random"
+              label={t("basics.options.labels.random")}
               checked={currentConfig.randomGroupLength}
               onChange={(_, data) => 
                 updateConfig({ randomGroupLength: data.checked === true })
@@ -647,13 +728,13 @@ export const OptionsPage = () => {
             <div className={styles.textContent}>
               <Tooltip
                 content={{
-                  children: tips.groupSpace,
+                  children: t("basics.options.tooltips.groupSpace"),
                   className: styles.tooltip,
                 }}
                 relationship="label"
                 positioning="below-start"
               >
-                <Text>Group space:</Text>
+                <Text>{t("basics.options.labels.groupSpace")}</Text>
               </Tooltip>
             </div>
             <SpinButton
@@ -663,8 +744,9 @@ export const OptionsPage = () => {
               max={10}
               value={currentConfig.groupSpace}
               onChange={handleSpin(1, 10, "groupSpace")}
+              {...numericSpinProps}
             />
-            <Text>× 7 dits</Text>
+            <Text>× 7 {t("basics.options.units.dits")}</Text>
           </div>
 
           {/* 组数 */}
@@ -672,13 +754,13 @@ export const OptionsPage = () => {
             <div className={styles.textContent}>
               <Tooltip
                 content={{
-                  children: tips.groupCount,
+                  children: t("basics.options.tooltips.groupCount"),
                   className: styles.tooltip,
                 }}
                 relationship="label"
                 positioning="below-start"
               >
-                <Text>Group count:</Text>
+                <Text>{t("basics.options.labels.groupCount")}</Text>
               </Tooltip>
             </div>
             <SpinButton
@@ -688,6 +770,7 @@ export const OptionsPage = () => {
               max={30}
               value={currentConfig.groupCount}
               onChange={handleSpin(1, 30, "groupCount")}
+              {...numericSpinProps}
             />
           </div>
 
@@ -696,19 +779,21 @@ export const OptionsPage = () => {
             <div className={styles.textContent}>
               <Tooltip
                 content={{
-                  children: tips.waveform,
+                  children: t("basics.options.tooltips.waveform"),
                   className: styles.tooltip,
                 }}
                 relationship="label"
                 positioning="below-start"
               >
-                <Text>Waveform diagram:</Text>
+                <Text>{t("basics.options.labels.waveform")}</Text>
               </Tooltip>
             </div>
             <Checkbox
               id="waveform-checkbox"
               className={styles.checkbox}
-              label={currentConfig.showWaveform ? "On" : "Off"}
+              label={currentConfig.showWaveform 
+                      ? t("basics.options.status.on") 
+                      : t("basics.options.status.off")}
               checked={currentConfig.showWaveform}
               onChange={(_, data) => 
                 updateConfig({ showWaveform: data.checked === true })
@@ -724,25 +809,28 @@ export const OptionsPage = () => {
             <div className={styles.textContent}>
               <Tooltip
                 content={{
-                  children: tips.charSpeed,
+                  children: t("basics.options.tooltips.charSpeed"),
                   className: styles.tooltip,
                 }}
                 relationship="label"
                 positioning="below-start"
               >
-                <Text>Character speed:</Text>
+                <Text>{t("basics.options.labels.charSpeed")}</Text>
               </Tooltip>
             </div>
             <div className={styles.controlContainer}>
               <Slider
                 id="char-speed-slider"
                 className={styles.slider}
+                style={{ marginRight: language === "English" ? "-10px" : "-6px" }}
                 min={5}
                 max={50}
                 value={currentConfig.charSpeed}
                 onChange={(_, data) => updateConfig({ charSpeed: data.value })}
               />
-              <Text className={styles.sliderValueText}>{currentConfig.charSpeed} WPM</Text>
+              <Text className={styles.sliderValueText}>
+                {currentConfig.charSpeed} {t("basics.options.units.wpm")}
+              </Text>
             </div>
           </div>
 
@@ -751,25 +839,28 @@ export const OptionsPage = () => {
             <div className={styles.textContent}>
               <Tooltip
                 content={{
-                  children: tips.effSpeed,
+                  children: t("basics.options.tooltips.effSpeed"),
                   className: styles.tooltip,
                 }}
                 relationship="label"
                 positioning="below-start"
               >
-                <Text>Effective speed:</Text>
+                <Text>{t("basics.options.labels.effSpeed")}</Text>
               </Tooltip>
             </div>
             <div className={styles.controlContainer}>
               <Slider
                 id="eff-speed-slider"
                 className={styles.slider}
+                style={{ marginRight: language === "English" ? "-10px" : "-6px" }}
                 min={0}
                 max={50}
                 value={currentConfig.effSpeed}
                 onChange={(_, data) => updateConfig({ effSpeed: data.value })}
               />
-              <Text className={styles.sliderValueText}>{currentConfig.effSpeed} WPM</Text>
+              <Text className={styles.sliderValueText}>
+                {currentConfig.effSpeed} {t("basics.options.units.wpm")}
+              </Text>
             </div>
           </div>
 
@@ -778,19 +869,20 @@ export const OptionsPage = () => {
             <div className={styles.textContent}>
               <Tooltip
                 content={{
-                  children: tips.tone,
+                  children: t("basics.options.tooltips.tone"),
                   className: styles.tooltip,
                 }}
                 relationship="label"
                 positioning="below-start"
               >
-                <Text>Tone:</Text>
+                <Text>{t("basics.options.labels.tone")}</Text>
               </Tooltip>
             </div>
             <div className={styles.controlContainer}>
               <Slider
                 id="tone-slider"
                 className={styles.slider}
+                style={{ marginRight: language === "English" ? "-10px" : "-6px" }}
                 min={300}
                 max={1500}
                 value={displayToneValue}
@@ -801,7 +893,7 @@ export const OptionsPage = () => {
                 onKeyUp={handleToneChangeEnd}
               />
               <Text className={styles.sliderValueText}>
-                {displayToneValue} Hz
+                {displayToneValue} {t("basics.options.units.hz")}
               </Text>
             </div>
           </div>
@@ -811,13 +903,13 @@ export const OptionsPage = () => {
             <div className={styles.textContent}>
               <Tooltip
                 content={{
-                  children: tips.startDelay,
+                  children: t("basics.options.tooltips.startDelay"),
                   className: styles.tooltip,
                 }}
                 relationship="label"
                 positioning="below-start"
               >
-                <Text>Start delay:</Text>
+                <Text>{t("basics.options.labels.startDelay")}</Text>
               </Tooltip>
             </div>
             <SpinButton
@@ -826,9 +918,10 @@ export const OptionsPage = () => {
               min={0}
               max={30}
               value={currentConfig.startDelay}
-              onChange={handleSpin(1, 30, "startDelay")}
+              onChange={handleSpin(0, 30, "startDelay")}
+              {...numericSpinProps}
             />
-            <Text>s</Text>
+            <Text>{t("basics.options.units.seconds")}</Text>
           </div>
 
           {/* 前后缀提示 */}
@@ -836,13 +929,13 @@ export const OptionsPage = () => {
             <div className={styles.textContent}>
               <Tooltip
                 content={{
-                  children: tips.prefixSuffix,
+                  children: t("basics.options.tooltips.prefixSuffix"),
                   className: styles.tooltip,
                 }}
                 relationship="label"
                 positioning="below-start"
               >
-                <Text>Prefix / Suffix:</Text>
+                <Text>{t("basics.options.labels.prefixSuffix")}</Text>
               </Tooltip>
             </div>
             <div className={styles.controlContainer}>
@@ -914,7 +1007,7 @@ export const OptionsPage = () => {
             onClick={handleConfirm}
           >
             <Text className={styles.buttonText}>
-              Confirm
+              {t("basics.options.buttons.confirm")}
             </Text>
           </Button>
         </div>

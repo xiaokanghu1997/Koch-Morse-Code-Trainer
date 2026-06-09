@@ -30,9 +30,11 @@ import { save, open } from "@tauri-apps/plugin-dialog";
 import { writeTextFile, readTextFile } from "@tauri-apps/plugin-fs";
 import { ChevronDown16Regular } from "@fluentui/react-icons";
 import { useEffect, useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useBasicsStore } from "../stores/basicsStore";
 import { useAdvancedStore } from "../stores/advancedStore";
 import { useOptionsStore } from "../stores/optionsStore";
+import { useSettingsStore } from "../stores/settingsStore";
 import { useLessonManager } from "../hooks/useLessonManager";
 import { recordManager } from "../services/recordManager";
 import { formatTimestamp } from "../services/statisticalToolset";
@@ -79,7 +81,6 @@ const useStyles = makeStyles({
   clearDialogSurface: {
     display: "flex",
     flexDirection: "column",
-    width: "345px",
     padding: "8px 16px 12px 16px",
   },
   modifyDialogContent: {
@@ -92,9 +93,6 @@ const useStyles = makeStyles({
   },
   clearDialogContent: {
     fontSize: tokens.fontSizeBase300,
-    marginTop: "-10px",
-    marginBottom: "-2px",
-    marginLeft: "6px",
   },
   dialogTitleContainer: {
     display: "flex",
@@ -256,7 +254,7 @@ const useStyles = makeStyles({
     },
   },
   tooltip: {
-    backgroundColor: tokens.colorNeutralBackground4Hover,
+    backgroundColor: tokens.colorNeutralBackground3Hover,
     boxShadow: tokens.shadow2,
   },
 });
@@ -290,14 +288,19 @@ const validateTimestamp = (value: string): { valid: boolean; timestamp: number }
 export const DataManagement = ({ children, onDataChange }: DataManagementProps) => {
   const styles = useStyles();
 
+  // 使用 i18n 获取翻译函数
+  const { t } = useTranslation();
+  // 获取当前语言设置
+  const { language } = useSettingsStore();
+
   // 获取当前数据集
   const currentDatasetName = useOptionsStore((state) => state.savedConfig.datasetName);
 
   // 获取训练记录
   const basicsDatasets = useBasicsStore((state) => state.datasets);
-  const advancedWord = useAdvancedStore((state) => state.Word);
-  const advancedCallsign = useAdvancedStore((state) => state.Callsign);
-  const advancedQTC = useAdvancedStore((state) => state.QTC);
+  const advancedWord = useAdvancedStore((state) => state.word);
+  const advancedCallsign = useAdvancedStore((state) => state.callsign);
+  const advancedQTC = useAdvancedStore((state) => state.qtc);
 
   // 获取有训练记录的数据集
   const availableBasicsDatasets = useMemo(() => {
@@ -311,9 +314,9 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
 
   const availableAdvancedTypes = useMemo(() => {
     const types: string[] = [];
-    if (advancedWord.length > 0) types.push("Word");
-    if (advancedCallsign.length > 0) types.push("Callsign");
-    if (advancedQTC.length > 0) types.push("QTC");
+    if (advancedWord.length > 0) types.push("word");
+    if (advancedCallsign.length > 0) types.push("callsign");
+    if (advancedQTC.length > 0) types.push("qtc");
     return types;
   }, [advancedWord, advancedCallsign, advancedQTC]);
 
@@ -335,7 +338,7 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
   });
   const [modifySelectedLesson, setModifySelectedLesson] = useState<number>(0);
   const [modifySelectedRecord, setModifySelectedRecord] = useState<number>(0);
-  const [modifyAdvancedType, setModifyAdvancedType] = useState<"Word" | "Callsign" | "QTC">("Word");
+  const [modifyAdvancedType, setModifyAdvancedType] = useState<"word" | "callsign" | "qtc">("word");
   const [modifyAdvancedIndex, setModifyAdvancedIndex] = useState<number>(0);
 
   const [editedTimestamp, setEditedTimestamp] = useState<string>("");
@@ -363,9 +366,9 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
         log.info("Data modification enabled", "DataManagement");
       }
     };
-    window.addEventListener("keydown", handleKeyDown);
+    addEventListener("keydown", handleKeyDown);
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
+      removeEventListener("keydown", handleKeyDown);
     };
   }, [inputBuffer]);
 
@@ -406,7 +409,7 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
     const lessonRecords = dataset[modifySelectedLesson];
     return lessonRecords.map((record, index) => ({
       index: index,
-      displayText: `Record #${(index + 1).toString().padStart(2, "0")}`,
+      displayText: t("dataManagement.recordLabel", { number: (index + 1).toString().padStart(2, "0") }),
       timestamp: record.timestamp,
       accuracy: record.accuracy,
       duration: record.duration,
@@ -415,14 +418,14 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
 
   const availableAdvancedRecords = useMemo(() => {
     const recordsMap: Record<string, any[]> = {
-      "Word": advancedWord,
-      "Callsign": advancedCallsign,
-      "QTC": advancedQTC,
+      "word": advancedWord,
+      "callsign": advancedCallsign,
+      "qtc": advancedQTC,
     };
     const records = recordsMap[modifyAdvancedType] || [];
     return records.map((record, index) => ({
       index: index,
-      displayText: `Record #${(index + 1).toString().padStart(2, "0")}`,
+      displayText: t("dataManagement.recordLabel", { number: (index + 1).toString().padStart(2, "0") }),
       timestamp: record.timestamp,
       duration: record.duration,
       charSpeed: record.charSpeed,
@@ -536,16 +539,16 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
   // 初始化进阶训练
   const initializeAdvancedSelection = () => {
     if (availableAdvancedTypes.length === 0) {
-      setModifyAdvancedType("Word");
+      setModifyAdvancedType("word");
       setModifyAdvancedIndex(0);
       return;
     }
-    const defaultType = availableAdvancedTypes[0] as "Word" | "Callsign" | "QTC";
+    const defaultType = availableAdvancedTypes[0] as "word" | "callsign" | "qtc";
     setModifyAdvancedType(defaultType);
     const recordsMap: Record<string, any[]> = {
-      "Word": advancedWord,
-      "Callsign": advancedCallsign,
-      "QTC": advancedQTC,
+      "word": advancedWord,
+      "callsign": advancedCallsign,
+      "qtc": advancedQTC,
     };
     const records = recordsMap[defaultType] || [];
     if (records.length > 0) {
@@ -583,10 +586,10 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
   const handleExport = async () => {
     try {
       const filePath = await save({
-        title: "Export Training Data",
+        title: t("dataManagement.dialogs.exportTitle"),
         defaultPath: `morse-training-data.json`,
         filters: [{
-          name: "JSON Files",
+          name: t("dataManagement.dialogs.jsonFiles"),
           extensions: ["json"],
         }],
       });
@@ -606,11 +609,11 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
   const handleImport = async () => {
     try {
       const filePath = await open({
-        title: "Import Training Data",
+        title: t("dataManagement.dialogs.importTitle"),
         multiple: false,
         directory: false,
         filters: [{
-          name: "JSON Files",
+          name: t("dataManagement.dialogs.jsonFiles"),
           extensions: ["json"],
         }],
       });
@@ -740,7 +743,7 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
           });
         } else {
           useBasicsStore.setState({
-            currentDatasetName: "Koch-LCWO",
+            currentDatasetName: "koch-lcwo",
             currentLessonNumber: 1,
           });
         }
@@ -776,15 +779,15 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
   // 更新进阶训练数据选择
   const updateAdvancedSelection = () => {
     const recordsMap: Record<string, any[]> = {
-      "Word": advancedWord,
-      "Callsign": advancedCallsign,
-      "QTC": advancedQTC,
+      "word": advancedWord,
+      "callsign": advancedCallsign,
+      "qtc": advancedQTC,
     };
     const records = recordsMap[modifyAdvancedType] || [];
     if (records.length === 0) {
       const remainTypes = availableAdvancedTypes.filter(type => type !== modifyAdvancedType);
       if (remainTypes.length > 0) {
-        setModifyAdvancedType(remainTypes[0] as "Word" | "Callsign" | "QTC");
+        setModifyAdvancedType(remainTypes[0] as "word" | "callsign" | "qtc");
       }
       return;
     }
@@ -853,27 +856,35 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
             className={styles.button}
             onClick={handleImport}
           >
-            <Text className={styles.buttonText}>Import Data</Text>
+            <Text className={styles.buttonText}>
+              {t("dataManagement.buttons.import")}
+            </Text>
           </Button>
           <Button 
             className={styles.button}
             onClick={handleExport}
           >
-            <Text className={styles.buttonText}>Export Data</Text>
+            <Text className={styles.buttonText}>
+              {t("dataManagement.buttons.export")}
+            </Text>
           </Button>
           {isModifyEnabled && (
             <Button 
               className={styles.button}
               onClick={() => setIsModifyDialogOpen(true)}
             >
-              <Text className={styles.buttonText}>Modify Data</Text>
+              <Text className={styles.buttonText}>
+                {t("dataManagement.buttons.modify")}
+              </Text>
             </Button>
           )}
           <Button 
             className={styles.button}
             onClick={() => setIsClearDialogOpen(true)}
           >
-            <Text className={styles.buttonText}>Clear Data</Text>
+            <Text className={styles.buttonText}>
+              {t("dataManagement.buttons.clear")}
+            </Text>
           </Button>
         </PopoverSurface>
       </Popover>
@@ -887,12 +898,16 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
           <DialogBody>
             <div className={styles.dialogTitleContainer}>
               <DialogTitle className={styles.dialogTitle}>
-                Modify {modifyStoreType === "basics" ? "Basics" : "Advanced"} Data
+                {t("dataManagement.modifyDialog.title", {
+                  type: modifyStoreType === "basics" 
+                  ? t("dataManagement.modifyDialog.types.basics") 
+                  : t("dataManagement.modifyDialog.types.advanced")
+                })}
               </DialogTitle>
               <div className={styles.dialogIconContainer}>
                 <Tooltip
                   content={{
-                    children: "Basics",
+                    children: t("dataManagement.types.basics"),
                     className: styles.tooltip,
                   }}
                   relationship="label"
@@ -908,7 +923,7 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
                 </Tooltip>
                 <Tooltip
                   content={{
-                    children: "Advanced",
+                    children: t("dataManagement.types.advanced"),
                     className: styles.tooltip,
                   }}
                   relationship="label"
@@ -929,7 +944,9 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
                 {modifyStoreType === "basics" ? (
                   <>
                     <div className={styles.dialogRow}>
-                      <Text className={styles.dialogLabel}>Select dataset:</Text>
+                      <Text className={styles.dialogLabel}>
+                        {t("dataManagement.modifyDialog.labels.selectDataset")}
+                      </Text>
                       <Dropdown
                         id="modify-basics-dataset-dropdown"
                         className={styles.dropdown}
@@ -940,7 +957,7 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
                             availableBasicsDatasets.length >= 5 && styles.dropdownListboxWithHeight
                           ) 
                         }}
-                        value={availableRecords.length > 0 ? modifySelectedDataset : ""}
+                        value={availableRecords.length > 0 ? t(`dataManagement.basicsDatasets.${modifySelectedDataset}`) : ""}
                         selectedOptions={availableRecords.length > 0 ? [modifySelectedDataset] : []}
                         onOptionSelect={(_, data) => {
                           if (data.optionValue) {
@@ -956,13 +973,15 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
                             className={styles.dropdownOption}
                             checkIcon={null}
                           >
-                            {dataset}
+                            {t(`dataManagement.basicsDatasets.${dataset}`)}
                           </Option>
                         ))}
                       </Dropdown>
                     </div>
                     <div className={styles.dialogRow}>
-                      <Text className={styles.dialogLabel}>Select lesson:</Text>
+                      <Text className={styles.dialogLabel}>
+                        {t("dataManagement.modifyDialog.labels.selectLesson")}
+                      </Text>
                       <Dropdown
                         id="modify-basics-lesson-dropdown"
                         className={styles.dropdown}
@@ -995,7 +1014,9 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
                       </Dropdown>
                     </div>
                     <div className={styles.dialogRow}>
-                      <Text className={styles.dialogLabel}>Select record:</Text>
+                      <Text className={styles.dialogLabel}>
+                        {t("dataManagement.modifyDialog.labels.selectRecord")}
+                      </Text>
                       <Dropdown
                         id="modify-basics-record-dropdown"
                         className={styles.dropdown}
@@ -1028,7 +1049,9 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
                       </Dropdown>
                     </div>
                     <div className={styles.dialogRow}>
-                      <Text className={styles.dialogLabel}>Timestamp:</Text>
+                      <Text className={styles.dialogLabel}>
+                        {t("dataManagement.modifyDialog.labels.timestamp")}
+                      </Text>
                       <Input 
                         id="modify-basics-timestamp-input"
                         className={mergeClasses(
@@ -1044,7 +1067,9 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
                       />
                     </div>
                     <div className={styles.dialogRow}>
-                      <Text className={styles.dialogLabel}>Accuracy (%):</Text>
+                      <Text className={styles.dialogLabel}>
+                        {t("dataManagement.modifyDialog.labels.accuracy")}
+                      </Text>
                       <Input 
                         id="modify-basics-accuracy-input"
                         className={mergeClasses(
@@ -1060,7 +1085,9 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
                       />
                     </div>
                     <div className={styles.dialogRow}>
-                      <Text className={styles.dialogLabel}>Duration (s):</Text>
+                      <Text className={styles.dialogLabel}>
+                        {t("dataManagement.modifyDialog.labels.duration")}
+                      </Text>
                       <Input
                         id="modify-basics-duration-input"
                         className={mergeClasses(
@@ -1079,17 +1106,19 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
                 ) : (
                   <>
                     <div className={styles.dialogRow}>
-                      <Text className={styles.dialogLabel}>Training type:</Text>
+                      <Text className={styles.dialogLabel}>
+                        {t("dataManagement.modifyDialog.labels.selectType")}
+                      </Text>
                       <Dropdown
                         id="modify-advanced-type-dropdown"
                         className={styles.dropdown}
                         expandIcon={<ChevronDown16Regular />}
                         listbox={{ className: styles.dropdownListbox }}
-                        value={availableAdvancedTypes.length > 0 ? modifyAdvancedType : ""}
+                        value={availableAdvancedTypes.length > 0 ? t(`dataManagement.advancedTypes.${modifyAdvancedType}`) : ""}
                         selectedOptions={availableAdvancedTypes.length > 0 ? [modifyAdvancedType] : []}
                         onOptionSelect={(_, data) => {
                           if (data.optionValue) {
-                            setModifyAdvancedType(data.optionValue as "Word" | "Callsign" | "QTC");
+                            setModifyAdvancedType(data.optionValue as "word" | "callsign" | "qtc");
                           }
                         }}
                         disabled={availableAdvancedTypes.length === 0}
@@ -1101,13 +1130,15 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
                             className={styles.dropdownOption}
                             checkIcon={null}
                           >
-                            {type}
+                            {t(`dataManagement.advancedTypes.${type}`)}
                           </Option>
                         ))}
                       </Dropdown>
                     </div>
                     <div className={styles.dialogRow}>
-                      <Text className={styles.dialogLabel}>Select record:</Text>
+                      <Text className={styles.dialogLabel}>
+                        {t("dataManagement.modifyDialog.labels.selectRecord")}
+                      </Text>
                       <Dropdown
                         id="modify-advanced-record-dropdown"
                         className={styles.dropdown}
@@ -1140,7 +1171,9 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
                       </Dropdown>
                     </div>
                     <div className={styles.dialogRow}>
-                      <Text className={styles.dialogLabel}>Timestamp:</Text>
+                      <Text className={styles.dialogLabel}>
+                        {t("dataManagement.modifyDialog.labels.timestamp")}
+                      </Text>
                       <Input 
                         id="modify-advanced-timestamp-input"
                         className={mergeClasses(
@@ -1156,7 +1189,9 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
                       />
                     </div>
                     <div className={styles.dialogRow}>
-                      <Text className={styles.dialogLabel}>Score:</Text>
+                      <Text className={styles.dialogLabel}>
+                        {t("dataManagement.modifyDialog.labels.score")}
+                      </Text>
                       <Input 
                         id="modify-advanced-score-input"
                         className={mergeClasses(
@@ -1172,7 +1207,9 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
                       />
                     </div>
                     <div className={styles.dialogRow}>
-                      <Text className={styles.dialogLabel}>Speed (WPM):</Text>
+                      <Text className={styles.dialogLabel}>
+                        {t("dataManagement.modifyDialog.labels.speed")}
+                      </Text>
                       <Input
                         id="modify-advanced-speed-input"
                         className={mergeClasses(
@@ -1188,7 +1225,9 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
                       />
                     </div>
                     <div className={styles.dialogRow}>
-                      <Text className={styles.dialogLabel}>Duration (s):</Text>
+                      <Text className={styles.dialogLabel}>
+                        {t("dataManagement.modifyDialog.labels.duration")}
+                      </Text>
                       <Input
                         id="modify-advanced-duration-input"
                         className={mergeClasses(
@@ -1217,7 +1256,9 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
                   (modifyStoreType === "advanced" && availableAdvancedRecords.length === 0)
                 }
               >
-                <Text className={styles.buttonText}>Modify</Text>
+                <Text className={styles.buttonText}>
+                  {t("dataManagement.modifyDialog.buttons.modify")}
+                </Text>
               </Button>
               <Button 
                 className={styles.button}
@@ -1228,14 +1269,18 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
                   (modifyStoreType === "advanced" && availableAdvancedRecords.length === 0)
                 }
               >
-                <Text className={styles.buttonText}>Delete</Text>
+                <Text className={styles.buttonText}>
+                  {t("dataManagement.modifyDialog.buttons.delete")}
+                </Text>
               </Button>
               <Button 
                 className={styles.button}
                 style={{ minWidth: "75px" }}
                 onClick={() => setIsModifyDialogOpen(false)}
               >
-                <Text className={styles.buttonText}>Close</Text>
+                <Text className={styles.buttonText}>
+                  {t("dataManagement.modifyDialog.buttons.close")}
+                </Text>
               </Button>
             </DialogActions>
           </DialogBody>
@@ -1247,16 +1292,20 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
         open={isClearDialogOpen}
         onOpenChange={(_, data) => setIsClearDialogOpen(data.open)}
       >
-        <DialogSurface className={styles.clearDialogSurface}>
+        <DialogSurface 
+          className={styles.clearDialogSurface}
+          style={{ width: language === "English" ? "345px" : "330px" }}
+        >
           <DialogBody>
             <DialogTitle className={styles.dialogTitle}>
-              Confirm Clear Data
+              {t("dataManagement.clearDialog.title")}
             </DialogTitle>
-            <DialogContent className={styles.clearDialogContent}>
+            <DialogContent 
+              className={styles.clearDialogContent}
+              style={{ margin: language === "English" ? "-10px 0px -2px 6px" : "-8px -10px -8px 4px" }}
+            >
               <Text>
-                Are you sure you want to clear all training data?
-                <br />
-                This action cannot be undone.
+                {t("dataManagement.clearDialog.content")}
               </Text>
             </DialogContent>
             <DialogActions>
@@ -1265,14 +1314,18 @@ export const DataManagement = ({ children, onDataChange }: DataManagementProps) 
                 style={{ minWidth: "85px" }}
                 onClick={handleClear}
               >
-                <Text className={styles.buttonText}>Yes</Text>
+                <Text className={styles.buttonText}>
+                  {t("dataManagement.clearDialog.buttons.yes")}
+                </Text>
               </Button>
               <Button 
                 className={styles.button}
                 style={{ minWidth: "85px" }}
                 onClick={() => setIsClearDialogOpen(false)}
               >
-                <Text className={styles.buttonText}>No</Text>
+                <Text className={styles.buttonText}>
+                  {t("dataManagement.clearDialog.buttons.no")}
+                </Text>
               </Button>
             </DialogActions>
           </DialogBody>

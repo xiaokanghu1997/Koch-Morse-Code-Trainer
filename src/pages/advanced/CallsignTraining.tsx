@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { CallsignTrainingConfig } from "../../lib/types";
 import { GenericTraining } from "../../components/GenericTraining";
 import { getRandomCallsigns } from "../../services/contentGenerator";
@@ -9,19 +10,21 @@ interface CallsignTrainingProps {
 }
 
 export const CallsignTraining = ({ config, onBack }: CallsignTrainingProps) => {
+  const { t } = useTranslation();
+
   return (
     <GenericTraining
       config={config}
       dataLoader={getRandomCallsigns}
-      inputPlaceholder="Input callsign here..."
+      inputPlaceholder={t("advanced.callsign.training.inputPlaceholder")}
       inputWidth="220px"
       inputMaxLength={13}
       idPrefix="callsign"
       tooltips={{
-        start: "Press enter to start",
-        next: "Press enter to confirm and move to next callsign",
-        retry: "Press enter to retry",
-        repeat: "Press period (.) to repeat",
+        start: t("advanced.callsign.training.tooltips.start"),
+        next: t("advanced.callsign.training.tooltips.next"),
+        retry: t("advanced.callsign.training.tooltips.retry"),
+        repeat: t("advanced.callsign.training.tooltips.repeat"),
       }}
       blindMode={config.blindMode}
       onBack={onBack}

@@ -7,6 +7,7 @@ import type {
   TimeStatType,
   TimeStats,
   TimeStatsResult,
+  CalendarDayItem,
 } from "../lib/types";
 import { CHARACTER_SET, PREFIX_SUFFIX } from "../lib/constants";
 
@@ -573,24 +574,100 @@ export function getAllYears(records: { timestamp: number }[]): number[] {
 }
 
 /**
- * 获取某年各天的练习次数
- * @param records - 训练记录
- * @param year - 指定年份
- * @returns 包含各天练习次数的数组
+ * 将 Date 对象格式化为 "YYYY-MM-DD" 格式的字符串
+ * @param date 要格式化的 Date 对象
+ * @returns 格式化后的日期字符串
  */
-export function getDailyRecordCounts(
+export const formatLocalDate = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+/**
+ * 获取指定年份的第一天的 Date 对象
+ * @param year 要获取的年份
+ * @returns 指定年份的第一天的 Date 对象
+ */
+export function getStartOfYear(year: number): Date {
+  return new Date(year, 0, 1);
+}
+
+/**
+ * 获取指定年份的最后一天的 Date 对象
+ * @param year 要获取的年份
+ * @returns 指定年份的最后一天的 Date 对象
+ */
+export function getEndOfYear(year: number): Date {
+  return new Date(year, 11, 31);
+}
+
+/**
+ * 获取指定日期的星期索引（以周一为第一天）
+ * @param date 要获取星期索引的日期
+ * @returns 星期索引，0 表示周一，6 表示周日
+ */
+export function getMondayFirstWeekdayIndex(date: Date): number {
+  const jsDay = date.getDay();
+  return jsDay === 0 ? 6 : jsDay - 1;
+}
+
+/**
+ * 获取日历热力图数据
+ * @param records 训练记录数组
+ * @param year 要生成热力图的年份
+ * @returns 包含每天的练习次数和今天的练习次数的对象
+ */
+export function getCalendarHeatmapData(
   records: { timestamp: number }[],
   year: number
-): Array<[string, number]> {
-  // 转换为 Array 格式
-  const countMap: Record<string, number> = {};
+): {
+  days: CalendarDayItem[];
+  todayCount: number;
+} {
+  const countMap = new Map<string, number>();
+
   records.forEach((record) => {
     const date = new Date(record.timestamp);
-    if (date.getFullYear() !== year) return;
-    const key = `${year}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-    countMap[key] = (countMap[key] ?? 0) + 1;
+    const dateKey = formatLocalDate(date);
+    countMap.set(dateKey, (countMap.get(dateKey) ?? 0) + 1);
   });
-  return Object.entries(countMap).map(([date, count]) => [date, count]);
+
+  const todayKey = formatLocalDate(new Date());
+  const todayCount = countMap.get(todayKey) ?? 0;
+
+  const startOfYear = getStartOfYear(year);
+  const endOfYear = getEndOfYear(year);
+  const firstWeekdayIndex = getMondayFirstWeekdayIndex(startOfYear);
+
+  const days: CalendarDayItem[] = [];
+  const cursor = new Date(startOfYear);
+
+  while (cursor <= endOfYear) {
+    const dateKey = formatLocalDate(cursor);
+    const weekdayIndex = getMondayFirstWeekdayIndex(cursor);
+    const dayOffset = Math.floor(
+      (cursor.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000)
+    );
+    const weekIndex = Math.floor((firstWeekdayIndex + dayOffset) / 7);
+
+    days.push({
+      date: dateKey,
+      value: countMap.get(dateKey) ?? 0,
+      month: cursor.getMonth(),
+      dayOfMonth: cursor.getDate(),
+      weekIndex,
+      weekdayIndex,
+    });
+
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return {
+    days,
+    todayCount,
+  };
 }
 
 /**
@@ -622,7 +699,7 @@ export function getYearOverviewStats(
  */
 export function getOverviewStats(
   basicsData: Record<string, Record<number, BasicsRecord[]>>,
-  advancedData: { Word: AdvancedRecord[]; Callsign: AdvancedRecord[]; QTC: AdvancedRecord[] },
+  advancedData: { word: AdvancedRecord[]; callsign: AdvancedRecord[]; qtc: AdvancedRecord[] },
   year: number
 ): {
   basics: { 
@@ -649,9 +726,9 @@ export function getOverviewStats(
   
   // Advanced: 合并所有记录，过滤年份
   const allAdvancedRecords = [
-    ...advancedData.Word, 
-    ...advancedData.Callsign, 
-    ...advancedData.QTC
+    ...advancedData.word, 
+    ...advancedData.callsign, 
+    ...advancedData.qtc
   ].filter(r => new Date(r.timestamp).getFullYear() === year);
   const advancedTotalDuration = allAdvancedRecords.reduce((sum, r) => sum + r.duration, 0);
   const allAdvancedScores = allAdvancedRecords.map(r => r.score);
@@ -721,7 +798,7 @@ export function getBasicsStats(
  * @return 包含进阶训练信息的对象
  */
 export function getAdvancedStats(
-  advancedData: { Word: AdvancedRecord[]; Callsign: AdvancedRecord[]; QTC: AdvancedRecord[] },
+  advancedData: { word: AdvancedRecord[]; callsign: AdvancedRecord[]; qtc: AdvancedRecord[] },
   year: number
 ): Array<{
   trainingType: string;
@@ -730,7 +807,7 @@ export function getAdvancedStats(
   bestScore: string;
   maxSpeed: string;
 }> {
-  const types: Array<keyof typeof advancedData> = ["Word", "Callsign", "QTC"];
+  const types: Array<keyof typeof advancedData> = ["word", "callsign", "qtc"];
   return types.map((type) => {
     const records = advancedData[type].filter(r => new Date(r.timestamp).getFullYear() === year);
     const totalDuration = records.reduce((sum, r) => sum + r.duration, 0);
